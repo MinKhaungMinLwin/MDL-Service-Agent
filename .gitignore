@@ -1,0 +1,23 @@
+# Local agent/session metadata
+.agents/
+.codex/
+
+# Phase 1 POC is kept locally for reference only.
+01_legacy_poc/
+
+# Duplicated or archived local history.
+02_experiments/
+05_archives/
+prompt-test/
+
+# Python/local runtime artifacts
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+.env.local
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
