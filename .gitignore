@@ -13,11 +13,15 @@ prompt-test/
 # Python/local runtime artifacts
 __pycache__/
 *.py[cod]
+*.egg-info/
 .venv/
 venv/
 .env
 .env.local
+parser_service/outputs/
 
 # OS/editor noise
 .DS_Store
 Thumbs.db
+
+.claude/
