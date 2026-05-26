@@ -18,7 +18,7 @@ __pycache__/
 venv/
 .env
 .env.local
-output/
+# output/
 
 # OS/editor noise
 .DS_Store

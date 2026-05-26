@@ -4,14 +4,22 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV UV_COMPILE_BYTECODE=1
 ENV UV_LINK_MODE=copy
+ENV HF_HOME=/home/app/.cache/huggingface
 ENV PATH="/app/.venv/bin:$PATH"
 
 WORKDIR /app
 
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        libgl1 \
+        libglib2.0-0 \
+        libxcb1 && \
+    rm -rf /var/lib/apt/lists/*
+
 RUN groupadd --system app && \
-    useradd --system --gid app --home-dir /app app
+    useradd --system --gid app --home-dir /home/app --create-home app
 
 COPY pyproject.toml uv.lock ./
 RUN --mount=type=cache,target=/root/.cache/uv \
@@ -21,8 +29,8 @@ COPY --chown=app:app src ./src
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev
 
-RUN mkdir -p /app/output/parser_service/uploads /app/output/parser_service/parsed && \
-    chown -R app:app /app/output
+RUN mkdir -p /home/app/.cache/huggingface /app/output/parser_service/uploads /app/output/parser_service/parsed && \
+    chown -R app:app /home/app/.cache /app/output
 
 USER app
 

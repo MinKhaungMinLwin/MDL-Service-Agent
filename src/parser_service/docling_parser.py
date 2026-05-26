@@ -21,9 +21,12 @@ class DoclingParseResult:
 
 def parse_pdf(input_path: Path) -> DoclingParseResult:
     """Parse a PDF with Docling and export JSON-ready data plus Markdown."""
-    from docling.document_converter import DocumentConverter
+    from docling.datamodel.base_models import InputFormat
+    from docling.datamodel.pipeline_options import PdfPipelineOptions
+    from docling.document_converter import DocumentConverter, PdfFormatOption
 
-    converter = DocumentConverter()
+    pipeline_options = PdfPipelineOptions(do_ocr=False)
+    converter = DocumentConverter(format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options)})
     result = converter.convert(input_path)
     document = result.document
 
