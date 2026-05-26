@@ -1,3 +1,7 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "doosan-mdl"
 version = "0.1.0"
@@ -5,8 +9,10 @@ description = "Doosan MDL parsing and matching workspace"
 requires-python = ">=3.11"
 dependencies = [
     "docling>=2.0.0",
+    "fastapi>=0.115.0",
     "loguru>=0.7.3",
-    "pydantic>=2.11.3",
+    "python-multipart>=0.0.20",
+    "uvicorn[standard]>=0.34.0",
 ]
 
 [project.optional-dependencies]
@@ -15,7 +21,10 @@ dev = [
 ]
 
 [tool.setuptools]
-packages = ["parser_service"]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
 
 [tool.ruff]
 line-length = 120
