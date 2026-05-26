@@ -1,3 +1,5 @@
+"""FastAPI entrypoint for the PDF parser service."""
+
 from __future__ import annotations
 
 import shutil
@@ -17,11 +19,13 @@ OUTPUT_DIR = Path("output") / "parser_service" / "parsed"
 
 @app.get("/health")
 def health() -> dict[str, str]:
+    """Return a basic service health check."""
     return {"status": "ok"}
 
 
 @app.post("/parse")
 def parse(file: Annotated[UploadFile, File(...)], max_pages: int | None = None) -> dict[str, object]:
+    """Parse an uploaded PDF and return output file metadata."""
     UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     input_path = UPLOAD_DIR / Path(file.filename or "upload.pdf").name
 
@@ -38,6 +42,7 @@ def parse(file: Annotated[UploadFile, File(...)], max_pages: int | None = None) 
 
 
 def _response(parser_output: ParserOutput) -> dict[str, object]:
+    """Build the API response for a parser output."""
     return {
         "document_id": parser_output.document_id,
         "input_path": str(parser_output.input_path),

@@ -1,3 +1,5 @@
+"""Application service for writing parsed PDF outputs."""
+
 from __future__ import annotations
 
 import json
@@ -11,6 +13,8 @@ from parser_service.docling_parser import parse_pdf
 
 @dataclass(frozen=True)
 class ParserOutput:
+    """File locations produced by a parser run."""
+
     document_id: str
     input_path: Path
     output_dir: Path
@@ -24,6 +28,7 @@ def parse_pdf_to_output(
     output_dir: Path | None = None,
     max_num_pages: int | None = None,
 ) -> ParserOutput:
+    """Parse a PDF and write Docling JSON and Markdown outputs."""
     resolved_input = input_path.resolve()
     resolved_output = (output_dir or Path("output") / "parser_service" / "parsed" / resolved_input.stem).resolve()
     resolved_output.mkdir(parents=True, exist_ok=True)

@@ -1,3 +1,5 @@
+"""Docling wrapper for parsing PDF documents."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -8,6 +10,8 @@ from typing import Any
 
 @dataclass(frozen=True)
 class DoclingParseResult:
+    """Parsed Docling document and exported representations."""
+
     source_path: Path
     document: Any
     raw_dict: dict[str, Any]
@@ -16,6 +20,7 @@ class DoclingParseResult:
 
 
 def parse_pdf(input_path: Path, max_num_pages: int | None = None) -> DoclingParseResult:
+    """Parse a PDF with Docling and export JSON-ready data plus Markdown."""
     from docling.document_converter import DocumentConverter
 
     converter = DocumentConverter()
