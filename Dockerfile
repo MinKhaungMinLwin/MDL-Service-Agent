@@ -3,24 +3,26 @@ FROM python:3.11-slim
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV UV_COMPILE_BYTECODE=1
+ENV UV_LINK_MODE=copy
 ENV PATH="/app/.venv/bin:$PATH"
 
 WORKDIR /app
 
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
+RUN groupadd --system app && \
+    useradd --system --gid app --home-dir /app app
+
 COPY pyproject.toml uv.lock ./
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev --no-install-project
 
-COPY src ./src
+COPY --chown=app:app src ./src
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev
 
-RUN groupadd --system app && \
-    useradd --system --gid app --home-dir /app app && \
-    mkdir -p /app/output/parser_service/uploads /app/output/parser_service/parsed && \
-    chown -R app:app /app
+RUN mkdir -p /app/output/parser_service/uploads /app/output/parser_service/parsed && \
+    chown -R app:app /app/output
 
 USER app
 

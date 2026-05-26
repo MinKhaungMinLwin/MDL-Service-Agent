@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from loguru import logger
+from pypdf import PdfReader, PdfWriter
 
 from parser_service.docling_parser import parse_pdf
 
@@ -26,15 +27,17 @@ class ParserOutput:
 def parse_pdf_to_output(
     input_path: Path,
     output_dir: Path | None = None,
-    max_num_pages: int | None = None,
+    preview_pages: int | None = None,
 ) -> ParserOutput:
     """Parse a PDF and write Docling JSON and Markdown outputs."""
-    resolved_input = input_path.resolve()
-    resolved_output = (output_dir or Path("output") / "parser_service" / "parsed" / resolved_input.stem).resolve()
+    source_input = input_path
+    output_path = output_dir or Path("output") / "parser_service" / "parsed" / source_input.stem
+    resolved_output = output_path.resolve()
     resolved_output.mkdir(parents=True, exist_ok=True)
+    parser_input = _preview_pdf(source_input, output_path, preview_pages) if preview_pages else source_input
 
-    logger.info("Parsing PDF: {}", resolved_input)
-    docling_result = parse_pdf(resolved_input, max_num_pages=max_num_pages)
+    logger.info("Parsing PDF: {}", parser_input)
+    docling_result = parse_pdf(parser_input)
 
     json_path = resolved_output / "docling.json"
     markdown_path = resolved_output / "docling.md"
@@ -44,10 +47,25 @@ def parse_pdf_to_output(
     markdown_path.write_text(docling_result.markdown, encoding="utf-8")
 
     return ParserOutput(
-        document_id=resolved_input.stem,
-        input_path=resolved_input,
+        document_id=source_input.stem,
+        input_path=source_input,
         output_dir=resolved_output,
         json_path=json_path,
         markdown_path=markdown_path,
         docling_version=docling_result.docling_version,
     )
+
+
+def _preview_pdf(input_path: Path, output_dir: Path, preview_pages: int) -> Path:
+    """Write a temporary PDF containing the first preview pages."""
+    reader = PdfReader(input_path)
+    writer = PdfWriter()
+
+    for page in reader.pages[:preview_pages]:
+        writer.add_page(page)
+
+    preview_path = output_dir / f"{input_path.stem}_first_{preview_pages}_pages.pdf"
+    with preview_path.open("wb") as buffer:
+        writer.write(buffer)
+
+    return preview_path

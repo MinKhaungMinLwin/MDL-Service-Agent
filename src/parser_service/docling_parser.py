@@ -19,16 +19,12 @@ class DoclingParseResult:
     docling_version: str | None
 
 
-def parse_pdf(input_path: Path, max_num_pages: int | None = None) -> DoclingParseResult:
+def parse_pdf(input_path: Path) -> DoclingParseResult:
     """Parse a PDF with Docling and export JSON-ready data plus Markdown."""
     from docling.document_converter import DocumentConverter
 
     converter = DocumentConverter()
-    kwargs: dict[str, Any] = {}
-    if max_num_pages is not None:
-        kwargs["max_num_pages"] = max_num_pages
-
-    result = converter.convert(input_path, **kwargs)
+    result = converter.convert(input_path)
     document = result.document
 
     return DoclingParseResult(

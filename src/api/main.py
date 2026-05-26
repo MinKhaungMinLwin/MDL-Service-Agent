@@ -6,12 +6,12 @@ import shutil
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import FastAPI, File, UploadFile
+from fastapi import FastAPI, File, Query, UploadFile
 from loguru import logger
 
 from parser_service.service import ParserOutput, parse_pdf_to_output
 
-app = FastAPI(title="Doosan MDL Parser API")
+app = FastAPI(title="Doosan MDL API")
 
 UPLOAD_DIR = Path("output") / "parser_service" / "uploads"
 OUTPUT_DIR = Path("output") / "parser_service" / "parsed"
@@ -23,8 +23,11 @@ def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
+PreviewPages = Annotated[int | None, Query(gt=0)]
+
+
 @app.post("/parse")
-def parse(file: Annotated[UploadFile, File(...)], max_pages: int | None = None) -> dict[str, object]:
+def parse(file: Annotated[UploadFile, File(...)], preview_pages: PreviewPages = None) -> dict[str, object]:
     """Parse an uploaded PDF and return output file metadata."""
     UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     input_path = UPLOAD_DIR / Path(file.filename or "upload.pdf").name
@@ -36,7 +39,7 @@ def parse(file: Annotated[UploadFile, File(...)], max_pages: int | None = None) 
     parser_output = parse_pdf_to_output(
         input_path=input_path,
         output_dir=OUTPUT_DIR / input_path.stem,
-        max_num_pages=max_pages,
+        preview_pages=preview_pages,
     )
     return _response(parser_output)
 
