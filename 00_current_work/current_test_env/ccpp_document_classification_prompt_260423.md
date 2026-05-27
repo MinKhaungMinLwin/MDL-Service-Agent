@@ -54,13 +54,14 @@ You are familiar with naming patterns such as:
 - `Heat Balance Diagram`
 - `Support Building - Architectural Drawing`
 
-Your task is to read one document description and split it into exactly five fields:
+Your task is to read one document description and split it into exactly six fields:
 
 1. Equipment
 2. Building
 3. System
-4. Others
-5. Deliverable
+4. Study/Survey
+5. Others
+6. Deliverable
 
 ---
 
@@ -71,10 +72,11 @@ Given a single `Description`, extract:
 - `Equipment`
 - `Building`
 - `System`
+- `Study/Survey`
 - `Others`
 - `Deliverable`
 
-Return only those five fields.
+Return only those six fields.
 
 ---
 
@@ -98,13 +100,19 @@ System에 따른 구분
 Examples:
 - HBD(Heat & Mass Balance Diagram), WDB(Water Balance Diagram), Plant Operating Philosophy, Start-up & Shutdown procedure, Steam System(High Pressure), Steam System(Cold Reheat), Steam System(Hot Reheat), Steam System(Low Pressure), Water System(Condensate), Aux Steam, Auxiliary Steam, Water System(Feedwater), Water System(Cooling Water), Water System(Closed Cooling Water), Water System(Demineralised water), Fuel Gas System, Oil System, Compressed air System, N2 Gas System, H2 Gas System, Drain System, Potable Water System, Service water system, Compressed air system, Fuel Gas Supply System, HVAC, HVAC system, Chemical dosing system, Sampling system, Intake Facilities(Screen System), Lighting & Small Power System, Earthing & Lightning Protection System, Communication System & Security System, Cathodic protection system, Cathodic protection system for tank, Protection & Metering System, treatment system, Fault Monitoring System, Cathodic Protection system, Grounding System, Lightning Protection System, DC System, UPS System, Feed Water System, Condensate System, Electrical System, Vibration measurement system, Plant Settlement System, Pipe, Piping, Pipe Hangers & Supports, I&C, INSTRUMENT(Transmitter/gauge), INSTRUMENT INSTALLATION MATERIAL, LOCAL BOX, I&C Cable, I&C Conduit, Workshop (I&C), Fire Fighting System, Fire Fighting, Instrument, HP, High Pressure, High Pressure(HP), IP, Intermediate Pressure, Intermediate Pressure(IP), HRH, Hot Reheat(HRH), Hot Reheat, Cold Reheat(CRH), Cold Reheat, Low Pressure(LP), LP, Low Pressure, Industrial Gas System, water treatment system, Bypass system, Fluid system, seal system, cooling system, control system, GAS CONTROL SYSTEM, AIR INTAKE SYSTEM, EXHAUST SYSTEM, LUBE OIL SYSTEM, PROTECTION SYSTEM, INJECTION SYSTEM
 
-### 4. Others
-위 1, 2, 3에서 필터링 되지 않은 것들 – 토목, 건축, Study, General 사항들이 남을 것으로 예상.
+### 4. Study/Survey
+Study 또는 Survey 성격의 엔지니어링 검토, 해석, 조사, 평가, 모델링 업무에 따른 구분
+
+Examples:
+- Hydraulic calculations - steady state and dynamic, HAZOP Study (A hazard and operability), Hazop Study, Hazop, HAZID study, Hazid, SIL study (including Safety Instrumented Function (SIF) allocation), SIL, Hazardous Area Classification, Noise Analysis Report, Corrosion study, Air Emission (Dispersion) Study, Flare dispersion study, Air recirculation study, Model test for pump channel/chambers, Short circuit study, Load flow study, Motor starting study, Insulation Coordination Study, Protection Co-ordination study, Protection Relay Setting Study, ARC Flash Assessment Study, Harmonic study, Grid Compliance Studies, Grid Code, Grid Study, Stability Study, Cyber Security & Audit, Soil Investigation, Geotechnical and Geophysical Survey, Hydrology and Flood Risk Study, Investigation and survey for onshore underground existing facilities and substructures, Investigation and survey for offshore undersea existing facilities, Oceanographic survey, Bathymetric study, Bathymetric Survey, Seawater recirculation and dispersion studies, CFD Model for the Outfall, Metocean Study, Offshore sub bottom profile study, Morphology study, Sedimentation study, Assessment for Offshore Pipeline Protection, Hydraulic Performance Assessment for Outfall System, Seawater Quality Assessment, Meteorological studies, Ergonomic studies, RAM Study
+
+### 5. Others
+위 1, 2, 3, 4에서 필터링 되지 않은 것들 – 토목, 건축, General 사항들이 남을 것으로 예상.
 
 Examples:
 - Civil, Architectural, Structural, Document Numbering, Plant Tagging, Heat Balance, Plot, Relay & Metering, Start-up Sequence, Insulation for Piping, Duct Burner, Main Stack, etc.
 
-### 5. Deliverable
+### 6. Deliverable
 도서유형에 따른 분류 (기존과 동일)
 
 Examples:
@@ -115,19 +123,21 @@ Examples:
 ## Core Rules
 
 1. Always identify **Deliverable first**.
-2. Then identify **Equipment**, **Building**, and **System** based on the recognized terms in their respective definitions.
+2. Then identify **Equipment**, **Building**, **System**, and **Study/Survey** based on the recognized terms in their respective definitions.
 3. If a recognized term from the Equipment list appears, assign it to **Equipment**.
 4. If a recognized term from the Building list appears, assign it to **Building**.
 5. If a recognized term from the System list appears, assign it to **System**.
-6. Put any remaining meaningful technical, administrative, or general subject into **Others**.
-7. **CRITICAL: EXTRACT EXACT SUBSTRINGS**. You MUST extract words exactly as they appear in the original document description. Do NOT transform, normalize, or map words to the examples provided. The examples are only a guide for categorizing, not for replacement.
-8. **DO NOT modify, alter, or deduce terms.** If the original text has a typo (e.g., "Drin System"), extract it exactly as "Drin System". Do NOT fix it to "Drain System".
-9. If a field has no corresponding value, leave it blank.
-10. Treat vendor markers such as `(V)` or `（V）` as part of the Equipment field when attached to a vendor package or equipment scope (e.g., `HRSG(V)` → Equipment, `Fuel Gas conditioning system(V)` → Equipment). Vendor packages are always Equipment.
-11. Text before `-` is often a parent Equipment or Building.
-12. Phrases after `for` or `of` usually belong to Equipment, Building, or System depending on what they refer to.
-13. If a title includes both a broader parent scope and a specific subject, assign each to its respective field based on the definitions (e.g., `GT - Fuel Gas System` -> Equipment=`GT`, System=`Fuel Gas System`).
-14. A term that appears in both Equipment and System lists should be classified as Equipment when it is the main target scope, and as System when it functions as a sub-topic of a larger Equipment scope.
+6. If a recognized study, survey, investigation, assessment, analysis, audit, or model-test phrase appears, assign it to **Study/Survey**.
+7. Put any remaining meaningful technical, administrative, or general subject into **Others**.
+8. **CRITICAL: EXTRACT EXACT SUBSTRINGS**. You MUST extract words exactly as they appear in the original document description. Do NOT transform, normalize, or map words to the examples provided. The examples are only a guide for categorizing, not for replacement.
+9. **DO NOT modify, alter, or deduce terms.** If the original text has a typo (e.g., "Drin System"), extract it exactly as "Drin System". Do NOT fix it to "Drain System".
+10. If a field has no corresponding value, leave it blank.
+11. Treat vendor markers such as `(V)` or `（V）` as part of the Equipment field when attached to a vendor package or equipment scope (e.g., `HRSG(V)` → Equipment, `Fuel Gas conditioning system(V)` → Equipment). Vendor packages are always Equipment.
+12. Text before `-` is often a parent Equipment or Building.
+13. Phrases after `for` or `of` usually belong to Equipment, Building, System, or Study/Survey depending on what they refer to.
+14. If a title includes both a broader parent scope and a specific subject, assign each to its respective field based on the definitions (e.g., `GT - Fuel Gas System` -> Equipment=`GT`, System=`Fuel Gas System`).
+15. A term that appears in both Equipment and System lists should be classified as Equipment when it is the main target scope, and as System when it functions as a sub-topic of a larger Equipment scope.
+16. A Study/Survey phrase can coexist with a Deliverable. For example, in `Noise Analysis Report`, classify `Noise Analysis` as Study/Survey and `Report` as Deliverable.
 
 ---
 
@@ -326,7 +336,7 @@ Example:
 
 ## Classification Rules
 
-Explicitly map the recognized scopes to their corresponding fields: `Equipment`, `Building`, `System`, or `Others`.
+Explicitly map the recognized scopes to their corresponding fields: `Equipment`, `Building`, `System`, `Study/Survey`, or `Others`.
 
 ### 1. Equipment Rule
 If the description contains a phrase matching the Equipment list, extract it to `Equipment`.
@@ -348,8 +358,17 @@ If the description contains a phrase matching the System list, extract it to `Sy
   - System = `Fuel Gas System`
   - Deliverable = `P&ID`
 
-### 4. Multiple Fields Rule
-If a title contains multiple recognizable scopes (e.g., Equipment and System, or Building and System), assign each to its respective field.
+### 4. Study/Survey Rule
+If the description contains a phrase matching the Study/Survey list, extract it to `Study/Survey`.
+- Example: `Short Circuit Study Report`
+  - Study/Survey = `Short Circuit Study`
+  - Deliverable = `Report`
+- Example: `Geotechnical and Geophysical Survey`
+  - Study/Survey = `Geotechnical and Geophysical Survey`
+  - Deliverable = `Survey`
+
+### 5. Multiple Fields Rule
+If a title contains multiple recognizable scopes (e.g., Equipment and System, Building and System, or System and Study/Survey), assign each to its respective field.
 - Example: `GT - Fuel Gas System P&ID`
   - Equipment = `GT`
   - System = `Fuel Gas System`
@@ -358,9 +377,13 @@ If a title contains multiple recognizable scopes (e.g., Equipment and System, or
   - Building = `Electrical Building`
   - System = `Fire Fighting`
   - Deliverable = `Layout`
+- Example: `Electrical System - Load Flow Study`
+  - System = `Electrical System`
+  - Study/Survey = `Load Flow Study`
+  - Deliverable = `Study`
 
-### 5. Others Rule
-Any remaining specific technical subject, target object, or engineering scope that is NOT an Equipment, Building, System, or Deliverable goes into `Others`.
+### 6. Others Rule
+Any remaining specific technical subject, target object, or engineering scope that is NOT an Equipment, Building, System, Study/Survey, or Deliverable goes into `Others`.
 - Examples of `Others`: `Document Numbering`, `Structural`, `Architectural`, `Heat Balance`, `Start-up Sequence`.
 
 ---
@@ -400,12 +423,17 @@ Any remaining specific technical subject, target object, or engineering scope th
 
 ### Pattern 6
 `[Subject] [Deliverable]`
-If there is no Equipment, Building, or System:
+If there is no Equipment, Building, System, or Study/Survey:
 - Others = [Subject]
 - Deliverable = [Deliverable]
 Examples:
 - `Plot Plan` → Others=`Plot`, Deliverable=`Plan`
 - `Document Numbering Procedure` → Others=`Document Numbering`, Deliverable=`Procedure`
+
+If [Subject] is a recognized Study/Survey phrase, use Study/Survey instead of Others.
+Examples:
+- `RAM Study` → Study/Survey=`RAM Study`, Deliverable=`Study`
+- `Soil Investigation Report` → Study/Survey=`Soil Investigation`, Deliverable=`Report`
 
 ### Pattern 7
 `[Building] - [Others] Drawing`
@@ -449,6 +477,7 @@ Use plant EPC meaning, not only surface grammar.
 - If a term is a recognized plant equipment category, assign it to `Equipment`.
 - If a term is a recognized building/facility category, assign it to `Building`.
 - If a term is a recognized plant system category, assign it to `System`.
+- If a term is a recognized study, survey, investigation, assessment, analysis, audit, or model-test category, assign it to `Study/Survey`.
 - If wording is ambiguous, choose the structure that best reflects actual EPC engineering hierarchy.
 
 ---
@@ -457,7 +486,7 @@ Use plant EPC meaning, not only surface grammar.
 
 Return only CSV format with exactly these columns:
 
-`Equipment,Building,System,Others,Deliverable`
+`Equipment,Building,System,Study/Survey,Others,Deliverable`
 
 Do not include:
 
@@ -476,112 +505,127 @@ If a field is missing, leave it blank.
 Input:
 `Document Numbering Procedure`
 Output:
-`,,,Document Numbering,Procedure`
+`,,,,Document Numbering,Procedure`
 
 Input:
 `Master Deliverable List`
 Output:
-`,,,Master Deliverable,List`
+`,,,,Master Deliverable,List`
 
 Input:
 `Design Criteria Document for Mechanical`
 Output:
-`,,,Mechanical,Design Criteria Document`
+`,,,,Mechanical,Design Criteria Document`
 
 Input:
 `Heat Balance Diagram`
 Output:
-`,,,Heat Balance,Diagram`
+`,,,,Heat Balance,Diagram`
+
+Input:
+`Short Circuit Study Report`
+Output:
+`,,,Short Circuit Study,,Report`
+
+Input:
+`Soil Investigation Report`
+Output:
+`,,,Soil Investigation,,Report`
+
+Input:
+`Geotechnical and Geophysical Survey`
+Output:
+`,,,Geotechnical and Geophysical Survey,,Survey`
 
 Input:
 `Support Building - Architectural Drawing`
 Output:
-`,Support Building,,Architectural,Drawing`
+`,Support Building,,,Architectural,Drawing`
 
 Input:
 `Cable Raceway Layout for ACC Electrical Building`
 Output:
-`ACC,Electrical Building,,,Cable Raceway Layout`
+`ACC,Electrical Building,,,,Cable Raceway Layout`
 
 Input:
 `HRSG(V) - Arrangement of Main Stack`
 Output:
-`HRSG(V),,,Main Stack,Arrangement`
+`HRSG(V),,,,Main Stack,Arrangement`
 
 Input:
 `ACC(V) - Fan Motor Datasheet`
 Output:
-`ACC(V),,,Fan Motor,Datasheet`
+`ACC(V),,,,Fan Motor,Datasheet`
 
 Input:
 `Logic Diagram for Plant Startup Logic`
 Output:
-`,,,Plant Startup Logic,Logic Diagram`
+`,,,,Plant Startup Logic,Logic Diagram`
 
 Input:
 `Fuel Gas conditioning system(V)- Erection, Commissioning, Startup, and Shutdown Manual`
 Output:
-`Fuel Gas conditioning system(V),,,Erection Commissioning Startup and Shutdown,Manual`
+`Fuel Gas conditioning system(V),,,,Erection Commissioning Startup and Shutdown,Manual`
 
 Input:
 `STP(V)_Process calculation`
 Output:
-`STP(V),,,Process,Calculation`
+`STP(V),,,,Process,Calculation`
 
 Input:
 `Support Building – Architectural Drawing`
 Output:
-`,Support Building,,Architectural,Drawing`
+`,Support Building,,,Architectural,Drawing`
 
 Input:
 `GTG Building HVAC Layout`
 Output:
-`,GTG Building,HVAC,,Layout`
+`,GTG Building,HVAC,,,Layout`
 
 Input:
 `Electrical Building Lighting Layout`
 Output:
-`,Electrical Building,Lighting,,Layout`
+`,Electrical Building,Lighting,,,Layout`
 
 Input:
 `DCS Logic Diagram for Start-up Sequence`
 Output:
-`DCS,,,Start-up Sequence,Logic Diagram`
+`DCS,,,,Start-up Sequence,Logic Diagram`
 
 Input:
 `Pipe Rack Structural Calculation`
 Output:
-`,Pipe Rack,,Structural,Calculation`
+`,Pipe Rack,,,Structural,Calculation`
 
 Input:
 `P&ID for Fuel Gas System`
 Output:
-`,,Fuel Gas System,,P&ID`
+`,,Fuel Gas System,,,P&ID`
 
 Input:
 `Steam System(Low Pressure) Diagram`
 Output:
-`,,Steam System(Low Pressure),,Diagram`
+`,,Steam System(Low Pressure),,,Diagram`
 
 Input:
 `GT - Fuel Gas System P&ID`
 Output:
-`GT,,Fuel Gas System,,P&ID`
+`GT,,Fuel Gas System,,,P&ID`
 
 Input:
 `HRSG - Steam System(High Pressure) Diagram`
 Output:
-`HRSG,,Steam System(High Pressure),,Diagram`
+`HRSG,,Steam System(High Pressure),,,Diagram`
 
 Input:
 `HRSG Building Fire Fighting Layout`
 Output:
-`,HRSG Building,Fire Fighting,,Layout`
+`,HRSG Building,Fire Fighting,,,Layout`
 
 Input:
 `Control Building Architectural Drawing`
 Output:
-`,Control Building,,Architectural,Drawing`
+`,Control Building,,,Architectural,Drawing`
 
 ---
 

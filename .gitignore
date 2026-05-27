@@ -19,6 +19,7 @@ venv/
 .env
 .env.local
 output/
+.claude
 
 # OS/editor noise
 .DS_Store
