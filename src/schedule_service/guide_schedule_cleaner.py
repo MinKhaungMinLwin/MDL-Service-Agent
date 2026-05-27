@@ -40,12 +40,6 @@ class CleanScheduleRow:
     start_date: str
     finish_date: str
     search_text: str
-    raw_wbs_level: str
-    raw_trimmed_id: str
-    raw_activity_name: str
-    raw_start: str
-    raw_finish: str
-    raw_wbs_level_extra: str
 
 
 def clean_guide_schedule(
@@ -123,12 +117,6 @@ def _clean_rows(input_path: Path, worksheet: Any) -> list[CleanScheduleRow]:
                 start_date=start_date,
                 finish_date=finish_date,
                 search_text=search_text,
-                raw_wbs_level=raw_wbs_level,
-                raw_trimmed_id=raw_trimmed_id,
-                raw_activity_name=raw_activity_name,
-                raw_start=raw_start,
-                raw_finish=raw_finish,
-                raw_wbs_level_extra=raw_wbs_level_extra,
             )
         )
 
@@ -208,7 +196,7 @@ def _build_metadata(
         "row_type_counts": row_type_counts,
         "generated_at": datetime.now().isoformat(timespec="seconds"),
         "notes": [
-            "Raw source columns are preserved as raw_* fields.",
+            "Source workbook is kept separately under 04_data/schedule_sources/raw.",
             "start_date and finish_date are normalized when a known date format is detected.",
             "wbs_path is derived from the latest parent WBS rows above each row.",
         ],
