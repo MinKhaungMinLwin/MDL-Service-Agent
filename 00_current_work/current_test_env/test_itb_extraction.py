@@ -32,7 +32,7 @@ TOKEN_OUTPUT_FILE = str(OUTPUT_DIR / "output_itb_tokens.csv")
 CHUNKS_DIR = BASE_DIR / "data" / "itb_chunks"
 OUTPUT_HEADER = [
     "Document", "Page", "1st Depth", "2nd Depth", "3rd Depth",
-    "4th Depth", "5th Depth", "Keywords", "Search Query", "Chunk Text"
+    "4th Depth", "5th Depth", "Keywords", "Search Query", "Search Query Source", "Chunk Text"
 ]
 TOKEN_HEADER = ["Document", "Page", "Prompt Tokens", "Completion Tokens", "Total Tokens", "Chunk Text"]
 
@@ -45,6 +45,8 @@ TARGETS = [
         "max_page": 124
     }
 ]
+
+MAX_TEST_CHUNKS = int(os.getenv("MAX_TEST_CHUNKS", "0"))
 
 def header_matches(path, expected_header):
     if not os.path.exists(path) or os.path.getsize(path) == 0:
@@ -118,6 +120,8 @@ def main():
                 pages = c.get("page_num", [])
                 if any(target["min_page"] <= p <= target["max_page"] for p in pages):
                     target_chunks.append(c)
+            if MAX_TEST_CHUNKS > 0:
+                target_chunks = target_chunks[:MAX_TEST_CHUNKS]
                     
             print(f"[{doc_name}] Found {len(target_chunks)} chunks for pages {target['min_page']}~{target['max_page']}")
             
@@ -177,6 +181,7 @@ def main():
                     else:
                         depth1, depth2, depth3, depth4, depth5, keywords, search_query = "", "", "", "", "", "", ""
                     
+                    search_query_source = "llm" if search_query.strip() else "fallback"
                     # Ensure Search Query is never empty
                     if not search_query.strip():
                         import re
@@ -203,7 +208,10 @@ def main():
                         search_query = " ".join(fallback_terms).strip()
                         
                     # 1. 기존 추출 결과 저장
-                    writer.writerow([doc_name, page_str, depth1, depth2, depth3, depth4, depth5, keywords, search_query, text])
+                    writer.writerow([
+                        doc_name, page_str, depth1, depth2, depth3, depth4, depth5,
+                        keywords, search_query, search_query_source, text
+                    ])
                     f_out.flush()
                     
                     # 2. 토큰 수 별도 파일에 저장
@@ -212,7 +220,7 @@ def main():
                     
                     print(f"OK (Tokens: {total_tokens})")
                 except Exception as e:
-                    writer.writerow([doc_name, page_str, "ERROR", str(e), "", "", "", "", "", text])
+                    writer.writerow([doc_name, page_str, "ERROR", str(e), "", "", "", "", "", "", text])
                     token_writer.writerow([doc_name, page_str, 0, 0, 0, text])
                     print("FAILED")
                     

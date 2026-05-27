@@ -205,7 +205,7 @@ def process_file(csv_path, output_path, embedding_service, conn):
     # 데이터프레임 저장
     base_cols = [
         'Document', 'Page', '1st Depth', '2nd Depth', '3rd Depth', '4th Depth',
-        '5th Depth', 'Depth_Context', 'Keywords', 'Search Query', 'Search_Queries', 'Chunk Text'
+        '5th Depth', 'Depth_Context', 'Keywords', 'Search Query', 'Search Query Source', 'Search_Queries', 'Chunk Text'
     ]
     match_cols = [f"Matched_Doc_{i+1}" for i in range(20)]
     
