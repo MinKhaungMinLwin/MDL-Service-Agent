@@ -71,8 +71,11 @@ class DocumentClassification(BaseModel):
     system: str = Field(
         description="System scope (e.g., Fuel Gas System, HVAC). Empty string if none applies."
     )
+    study_survey: str = Field(
+        description="Study/survey scope (e.g., HAZOP Study, Soil Investigation, Load Flow Study). Empty string if none applies."
+    )
     others: str = Field(
-        description="Other specific technical subjects, target objects, or engineering scopes not covered by equipment, building, or system. May contain commas, slashes, or special chars. Empty string if none applies."
+        description="Other specific technical subjects, target objects, or engineering scopes not covered by equipment, building, system, or study/survey. May contain commas, slashes, or special chars. Empty string if none applies."
     )
     deliverable: str = Field(
         description="Document type or engineering output (e.g., P&ID, Datasheet, Sizing Calculation, Architectural Drawing)."
@@ -106,6 +109,7 @@ def load_system_prompt(path: str) -> str:
         "  - `equipment` (string, may be empty)\n"
         "  - `building` (string, may be empty)\n"
         "  - `system` (string, may be empty)\n"
+        "  - `study_survey` (string, may be empty)\n"
         "  - `others` (string, may contain commas, slashes, parentheses)\n"
         "  - `deliverable` (string)\n\n"
         "For batch input (multiple numbered descriptions), return ONE object per description "
@@ -113,7 +117,8 @@ def load_system_prompt(path: str) -> str:
         "The number of results MUST equal the number of input descriptions.\n\n"
         "Internal commas in any field are now SAFE — keep them as-is. "
         "Example: a building name like \"Unit MV/LV Switchgear Building - 11, 12, 13\" "
-        "should be placed in `building` or `others` exactly as written, including the commas."
+        "should be placed in `building` or `others` exactly as written, including the commas. "
+        "Map the prompt's `Study/Survey` field to `study_survey`."
     )
     return content
 
@@ -188,9 +193,9 @@ def classify_batch(
     system_prompt: str,
     titles: list[str],
     max_retries: int = 3,
-) -> list[tuple[str, str, str, str, str, str]]:
+) -> list[tuple[str, str, str, str, str, str, str]]:
     """
-    배치 분류. (equipment, building, system, others, deliverable, note) 튜플 리스트 반환.
+    배치 분류. (equipment, building, system, study_survey, others, deliverable, note) 튜플 리스트 반환.
     Structured Output을 사용하므로 CSV 파싱이 필요 없음.
     """
     if len(titles) == 1:
@@ -243,7 +248,15 @@ def classify_batch(
 
             # 결과 변환
             results = [
-                (r.equipment.strip(), r.building.strip(), r.system.strip(), r.others.strip(), r.deliverable.strip(), "")
+                (
+                    r.equipment.strip(),
+                    r.building.strip(),
+                    r.system.strip(),
+                    r.study_survey.strip(),
+                    r.others.strip(),
+                    r.deliverable.strip(),
+                    "",
+                )
                 for r in parsed.results
             ]
 
@@ -252,7 +265,7 @@ def classify_batch(
                 missing = len(titles) - len(results)
                 print(f"  [WARN] Model returned {len(results)} but expected {len(titles)}. "
                       f"Padding {missing} empty rows.")
-                results.extend([("", "", "", "", "", "missing from batch response")] * missing)
+                results.extend([("", "", "", "", "", "", "missing from batch response")] * missing)
             elif len(results) > len(titles):
                 print(f"  [WARN] Model returned {len(results)} but expected {len(titles)}. Truncating.")
                 results = results[:len(titles)]
@@ -270,14 +283,14 @@ def classify_batch(
                 print(f"  Rate limited. Waiting {wait}s...")
                 time.sleep(wait)
             elif "400" in err_msg or "content_filter" in err_msg.lower() or "BadRequest" in err_type:
-                print(f"  [SKIP] Content filter or bad request. Returning empty.")
-                return [("", "", "", "", "", err_msg[:200])] * len(titles)
+                print("  [SKIP] Content filter or bad request. Returning empty.")
+                return [("", "", "", "", "", "", err_msg[:200])] * len(titles)
             elif attempt < max_retries - 1:
                 time.sleep(2)
             else:
                 break
 
-    return [("", "", "", "", "", last_error[:200])] * len(titles)
+    return [("", "", "", "", "", "", last_error[:200])] * len(titles)
 
 
 # ─────────────────────────────────────────────────────────────
@@ -295,13 +308,13 @@ def classify_file(client: AzureOpenAI, system_prompt: str, filepath: str, output
     # print(f"  Extracted: {len(records)} titles (Limited to 100)")
 
     if not records:
-        print(f"  No titles found. Skipping.")
+        print("  No titles found. Skipping.")
         return
 
     classified = []
     total_batches = (len(records) + BATCH_SIZE - 1) // BATCH_SIZE
 
-    for batch_idx in tqdm(range(total_batches), desc=f"  Classifying", unit="batch"):
+    for batch_idx in tqdm(range(total_batches), desc="  Classifying", unit="batch"):
         start = batch_idx * BATCH_SIZE
         end = min(start + BATCH_SIZE, len(records))
         batch_records = records[start:end]
@@ -309,7 +322,7 @@ def classify_file(client: AzureOpenAI, system_prompt: str, filepath: str, output
 
         results = classify_batch(client, system_prompt, batch_titles)
 
-        for rec, (eq, bld, sys, oth, deliv, note) in zip(batch_records, results):
+        for rec, (eq, bld, system_scope, study_survey, oth, deliv, note) in zip(batch_records, results):
             classified.append({
                 "Source File": rec["source"],
                 "Sheet": rec["sheet"],
@@ -317,7 +330,8 @@ def classify_file(client: AzureOpenAI, system_prompt: str, filepath: str, output
                 "Title": rec["title"],
                 "Equipment": eq,
                 "Building": bld,
-                "System": sys,
+                "System": system_scope,
+                "Study/Survey": study_survey,
                 "Others": oth,
                 "Deliverable": deliv,
                 "Note": note,
@@ -328,7 +342,7 @@ def classify_file(client: AzureOpenAI, system_prompt: str, filepath: str, output
 
     # CSV 저장 (csv 모듈이 내부 쉼표를 자동 escape 처리)
     fieldnames = ["Source File", "Sheet", "Document No", "Title",
-                  "Equipment", "Building", "System", "Others", "Deliverable", "Note"]
+                  "Equipment", "Building", "System", "Study/Survey", "Others", "Deliverable", "Note"]
     with open(output_path, "w", newline="", encoding="utf-8-sig") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames, quoting=csv.QUOTE_MINIMAL)
         writer.writeheader()
