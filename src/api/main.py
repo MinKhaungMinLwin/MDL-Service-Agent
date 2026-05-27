@@ -9,12 +9,14 @@ from typing import Annotated
 from fastapi import FastAPI, File, Query, UploadFile
 from loguru import logger
 
+from chunker_service.service import ChunkerOutput, chunk_docling_json_to_output
 from parser_service.service import ParserOutput, parse_pdf_to_output
 
 app = FastAPI(title="Doosan MDL API")
 
 UPLOAD_DIR = Path("output") / "parser_service" / "uploads"
 OUTPUT_DIR = Path("output") / "parser_service" / "parsed"
+CHUNK_OUTPUT_DIR = Path("output") / "chunker_service" / "chunks"
 
 
 @app.get("/health")
@@ -44,6 +46,22 @@ def parse(file: Annotated[UploadFile, File(...)], preview_pages: PreviewPages = 
     return _response(parser_output)
 
 
+MaxTokens = Annotated[int, Query(gt=0)]
+
+
+@app.post("/chunk")
+def chunk(document_id: Annotated[str, Query(min_length=1)], max_tokens: MaxTokens = 512) -> dict[str, object]:
+    """Chunk a parser-service Docling JSON output and return chunk metadata."""
+    input_path = OUTPUT_DIR / document_id / "docling.json"
+    chunker_output = chunk_docling_json_to_output(
+        input_path=input_path,
+        document_id=document_id,
+        output_dir=CHUNK_OUTPUT_DIR / document_id,
+        max_tokens=max_tokens,
+    )
+    return _chunk_response(chunker_output)
+
+
 def _response(parser_output: ParserOutput) -> dict[str, object]:
     """Build the API response for a parser output."""
     return {
@@ -54,5 +72,20 @@ def _response(parser_output: ParserOutput) -> dict[str, object]:
         "files": {
             "json": str(parser_output.json_path),
             "markdown": str(parser_output.markdown_path),
+        },
+    }
+
+
+def _chunk_response(chunker_output: ChunkerOutput) -> dict[str, object]:
+    """Build the API response for a chunker output."""
+    return {
+        "document_id": chunker_output.document_id,
+        "input_path": str(chunker_output.input_path),
+        "output_dir": str(chunker_output.output_dir),
+        "chunker": chunker_output.chunker,
+        "max_tokens": chunker_output.max_tokens,
+        "chunk_count": chunker_output.chunk_count,
+        "files": {
+            "chunks": str(chunker_output.chunks_path),
         },
     }

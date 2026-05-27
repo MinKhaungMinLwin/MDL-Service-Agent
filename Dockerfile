@@ -29,7 +29,11 @@ COPY --chown=app:app src ./src
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev
 
-RUN mkdir -p /home/app/.cache/huggingface /app/output/parser_service/uploads /app/output/parser_service/parsed && \
+RUN mkdir -p \
+        /home/app/.cache/huggingface \
+        /app/output/parser_service/uploads \
+        /app/output/parser_service/parsed \
+        /app/output/chunker_service/chunks && \
     chown -R app:app /home/app/.cache /app/output
 
 USER app

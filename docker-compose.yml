@@ -6,6 +6,7 @@ services:
     volumes:
       - ./output/parser_service/parsed:/app/output/parser_service/parsed
       - ./output/parser_service/uploads:/app/output/parser_service/uploads
+      - ./output/chunker_service/chunks:/app/output/chunker_service/chunks
     healthcheck:
       test:
         [
