@@ -25,8 +25,16 @@ script_dir = os.path.dirname(os.path.abspath(__file__))
 
 # 프롬프트 파일 경로 (동일 폴더 내)
 PROMPT_FILE = os.path.join(script_dir, "itb_keyword_extraction_prompt.md")
+ITB_SECTION = os.getenv("ITB_SECTION", "7").strip()
+SECTION_CONFIG = {
+    "6": {"min_page": 79, "max_page": 97},
+    "7": {"min_page": 97, "max_page": 124},
+}
+if ITB_SECTION not in SECTION_CONFIG:
+    raise ValueError("ITB_SECTION must be 6 or 7")
+
 # 결과를 저장할 출력 파일
-OUTPUT_FILE = str(OUTPUT_DIR / "output_itb_section7_focused.csv")
+OUTPUT_FILE = str(OUTPUT_DIR / f"output_itb_section{ITB_SECTION}_focused.csv")
 # 토큰 사용량을 별도로 기록할 파일
 TOKEN_OUTPUT_FILE = str(OUTPUT_DIR / "output_itb_tokens.csv")
 CHUNKS_DIR = BASE_DIR / "data" / "itb_chunks"
@@ -41,8 +49,8 @@ TARGETS = [
     {
         "file": "R&N_ITB_chunks.json",
         "doc_name": "R&N_ITB",
-        "min_page": 97,
-        "max_page": 124
+        "min_page": SECTION_CONFIG[ITB_SECTION]["min_page"],
+        "max_page": SECTION_CONFIG[ITB_SECTION]["max_page"]
     }
 ]
 
