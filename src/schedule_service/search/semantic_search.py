@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-import hashlib
-import json
 import math
 import os
+from datetime import datetime
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -19,16 +18,11 @@ class SemanticIndex:
 
     @classmethod
     def build(cls, activities: list[ScheduleActivity], cache_dir: Path) -> "SemanticIndex":
-        cache_dir.mkdir(parents=True, exist_ok=True)
+        del cache_dir
         service = AzureEmbeddingService()
         target_texts = [activity.target_text for activity in activities]
-        cache_path = cache_dir / service.cache_filename("schedule_activities", target_texts)
-        if cache_path.exists():
-            payload = json.loads(cache_path.read_text(encoding="utf-8"))
-            return cls(payload["embeddings"])
-
+        _log(f"Embedding {len(target_texts)} schedule activity target texts")
         embeddings = service.embed_texts(target_texts)
-        cache_path.write_text(json.dumps({"embeddings": embeddings}), encoding="utf-8")
         return cls(embeddings)
 
     def score(self, query: str) -> list[float]:
@@ -61,6 +55,7 @@ class AzureEmbeddingService:
         cleaned = [text if text.strip() else "N/A" for text in texts]
         for start in range(0, len(cleaned), self.batch_size):
             batch = cleaned[start : start + self.batch_size]
+            _log(f"Embedding batch {start + 1}-{start + len(batch)} of {len(cleaned)}")
             response = self.client.embeddings.create(
                 model=self.model,
                 input=batch,
@@ -68,16 +63,6 @@ class AzureEmbeddingService:
             )
             embeddings.extend(item.embedding for item in response.data)
         return embeddings
-
-    def cache_filename(self, prefix: str, texts: list[str]) -> str:
-        digest_input = json.dumps(
-            {"model": self.model, "dimensions": self.dimensions, "texts": texts},
-            ensure_ascii=False,
-            sort_keys=True,
-        )
-        digest = hashlib.sha256(digest_input.encode("utf-8")).hexdigest()[:16]
-        return f"{prefix}_{self.model}_{self.dimensions}_{digest}.json"
-
 
 def _normalize_vector(vector: list[float]) -> list[float]:
     norm = math.sqrt(sum(value * value for value in vector))
@@ -106,3 +91,8 @@ def _load_env_file(path: Path) -> None:
             continue
         key, value = stripped.split("=", 1)
         os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
+
+
+def _log(message: str) -> None:
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    print(f"[{timestamp}] {message}", flush=True)

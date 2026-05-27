@@ -6,6 +6,7 @@ import argparse
 import csv
 import re
 import sys
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -36,26 +37,55 @@ def map_file(
     use_llm: bool = True,
     limit: int = 0,
 ) -> tuple[Path, Path]:
+    _log(f"Reading input CSV: {input_csv}")
     rows = _read_csv(input_csv)
+    original_row_count = len(rows)
     if limit > 0:
         rows = rows[:limit]
+        _log(f"Limit enabled: processing first {len(rows)} of {original_row_count} rows")
     if not rows:
         raise ValueError(f"No rows found in {input_csv}")
 
+    _log(f"Building keyword index for {len(schedule_activities)} schedule activities")
     bm25 = BM25Index([activity.target_text for activity in schedule_activities])
-    semantic_index = SemanticIndex.build(schedule_activities, output_dir / "cache") if use_semantic else None
-    llm_validator = ScheduleLLMValidator() if use_llm else None
+    _log("Keyword index ready")
+
+    if use_semantic:
+        _log(f"Building semantic index with cache dir: {output_dir / 'cache'}")
+        semantic_index = SemanticIndex.build(schedule_activities, output_dir / "cache")
+        _log("Semantic index ready")
+    else:
+        semantic_index = None
+        _log("Semantic search disabled")
+
+    if use_llm:
+        _log("Initializing LLM validator")
+        llm_validator = ScheduleLLMValidator()
+        _log("LLM validator ready")
+    else:
+        llm_validator = None
+        _log("LLM validation disabled")
 
     mapped_rows: list[dict[str, Any]] = []
-    for row in rows:
+    for index, row in enumerate(rows, start=1):
         query_text = _query_text(row)
+        _log(f"Processing row {index}/{len(rows)} | query: {_shorten(query_text)}")
         candidates = _rank_candidates(query_text, schedule_activities, bm25, semantic_index, retrieve_k, top_k)
+        _log(f"Row {index}: retrieved top {len(candidates)} candidates after rerank")
         llm_selection = llm_validator.select_activity(query_text, candidates) if llm_validator else _empty_llm_selection()
+        if llm_validator:
+            _log(
+                "Row "
+                f"{index}: LLM selected {llm_selection.get('llm_selected_activity_id', '')} "
+                f"(rank {llm_selection.get('llm_selected_rank', '')}, "
+                f"status {llm_selection.get('llm_status', '')})"
+            )
         mapped_rows.append(_format_output_row(input_csv, row, query_text, candidates, llm_selection, top_k))
 
     output_stem = input_csv.stem.replace("output_match_", "schedule_mapping_")
     if limit > 0:
         output_stem = f"{output_stem}_limit{limit}"
+    _log(f"Writing outputs with stem: {output_stem}")
     return write_mapping_outputs(output_dir, output_stem, mapped_rows)
 
 
@@ -180,7 +210,9 @@ def main() -> None:
     parser.add_argument("inputs", nargs="+", type=Path, help="One or more output_match_*.csv files to map.")
     args = parser.parse_args()
 
+    _log(f"Loading schedule activities: {args.schedule}")
     activities = load_schedule_activities(args.schedule)
+    _log(f"Loaded {len(activities)} schedule activities")
     for input_csv in args.inputs:
         xlsx_path, json_path = map_file(
             input_csv=input_csv,
@@ -194,6 +226,18 @@ def main() -> None:
         )
         print(f"Wrote schedule mapping workbook: {xlsx_path}")
         print(f"Wrote schedule mapping JSON: {json_path}")
+
+
+def _log(message: str) -> None:
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    print(f"[{timestamp}] {message}", flush=True)
+
+
+def _shorten(text: str, max_length: int = 140) -> str:
+    compact = re.sub(r"\s+", " ", text).strip()
+    if len(compact) <= max_length:
+        return compact
+    return f"{compact[: max_length - 3]}..."
 
 
 if __name__ == "__main__":
