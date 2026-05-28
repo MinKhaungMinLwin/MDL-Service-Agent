@@ -17,6 +17,7 @@ __pycache__/
 venv/
 .env
 .env.local
+.claude
 
 # OS/editor noise
 .DS_Store

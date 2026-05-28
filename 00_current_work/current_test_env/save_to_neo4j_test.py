@@ -23,6 +23,8 @@ def get_text_to_embed(row):
         parts.append(f"Building: {row['Building']}")
     if pd.notna(row.get('System')) and str(row['System']).strip():
         parts.append(f"System: {row['System']}")
+    if pd.notna(row.get('Study/Survey')) and str(row['Study/Survey']).strip():
+        parts.append(f"Study/Survey: {row['Study/Survey']}")
     if pd.notna(row.get('Deliverable')) and str(row['Deliverable']).strip():
         parts.append(f"Deliverable: {row['Deliverable']}")
     
@@ -76,13 +78,13 @@ def main():
         print(f"[오류] {output_dir} 폴더를 찾을 수 없습니다.")
         sys.exit(1)
 
-    csv_files = [f.name for f in output_dir.iterdir() if f.name.endswith(".csv")]
+    csv_files = sorted([f.name for f in output_dir.iterdir() if f.name.endswith("_classified.csv")])
     if not csv_files:
         print("[안내] 처리할 CSV 파일이 없습니다.")
         return
         
     for csv_file in csv_files:
-        print(f"\n======================================")
+        print("\n======================================")
         print(f"처리 중: {csv_file}")
         csv_path = output_dir / csv_file
         
@@ -112,7 +114,9 @@ def main():
                 "document_no": doc_no,
                 "title": str(row.get('Title', '')),
                 "equipment": str(row.get('Equipment', '')),
+                "building": str(row.get('Building', '')),
                 "system": str(row.get('System', '')),
+                "study_survey": str(row.get('Study/Survey', '')),
                 "deliverable": str(row.get('Deliverable', ''))
             })
             
@@ -143,7 +147,9 @@ def main():
                     n.document_no = record.document_no,
                     n.title = record.title,
                     n.equipment = record.equipment,
+                    n.building = record.building,
                     n.system = record.system,
+                    n.study_survey = record.study_survey,
                     n.deliverable = record.deliverable,
                     n.embedding = record.embedding
                 """
