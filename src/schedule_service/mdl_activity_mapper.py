@@ -6,12 +6,13 @@ import argparse
 import csv
 import re
 import sys
-from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 if __package__ in (None, ""):
     sys.path.append(str(Path(__file__).resolve().parents[1]))
+
+from loguru import logger
 
 from schedule_service.guide_schedule_loader import DEFAULT_SCHEDULE_PATH, load_schedule_activities
 from schedule_service.llm_validator import ScheduleLLMValidator
@@ -224,13 +225,12 @@ def main() -> None:
             use_llm=not args.no_llm,
             limit=args.limit,
         )
-        print(f"Wrote schedule mapping workbook: {xlsx_path}")
-        print(f"Wrote schedule mapping JSON: {json_path}")
+        logger.info("Wrote schedule mapping workbook: {}", xlsx_path)
+        logger.info("Wrote schedule mapping JSON: {}", json_path)
 
 
 def _log(message: str) -> None:
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    print(f"[{timestamp}] {message}", flush=True)
+    logger.info(message)
 
 
 def _shorten(text: str, max_length: int = 140) -> str:

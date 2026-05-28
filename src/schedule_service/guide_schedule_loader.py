@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import json
-import re
 from pathlib import Path
 
+from common.text_normalizer import build_schedule_target_text
 from schedule_service.models import ScheduleActivity
 
 
@@ -22,7 +22,11 @@ def load_schedule_activities(schedule_path: Path) -> list[ScheduleActivity]:
         activity_name_clean = row.get("activity_name_clean", "").strip()
         wbs_path = row.get("wbs_path", "").strip()
         activity_id = row.get("activity_id", "").strip()
-        target_text = _normalize_space(f"{activity_name_clean} {wbs_path} {activity_id}")
+        target_text = build_schedule_target_text(
+            activity_name=activity_name_clean,
+            wbs_path=wbs_path,
+            activity_id=activity_id,
+        )
         activities.append(
             ScheduleActivity(
                 activity_id=activity_id,
@@ -35,7 +39,3 @@ def load_schedule_activities(schedule_path: Path) -> list[ScheduleActivity]:
             )
         )
     return activities
-
-
-def _normalize_space(text: str) -> str:
-    return re.sub(r"\s+", " ", text).strip()

@@ -25,7 +25,15 @@ except ImportError:
     ChunkerOutput = object
     chunk_docling_json_to_output = None
 
-app = FastAPI(title="Doosan MDL API")
+app = FastAPI(
+    title="Doosan MDL API",
+    openapi_tags=[
+        {"name": "health", "description": "Service health check."},
+        {"name": "parser", "description": "PDF parser service APIs."},
+        {"name": "chunker", "description": "Docling chunker service APIs."},
+        {"name": "schedule", "description": "Schedule mapping and generation APIs."},
+    ],
+)
 
 UPLOAD_DIR = Path("output") / "parser_service" / "uploads"
 OUTPUT_DIR = Path("output") / "parser_service" / "parsed"
@@ -33,7 +41,7 @@ CHUNK_OUTPUT_DIR = Path("output") / "chunker_service" / "chunks"
 SCHEDULE_OUTPUT_DIR = Path("output") / "schedule_service"
 
 
-@app.get("/health")
+@app.get("/health", tags=["health"])
 def health() -> dict[str, str]:
     """Return a basic service health check."""
     return {"status": "ok"}
@@ -42,7 +50,7 @@ def health() -> dict[str, str]:
 PreviewPages = Annotated[int | None, Query(gt=0)]
 
 
-@app.post("/parse")
+@app.post("/parse", tags=["parser"])
 def parse(file: Annotated[UploadFile, File(...)], preview_pages: PreviewPages = None) -> dict[str, object]:
     """Parse an uploaded PDF and return output file metadata."""
     if parse_pdf_to_output is None:
@@ -66,7 +74,7 @@ def parse(file: Annotated[UploadFile, File(...)], preview_pages: PreviewPages = 
 MaxTokens = Annotated[int, Query(gt=0)]
 
 
-@app.post("/chunk")
+@app.post("/chunk", tags=["chunker"])
 def chunk(document_id: Annotated[str, Query(min_length=1)], max_tokens: MaxTokens = 512) -> dict[str, object]:
     """Chunk a parser-service Docling JSON output and return chunk metadata."""
     if chunk_docling_json_to_output is None:
@@ -82,17 +90,51 @@ def chunk(document_id: Annotated[str, Query(min_length=1)], max_tokens: MaxToken
     return _chunk_response(chunker_output)
 
 
-ScheduleLimit = Annotated[int, Query(ge=0)]
+ScheduleLimit = Annotated[
+    int,
+    Query(
+        ge=0,
+        description="Maximum number of input rows to process. Use 0 to process all rows.",
+    ),
+]
 ScheduleK = Annotated[int, Query(gt=0)]
 
 
-@app.post("/schedule/map")
+@app.post(
+    "/schedule/map",
+    tags=["schedule"],
+    summary="Map ITB requirements to schedule activities",
+    description=(
+        "Reads an ITB matching CSV, searches the cleaned CCPP guide schedule, "
+        "reranks candidates, optionally lets the LLM select one activity, and writes "
+        "schedule mapping JSON/XLSX files under output/schedule_service."
+    ),
+)
 def schedule_map(
-    input_csv: Annotated[str, Query(min_length=1)],
-    retrieve_k: ScheduleK = 50,
-    top_k: ScheduleK = 10,
-    use_semantic: bool = True,
-    use_llm: bool = True,
+    input_csv: Annotated[
+        str,
+        Query(
+            min_length=1,
+            description="Path to an ITB matching CSV file inside the running app/container.",
+            examples=["00_current_work/current_test_env/output/output_match_all_projects_section6.csv"],
+        ),
+    ],
+    retrieve_k: Annotated[
+        int,
+        Query(gt=0, description="Number of candidates to retrieve from each search method before reranking."),
+    ] = 50,
+    top_k: Annotated[
+        int,
+        Query(gt=0, description="Number of reranked candidates passed to the LLM/final output."),
+    ] = 10,
+    use_semantic: Annotated[
+        bool,
+        Query(description="Use Azure OpenAI embeddings for semantic schedule search."),
+    ] = True,
+    use_llm: Annotated[
+        bool,
+        Query(description="Use the LLM to select one final activity from the reranked candidates."),
+    ] = True,
     limit: ScheduleLimit = 0,
 ) -> dict[str, object]:
     """Map an ITB match CSV output to CCPP guide schedule activities."""
@@ -113,9 +155,25 @@ def schedule_map(
     return _schedule_file_response("schedule_mapping", input_path, xlsx_path, json_path)
 
 
-@app.post("/schedule/generate")
+@app.post(
+    "/schedule/generate",
+    tags=["schedule"],
+    summary="Generate baseline schedule from mapping output",
+    description=(
+        "Reads a schedule mapping JSON produced by /schedule/map, joins the selected "
+        "activity IDs back to the cleaned CCPP guide schedule, and writes baseline "
+        "generated schedule JSON/XLSX files under output/schedule_service."
+    ),
+)
 def schedule_generate(
-    mapping_json: Annotated[str, Query(min_length=1)],
+    mapping_json: Annotated[
+        str,
+        Query(
+            min_length=1,
+            description="Path to a schedule mapping JSON file produced by /schedule/map.",
+            examples=["output/schedule_service/schedule_mapping_all_projects_section6_limit3.json"],
+        ),
+    ],
     limit: ScheduleLimit = 0,
 ) -> dict[str, object]:
     """Generate a baseline schedule output from a schedule mapping JSON file."""

@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import math
 import os
-from datetime import datetime
 from pathlib import Path
 from urllib.parse import urlparse
+
+from loguru import logger
 
 from schedule_service.models import ScheduleActivity
 
@@ -94,5 +95,4 @@ def _load_env_file(path: Path) -> None:
 
 
 def _log(message: str) -> None:
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    print(f"[{timestamp}] {message}", flush=True)
+    logger.info(message)
