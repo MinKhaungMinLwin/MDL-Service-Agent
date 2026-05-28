@@ -11,6 +11,7 @@ services:
       - ./output/chunker_service/chunks:/app/output/chunker_service/chunks
       - ./output/schedule_service:/app/output/schedule_service
       - ./04_data/schedule_sources/processed:/app/04_data/schedule_sources/processed:ro
+      - ./04_data/schedule_sources/rules:/app/04_data/schedule_sources/rules:ro
     healthcheck:
       test:
         [
