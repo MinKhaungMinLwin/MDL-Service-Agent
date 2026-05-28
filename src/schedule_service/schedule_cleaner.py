@@ -10,6 +10,7 @@ from datetime import date, datetime
 from pathlib import Path
 from typing import Any
 
+from loguru import logger
 from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Font, PatternFill
 from openpyxl.utils import get_column_letter
@@ -22,6 +23,8 @@ PREFERRED_SHEET = "Sheet1 (2)"
 
 @dataclass(frozen=True)
 class CleanScheduleRow:
+    """One normalized row from the guide schedule workbook."""
+
     source_file: str
     source_sheet: str
     source_row: int
@@ -46,6 +49,7 @@ def clean_guide_schedule(
     output_dir: Path = DEFAULT_OUTPUT_DIR,
     output_stem: str = DEFAULT_OUTPUT_STEM,
 ) -> tuple[Path, Path]:
+    """Clean the guide schedule workbook and write JSON/XLSX outputs."""
     input_path = input_path.resolve()
     output_dir = output_dir.resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -65,6 +69,7 @@ def clean_guide_schedule(
 
 
 def _clean_rows(input_path: Path, worksheet: Any) -> list[CleanScheduleRow]:
+    """Normalize worksheet rows into schedule rows."""
     current_wbs: dict[int, str] = {}
     clean_rows: list[CleanScheduleRow] = []
 
@@ -123,6 +128,7 @@ def _clean_rows(input_path: Path, worksheet: Any) -> list[CleanScheduleRow]:
 
 
 def _row_type(raw_wbs_level: str) -> str:
+    """Classify a raw workbook row as WBS, activity, or unknown."""
     if raw_wbs_level.strip().lower() == "activity":
         return "activity"
     if _is_numeric_level(raw_wbs_level):
@@ -131,6 +137,7 @@ def _row_type(raw_wbs_level: str) -> str:
 
 
 def _is_numeric_level(value: str) -> bool:
+    """Return whether a value is an integer-like WBS level."""
     try:
         numeric = float(value)
     except ValueError:
@@ -139,6 +146,7 @@ def _is_numeric_level(value: str) -> bool:
 
 
 def _cell_to_text(value: Any) -> str:
+    """Convert workbook cell values to stable text."""
     if value is None:
         return ""
     if isinstance(value, datetime):
@@ -151,6 +159,7 @@ def _cell_to_text(value: Any) -> str:
 
 
 def _parse_date(value: str) -> str:
+    """Normalize known schedule date formats to ISO dates."""
     cleaned = value.strip().rstrip("*").strip()
     if not cleaned:
         return ""
@@ -164,6 +173,7 @@ def _parse_date(value: str) -> str:
 
 
 def _clean_activity_name(value: str) -> str:
+    """Remove noisy suffixes from an activity name."""
     cleaned = value.strip()
     cleaned = re.sub(r"\([^()]*NTP[^()]*\)", "", cleaned, flags=re.IGNORECASE).strip()
     cleaned = re.sub(r"\s+", " ", cleaned)
@@ -171,6 +181,7 @@ def _clean_activity_name(value: str) -> str:
 
 
 def _make_search_text(wbs_path_parts: list[str], activity_id: str, activity_name: str) -> str:
+    """Build a compact search text for one activity row."""
     text = " ".join([*wbs_path_parts, activity_id, activity_name])
     return re.sub(r"\s+", " ", text).strip()
 
@@ -182,6 +193,7 @@ def _build_metadata(
     source_row_count: int,
     rows: list[CleanScheduleRow],
 ) -> dict[str, Any]:
+    """Build metadata for cleaned schedule outputs."""
     row_type_counts: dict[str, int] = {}
     for row in rows:
         row_type_counts[row.row_type] = row_type_counts.get(row.row_type, 0) + 1
@@ -203,6 +215,7 @@ def _build_metadata(
 
 
 def _write_json(path: Path, metadata: dict[str, Any], rows: list[CleanScheduleRow]) -> None:
+    """Write cleaned schedule rows to JSON."""
     payload = {
         "metadata": metadata,
         "rows": [asdict(row) for row in rows],
@@ -211,6 +224,7 @@ def _write_json(path: Path, metadata: dict[str, Any], rows: list[CleanScheduleRo
 
 
 def _write_xlsx(path: Path, metadata: dict[str, Any], rows: list[CleanScheduleRow]) -> None:
+    """Write cleaned schedule rows to XLSX."""
     workbook = Workbook()
     summary = workbook.active
     summary.title = "Summary"
@@ -224,6 +238,7 @@ def _write_xlsx(path: Path, metadata: dict[str, Any], rows: list[CleanScheduleRo
 
 
 def _write_summary_sheet(worksheet: Any, metadata: dict[str, Any]) -> None:
+    """Write the summary worksheet."""
     worksheet.append(["Field", "Value"])
     worksheet.append(["Source file", metadata["source_file"]])
     worksheet.append(["Selected sheet", metadata["selected_sheet"]])
@@ -239,6 +254,7 @@ def _write_summary_sheet(worksheet: Any, metadata: dict[str, Any]) -> None:
 
 
 def _write_rows_sheet(worksheet: Any, rows: list[CleanScheduleRow]) -> None:
+    """Write normalized rows to a worksheet."""
     headers = list(CleanScheduleRow.__dataclass_fields__)
     worksheet.append(headers)
     for row in rows:
@@ -249,6 +265,7 @@ def _write_rows_sheet(worksheet: Any, rows: list[CleanScheduleRow]) -> None:
 
 
 def _format_sheet(worksheet: Any) -> None:
+    """Apply basic XLSX formatting."""
     header_fill = PatternFill("solid", fgColor="D9EAF7")
     for cell in worksheet[1]:
         cell.font = Font(bold=True)
@@ -260,6 +277,7 @@ def _format_sheet(worksheet: Any) -> None:
 
 
 def main() -> None:
+    """Run the guide schedule cleaner CLI."""
     parser = argparse.ArgumentParser(description="Clean a CCPP guide schedule workbook.")
     parser.add_argument("--input", type=Path, default=DEFAULT_INPUT)
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
@@ -267,8 +285,8 @@ def main() -> None:
     args = parser.parse_args()
 
     xlsx_path, json_path = clean_guide_schedule(args.input, args.output_dir, args.output_stem)
-    print(f"Wrote cleaned workbook: {xlsx_path}")
-    print(f"Wrote cleaned JSON: {json_path}")
+    logger.info("Wrote cleaned workbook: {}", xlsx_path)
+    logger.info("Wrote cleaned JSON: {}", json_path)
 
 
 if __name__ == "__main__":

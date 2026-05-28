@@ -1,5 +1,5 @@
 services:
-  parser-service:
+  doosan-mdl-api:
     build: .
     env_file:
       - .env

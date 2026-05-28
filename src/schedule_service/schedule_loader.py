@@ -12,6 +12,7 @@ DEFAULT_SCHEDULE_PATH = Path("04_data/schedule_sources/processed/ccpp_guide_sche
 
 
 def load_schedule_activities(schedule_path: Path) -> list[ScheduleActivity]:
+    """Load activity rows from a cleaned guide schedule JSON file."""
     payload = json.loads(schedule_path.read_text(encoding="utf-8"))
     activities: list[ScheduleActivity] = []
     for row in payload["rows"]:

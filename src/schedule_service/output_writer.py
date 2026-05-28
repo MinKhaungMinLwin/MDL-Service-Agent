@@ -12,10 +12,12 @@ from openpyxl.utils import get_column_letter
 
 
 def write_mapping_outputs(output_dir: Path, output_stem: str, rows: list[dict[str, Any]]) -> tuple[Path, Path]:
+    """Write schedule mapping JSON and XLSX outputs."""
     return write_table_outputs(output_dir, output_stem, rows, "Schedule Mapping")
 
 
 def write_schedule_outputs(output_dir: Path, output_stem: str, rows: list[dict[str, Any]]) -> tuple[Path, Path]:
+    """Write generated schedule JSON and XLSX outputs."""
     return write_table_outputs(output_dir, output_stem, rows, "Generated Schedule")
 
 
@@ -25,6 +27,7 @@ def write_table_outputs(
     rows: list[dict[str, Any]],
     sheet_title: str,
 ) -> tuple[Path, Path]:
+    """Write tabular rows to paired JSON and XLSX files."""
     output_dir.mkdir(parents=True, exist_ok=True)
     json_path = output_dir / f"{output_stem}.json"
     xlsx_path = output_dir / f"{output_stem}.xlsx"
@@ -34,6 +37,7 @@ def write_table_outputs(
 
 
 def _write_xlsx(path: Path, rows: list[dict[str, Any]], sheet_title: str) -> None:
+    """Write rows to one formatted XLSX sheet."""
     workbook = Workbook()
     worksheet = workbook.active
     worksheet.title = sheet_title

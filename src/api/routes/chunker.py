@@ -13,7 +13,6 @@ except ImportError:
     ChunkerOutput = object
     chunk_docling_json_to_output = None
 
-
 router = APIRouter(tags=["chunker"])
 
 PARSER_OUTPUT_DIR = Path("output") / "parser_service" / "parsed"
@@ -28,6 +27,9 @@ def chunk(document_id: Annotated[str, Query(min_length=1)], max_tokens: MaxToken
         raise HTTPException(status_code=503, detail="Chunker service is not available.")
 
     input_path = PARSER_OUTPUT_DIR / document_id / "docling.json"
+    if not input_path.is_file():
+        raise HTTPException(status_code=404, detail=f"Parser output not found: {input_path}")
+
     chunker_output = chunk_docling_json_to_output(
         input_path=input_path,
         document_id=document_id,
@@ -50,4 +52,3 @@ def _response(chunker_output: ChunkerOutput) -> dict[str, object]:
             "chunks": str(chunker_output.chunks_path),
         },
     }
-
