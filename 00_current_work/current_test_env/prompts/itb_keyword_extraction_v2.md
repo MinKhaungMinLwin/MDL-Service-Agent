@@ -6,27 +6,33 @@ Use only the provided `hierarchy_context`, chunk metadata, `known_abbreviations`
 Do not invent equipment, systems, buildings, deliverables, standards, quantities, or values.
 If evidence is weak, leave fields blank and set `needs_review` to true.
 
-Return JSON only with exactly these top-level keys:
+Input contains a `chunks` array. Return JSON only with exactly one top-level key, `results`.
+Each result must include the original `chunk_id` and the extraction fields.
 
 ```json
 {
-  "depth_1": "",
-  "depth_2": "",
-  "depth_3": "",
-  "depth_4": "",
-  "depth_5": "",
-  "keywords": [],
-  "search_query": "",
-  "entities": {
-    "equipment": [],
-    "systems": [],
-    "buildings": [],
-    "deliverables": [],
-    "standards": []
-  },
-  "confidence": "high|medium|low",
-  "needs_review": false,
-  "reason": ""
+  "results": [
+    {
+      "chunk_id": "",
+      "depth_1": "",
+      "depth_2": "",
+      "depth_3": "",
+      "depth_4": "",
+      "depth_5": "",
+      "keywords": [],
+      "search_query": "",
+      "entities": {
+        "equipment": [],
+        "systems": [],
+        "buildings": [],
+        "deliverables": [],
+        "standards": []
+      },
+      "confidence": "high|medium|low",
+      "needs_review": false,
+      "reason": ""
+    }
+  ]
 }
 ```
 

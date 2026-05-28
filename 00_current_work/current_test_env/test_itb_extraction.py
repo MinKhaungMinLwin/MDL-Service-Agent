@@ -77,6 +77,7 @@ TARGETS = [
 ]
 
 MAX_TEST_CHUNKS = int(os.getenv("MAX_TEST_CHUNKS", "0"))
+ITB_BATCH_SIZE = max(1, int(os.getenv("ITB_BATCH_SIZE", "1")))
 
 
 def load_abbreviation_rules() -> dict[str, str]:
@@ -230,7 +231,7 @@ def build_json_record(
     known_abbreviations: dict[str, str] | None = None,
     error: str = "",
 ) -> dict:
-    """Build the JSONL source-of-truth record for one chunk."""
+    """Build the JSON source-of-truth record for one chunk."""
     record = {
         "document": doc_name,
         "chunk_id": chunk.get("chunk_id", ""),
@@ -251,8 +252,25 @@ def build_json_record(
     return record
 
 
-def extract_chunk(client: AzureOpenAI, system_prompt: str, user_msg: str) -> tuple[dict, dict, str]:
-    """Extract one chunk with the chat model."""
+def build_chunk_payload(doc_name: str, chunk: dict, hierarchy: str, known_abbreviations: dict[str, str]) -> dict:
+    """Build one chunk payload for model extraction."""
+    return {
+        "document": doc_name,
+        "chunk_id": chunk.get("chunk_id", ""),
+        "pages": chunk.get("page_num", []),
+        "section": chunk.get("section", ""),
+        "section_path": chunk.get("section_path", ""),
+        "chunk_type": chunk.get("chunk_type", ""),
+        "label": chunk.get("label", ""),
+        "hierarchy_context": hierarchy,
+        "known_abbreviations": known_abbreviations,
+        "chunk_text": chunk.get("text", ""),
+    }
+
+
+def extract_chunk_batch(client: AzureOpenAI, system_prompt: str, batch_payload: list[dict]) -> tuple[dict, dict, str]:
+    """Extract a batch of chunks with the chat model."""
+    user_msg = json.dumps({"chunks": batch_payload}, ensure_ascii=False)
     response = client.chat.completions.create(
         model=MODEL_DEPLOYMENT,
         messages=[
@@ -260,7 +278,7 @@ def extract_chunk(client: AzureOpenAI, system_prompt: str, user_msg: str) -> tup
             {"role": "user", "content": user_msg},
         ],
         temperature=0.0,
-        max_completion_tokens=2048,
+        max_completion_tokens=min(8192, 2048 * len(batch_payload)),
         response_format={"type": "json_object"},
     )
     output = response.choices[0].message.content or "{}"
@@ -269,10 +287,40 @@ def extract_chunk(client: AzureOpenAI, system_prompt: str, user_msg: str) -> tup
         "completion_tokens": response.usage.completion_tokens if response.usage else 0,
         "total_tokens": response.usage.total_tokens if response.usage else 0,
     }
-    return parse_json_output(output), token_usage, ""
+    parsed = parse_json_output(output)
+    return parse_batch_results(parsed, batch_payload), token_usage, ""
 
 
-def failed_extraction(exc: Exception) -> tuple[dict, dict, str]:
+def parse_batch_results(parsed: dict, batch_payload: list[dict]) -> dict[str, dict]:
+    """Map model results back to chunk IDs."""
+    if isinstance(parsed.get("results"), list):
+        return {
+            as_text(item.get("chunk_id")): item
+            for item in parsed["results"]
+            if isinstance(item, dict) and as_text(item.get("chunk_id"))
+        }
+    if len(batch_payload) == 1:
+        return {as_text(batch_payload[0].get("chunk_id")): parsed}
+    return {}
+
+
+def chunked(items: list[dict], size: int) -> list[list[dict]]:
+    """Split a list into fixed-size batches."""
+    return [items[index : index + size] for index in range(0, len(items), size)]
+
+
+def split_token_usage(token_usage: dict, count: int) -> dict:
+    """Approximate per-chunk token usage for batch calls."""
+    if count <= 0:
+        return {}
+    return {
+        "prompt_tokens": round(token_usage.get("prompt_tokens", 0) / count),
+        "completion_tokens": round(token_usage.get("completion_tokens", 0) / count),
+        "total_tokens": round(token_usage.get("total_tokens", 0) / count),
+    }
+
+
+def failed_extraction(exc: Exception | str) -> tuple[dict, dict, str]:
     """Build a failed extraction payload."""
     error = str(exc)
     return (
@@ -293,6 +341,12 @@ def failed_extraction(exc: Exception) -> tuple[dict, dict, str]:
 def main() -> None:
     """Run ITB chunk extraction and write structured outputs."""
     logger.info("ITB Keyword Extraction Test -> Structured JSON + CSV Export")
+    logger.info(
+        "Runtime config: ITB_SECTION={}, MAX_TEST_CHUNKS={}, ITB_BATCH_SIZE={}",
+        ITB_SECTION,
+        MAX_TEST_CHUNKS,
+        ITB_BATCH_SIZE,
+    )
     for target in TARGETS:
         logger.info("Target: {} (Pages {}~{})", target["doc_name"], target["min_page"], target["max_page"])
 
@@ -339,85 +393,126 @@ def main() -> None:
                 pages = chunk.get("page_num", [])
                 if any(target["min_page"] <= page <= target["max_page"] for page in pages):
                     target_chunks.append(chunk)
+            filtered_count = len(target_chunks)
             if MAX_TEST_CHUNKS > 0:
                 target_chunks = target_chunks[:MAX_TEST_CHUNKS]
 
             logger.info(
-                "{}: found {} chunks for pages {}~{}",
+                "{}: loaded {} chunks, matched {} chunks for pages {}~{}, processing {} chunks",
                 doc_name,
-                len(target_chunks),
+                len(chunks),
+                filtered_count,
                 target["min_page"],
                 target["max_page"],
+                len(target_chunks),
             )
 
-            for index, chunk in enumerate(target_chunks, 1):
+            prepared_chunks = []
+            skipped_empty_chunks = 0
+            for chunk in target_chunks:
                 text = chunk.get("text", "")
                 hierarchy = normalize_hierarchy(chunk.get("hierarchy_context", ""), doc_name)
                 known_abbreviations = find_known_abbreviations(f"{hierarchy}\n{text}", abbreviation_rules)
-                pages = chunk.get("page_num", [])
-                page_str = ", ".join(map(str, pages))
 
                 if not text.strip():
+                    skipped_empty_chunks += 1
                     continue
 
-                logger.info(
-                    "Processing {} chunk {}/{} (Pages: {})",
-                    doc_name,
-                    index,
-                    len(target_chunks),
-                    pages,
-                )
-
-                user_msg = json.dumps(
+                prepared_chunks.append(
                     {
-                        "document": doc_name,
-                        "chunk_id": chunk.get("chunk_id", ""),
-                        "pages": pages,
-                        "section": chunk.get("section", ""),
-                        "section_path": chunk.get("section_path", ""),
-                        "chunk_type": chunk.get("chunk_type", ""),
-                        "label": chunk.get("label", ""),
-                        "hierarchy_context": hierarchy,
+                        "chunk": chunk,
+                        "hierarchy": hierarchy,
                         "known_abbreviations": known_abbreviations,
-                        "chunk_text": text,
-                    },
-                    ensure_ascii=False,
+                        "payload": build_chunk_payload(doc_name, chunk, hierarchy, known_abbreviations),
+                    }
                 )
 
-                error = ""
+            if skipped_empty_chunks:
+                logger.warning("Skipped {} empty chunks for {}", skipped_empty_chunks, doc_name)
+
+            batches = chunked(prepared_chunks, ITB_BATCH_SIZE)
+            logger.info(
+                "{}: prepared {} non-empty chunks into {} batches",
+                doc_name,
+                len(prepared_chunks),
+                len(batches),
+            )
+            for batch_index, batch in enumerate(batches, 1):
+                batch_chunk_ids = [as_text(item["chunk"].get("chunk_id")) for item in batch]
+                logger.info(
+                    "Processing {} batch {}/{} ({} chunks): {}",
+                    doc_name,
+                    batch_index,
+                    len(batches),
+                    len(batch),
+                    ", ".join(batch_chunk_ids),
+                )
+
+                batch_payload = [item["payload"] for item in batch]
+                batch_error = ""
                 try:
-                    parsed, token_usage, error = extract_chunk(client, system_prompt, user_msg)
-                except Exception as exc:
-                    parsed, token_usage, error = failed_extraction(exc)
-                    logger.exception("Chunk processing failed")
-
-                writer.writerow(build_csv_row(doc_name, chunk, hierarchy, parsed, text))
-                json_records.append(
-                    build_json_record(
-                        doc_name,
-                        chunk,
-                        hierarchy,
-                        parsed,
-                        token_usage,
-                        known_abbreviations=known_abbreviations,
-                        error=error,
+                    results_by_id, batch_token_usage, batch_error = extract_chunk_batch(
+                        client,
+                        system_prompt,
+                        batch_payload,
                     )
-                )
-                token_writer.writerow(
-                    [
-                        doc_name,
-                        page_str,
-                        token_usage.get("prompt_tokens", 0),
-                        token_usage.get("completion_tokens", 0),
-                        token_usage.get("total_tokens", 0),
-                        text,
-                    ]
-                )
+                except Exception as exc:
+                    results_by_id = {}
+                    batch_token_usage = {}
+                    batch_error = str(exc)
+                    logger.exception("Batch processing failed")
+
+                token_usage = split_token_usage(batch_token_usage, len(batch))
+                for item in batch:
+                    chunk = item["chunk"]
+                    hierarchy = item["hierarchy"]
+                    known_abbreviations = item["known_abbreviations"]
+                    text = chunk.get("text", "")
+                    pages = chunk.get("page_num", [])
+                    page_str = ", ".join(map(str, pages))
+                    chunk_id = as_text(chunk.get("chunk_id"))
+
+                    error = batch_error
+                    if error:
+                        parsed, _, error = failed_extraction(error)
+                    else:
+                        parsed = results_by_id.get(chunk_id)
+                        if parsed is None:
+                            parsed, _, error = failed_extraction(f"Missing model result for chunk_id: {chunk_id}")
+                            logger.error("Missing model result for chunk_id: {}", chunk_id)
+
+                    writer.writerow(build_csv_row(doc_name, chunk, hierarchy, parsed, text))
+                    json_records.append(
+                        build_json_record(
+                            doc_name,
+                            chunk,
+                            hierarchy,
+                            parsed,
+                            token_usage,
+                            known_abbreviations=known_abbreviations,
+                            error=error,
+                        )
+                    )
+                    token_writer.writerow(
+                        [
+                            doc_name,
+                            page_str,
+                            token_usage.get("prompt_tokens", 0),
+                            token_usage.get("completion_tokens", 0),
+                            token_usage.get("total_tokens", 0),
+                            text,
+                        ]
+                    )
 
                 csv_file.flush()
                 token_file.flush()
-                if not error:
-                    logger.info("Chunk processed OK (Tokens: {})", token_usage["total_tokens"])
+                if not batch_error:
+                    logger.info(
+                        "Batch processed OK: returned {}/{} results, tokens={}",
+                        len(results_by_id),
+                        len(batch),
+                        batch_token_usage.get("total_tokens", 0),
+                    )
 
                 time.sleep(1.5)
 
