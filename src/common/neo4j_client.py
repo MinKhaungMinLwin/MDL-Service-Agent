@@ -21,6 +21,7 @@ class Neo4jConnection:
         database: str | None = None,
         max_pool_size: int | None = None,
     ) -> None:
+        """Load Neo4j connection settings."""
         load_env_file()
         self.uri = uri or required_env("NEO4J_URI")
         self.user = user or required_env("NEO4J_USER")
@@ -71,8 +72,10 @@ class Neo4jConnection:
             return False
 
     def __enter__(self) -> Neo4jConnection:
+        """Open the connection for context-manager usage."""
         self.connect()
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+        """Close the connection after context-manager usage."""
         self.close()

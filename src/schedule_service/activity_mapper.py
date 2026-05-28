@@ -37,6 +37,7 @@ def map_file(
     use_llm: bool = True,
     limit: int = 0,
 ) -> tuple[Path, Path]:
+    """Map one ITB match CSV to guide schedule activities."""
     _log(f"Reading input CSV: {input_csv}")
     rows = _read_csv(input_csv)
     original_row_count = len(rows)
@@ -99,6 +100,7 @@ def _rank_candidates(
     retrieve_k: int,
     top_k: int,
 ) -> list[Candidate]:
+    """Rank schedule activities for one query."""
     bm25_scores = bm25.score(query_text)
     semantic_scores = semantic_index.score(query_text) if semantic_index else [0.0] * len(activities)
     return rrf_candidates(
@@ -119,6 +121,7 @@ def _format_output_row(
     llm_selection: dict[str, str],
     top_k: int,
 ) -> dict[str, Any]:
+    """Format one mapped output row."""
     output: dict[str, Any] = {
         "source_file": input_csv.name,
         "document": row.get("Document", ""),
@@ -157,6 +160,7 @@ def _format_output_row(
 
 
 def _empty_llm_selection() -> dict[str, str]:
+    """Return empty LLM selection fields."""
     return {
         "llm_selected_activity_id": "",
         "llm_selected_rank": "",
@@ -167,6 +171,7 @@ def _empty_llm_selection() -> dict[str, str]:
 
 
 def _empty_candidate(prefix: str) -> dict[str, str]:
+    """Return empty candidate fields for one rank."""
     fields = [
         "activity_id",
         "activity_name",
@@ -184,11 +189,13 @@ def _empty_candidate(prefix: str) -> dict[str, str]:
 
 
 def _read_csv(path: Path) -> list[dict[str, str]]:
+    """Read a CSV file as dictionaries."""
     with path.open("r", encoding="utf-8-sig", newline="") as file:
         return list(csv.DictReader(file))
 
 
 def _query_text(row: dict[str, str]) -> str:
+    """Build query text from a match output row."""
     query = row.get("Search Query", "").strip()
     if query:
         return query
@@ -201,6 +208,7 @@ def _query_text(row: dict[str, str]) -> str:
 
 
 def main() -> None:
+    """Run the activity mapper CLI."""
     parser = argparse.ArgumentParser(description="Map ITB match outputs to guide schedule activities.")
     parser.add_argument("--schedule", type=Path, default=DEFAULT_SCHEDULE_PATH)
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
@@ -231,10 +239,12 @@ def main() -> None:
 
 
 def _log(message: str) -> None:
+    """Log an activity mapper message."""
     logger.info(message)
 
 
 def _shorten(text: str, max_length: int = 140) -> str:
+    """Shorten long query text for logs."""
     compact = re.sub(r"\s+", " ", text).strip()
     if len(compact) <= max_length:
         return compact

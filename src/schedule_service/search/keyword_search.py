@@ -9,7 +9,10 @@ TOKEN_PATTERN = re.compile(r"[a-z0-9]+")
 
 
 class BM25Index:
+    """In-memory BM25 keyword index."""
+
     def __init__(self, documents: list[str], k1: float = 1.5, b: float = 0.75) -> None:
+        """Build BM25 statistics for documents."""
         self.k1 = k1
         self.b = b
         self.documents = [tokenize(document) for document in documents]
@@ -32,6 +35,7 @@ class BM25Index:
         }
 
     def score(self, query: str) -> list[float]:
+        """Score all indexed documents against a query."""
         query_tokens = tokenize(query)
         scores: list[float] = []
         for document, term_freq in zip(self.documents, self.term_freqs, strict=True):
@@ -48,4 +52,5 @@ class BM25Index:
 
 
 def tokenize(text: str) -> list[str]:
+    """Tokenize text for keyword search."""
     return TOKEN_PATTERN.findall(text.lower())

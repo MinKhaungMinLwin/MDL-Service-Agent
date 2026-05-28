@@ -15,7 +15,6 @@ except ImportError:
     ParserOutput = object
     parse_pdf_to_output = None
 
-
 router = APIRouter(tags=["parser"])
 
 UPLOAD_DIR = Path("output") / "parser_service" / "uploads"
@@ -56,4 +55,3 @@ def _response(parser_output: ParserOutput) -> dict[str, object]:
             "markdown": str(parser_output.markdown_path),
         },
     }
-

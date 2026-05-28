@@ -33,7 +33,8 @@ RUN mkdir -p \
         /home/app/.cache/huggingface \
         /app/output/parser_service/uploads \
         /app/output/parser_service/parsed \
-        /app/output/chunker_service/chunks && \
+        /app/output/chunker_service/chunks \
+        /app/output/schedule_service && \
     chown -R app:app /home/app/.cache /app/output
 
 USER app

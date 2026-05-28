@@ -27,6 +27,7 @@ def generate_schedule_file(
     output_dir: Path,
     limit: int = 0,
 ) -> tuple[Path, Path]:
+    """Generate baseline schedule outputs from a mapping JSON."""
     _log(f"Reading schedule mapping: {mapping_json}")
     mapping_rows = _read_mapping_rows(mapping_json)
     original_row_count = len(mapping_rows)
@@ -51,6 +52,7 @@ def _format_schedule_row(
     row: dict[str, Any],
     activity_by_id: dict[str, ScheduleActivity],
 ) -> dict[str, Any]:
+    """Format one generated schedule row."""
     selected_activity_id = str(row.get("llm_selected_activity_id", "")).strip()
     activity = activity_by_id.get(selected_activity_id)
     rank = _to_int(row.get("llm_selected_rank", ""))
@@ -93,6 +95,7 @@ def _format_schedule_row(
 
 
 def _candidate_fields(row: dict[str, Any], rank: int | None) -> dict[str, Any]:
+    """Return selected candidate fields from a mapping row."""
     if rank is None or rank < 1:
         return {}
     prefix = f"candidate_{rank}"
@@ -105,6 +108,7 @@ def _candidate_fields(row: dict[str, Any], rank: int | None) -> dict[str, Any]:
 
 
 def _read_mapping_rows(path: Path) -> list[dict[str, Any]]:
+    """Read mapping rows from a JSON list."""
     payload = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(payload, list):
         raise ValueError(f"Expected a JSON list in {path}")
@@ -112,6 +116,7 @@ def _read_mapping_rows(path: Path) -> list[dict[str, Any]]:
 
 
 def _output_stem(mapping_json: Path) -> str:
+    """Build the generated schedule output stem."""
     stem = mapping_json.stem
     if stem.startswith("schedule_mapping_"):
         return f"generated_schedule_{stem.removeprefix('schedule_mapping_')}"
@@ -119,6 +124,7 @@ def _output_stem(mapping_json: Path) -> str:
 
 
 def _to_int(value: Any) -> int | None:
+    """Parse a positive integer string."""
     text = str(value).strip()
     if not re.fullmatch(r"\d+", text):
         return None
@@ -126,6 +132,7 @@ def _to_int(value: Any) -> int | None:
 
 
 def main() -> None:
+    """Run the schedule generator CLI."""
     parser = argparse.ArgumentParser(description="Generate baseline schedule outputs from schedule mapping JSON files.")
     parser.add_argument("--schedule", type=Path, default=DEFAULT_SCHEDULE_PATH)
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
@@ -148,6 +155,7 @@ def main() -> None:
 
 
 def _log(message: str) -> None:
+    """Log a schedule generator message."""
     logger.info(message)
 
 

@@ -54,6 +54,7 @@ def join_unique_texts(texts: list[str]) -> str:
 
 @lru_cache(maxsize=1)
 def _schedule_abbreviations() -> tuple[tuple[str, str], ...]:
+    """Load schedule abbreviation replacements."""
     rules = json.loads(SCHEDULE_ABBREVIATIONS_PATH.read_text(encoding="utf-8"))
     replacements = []
     for canonical, variants in rules.items():
@@ -66,5 +67,6 @@ def _schedule_abbreviations() -> tuple[tuple[str, str], ...]:
 
 
 def _replace_token(text: str, abbreviation: str, full_name: str) -> str:
+    """Replace one abbreviation token case-insensitively."""
     pattern = re.compile(rf"(?<![A-Za-z0-9]){re.escape(abbreviation)}(?![A-Za-z0-9])", re.IGNORECASE)
     return pattern.sub(full_name, text)

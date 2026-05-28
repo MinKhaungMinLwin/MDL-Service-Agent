@@ -10,7 +10,10 @@ from schedule_service.models import Candidate
 
 
 class ScheduleLLMValidator:
+    """Select the best schedule activity candidate with Azure OpenAI."""
+
     def __init__(self) -> None:
+        """Create the Azure OpenAI chat client."""
         load_env_file()
         self.deployment = required_env("AZURE_OPENAI_CHAT_DEPLOYMENT")
         self.client = build_azure_openai_client(
@@ -19,6 +22,7 @@ class ScheduleLLMValidator:
         )
 
     def select_activity(self, query_text: str, candidates: list[Candidate]) -> dict[str, str]:
+        """Return the LLM-selected activity metadata for one query."""
         if not candidates:
             return _empty_selection("no_candidates")
 
@@ -73,6 +77,7 @@ class ScheduleLLMValidator:
 
 
 def _empty_selection(status: str = "") -> dict[str, str]:
+    """Return an empty LLM selection payload."""
     return {
         "llm_selected_activity_id": "",
         "llm_selected_rank": "",
@@ -83,6 +88,7 @@ def _empty_selection(status: str = "") -> dict[str, str]:
 
 
 def _parse_json_object(text: str) -> dict[str, object]:
+    """Parse the first JSON object returned by the LLM."""
     try:
         value = json.loads(text)
         return value if isinstance(value, dict) else {}

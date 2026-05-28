@@ -12,6 +12,7 @@ class AzureEmbeddingService:
     """Thin Azure OpenAI embedding wrapper."""
 
     def __init__(self) -> None:
+        """Create the embedding client from environment config."""
         load_env_file()
         self.model = required_env("EMBEDDING_MODEL")
         self.dimensions = env_int("EMBEDDING_DIMENSIONS", 1536)
