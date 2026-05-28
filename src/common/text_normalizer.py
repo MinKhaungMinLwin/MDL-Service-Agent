@@ -7,7 +7,6 @@ import re
 from functools import lru_cache
 from pathlib import Path
 
-
 RULES_DIR = Path(__file__).resolve().parent / "normalization_rules"
 SCHEDULE_ABBREVIATIONS_PATH = RULES_DIR / "schedule_abbreviations.json"
 

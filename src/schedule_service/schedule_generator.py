@@ -14,10 +14,9 @@ if __package__ in (None, ""):
 
 from loguru import logger
 
-from schedule_service.guide_schedule_loader import DEFAULT_SCHEDULE_PATH, load_schedule_activities
 from schedule_service.models import ScheduleActivity
 from schedule_service.output_writer import write_schedule_outputs
-
+from schedule_service.schedule_loader import DEFAULT_SCHEDULE_PATH, load_schedule_activities
 
 DEFAULT_OUTPUT_DIR = Path("output/schedule_service")
 

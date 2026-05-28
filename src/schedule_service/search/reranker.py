@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from schedule_service.models import Candidate, ScheduleActivity
 
-
 DEFAULT_RRF_K = 60
 
 

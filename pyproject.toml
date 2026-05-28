@@ -11,7 +11,9 @@ dependencies = [
     "docling>=2.0.0",
     "fastapi>=0.115.0",
     "loguru>=0.7.3",
+    "neo4j>=5.28.0",
     "openai>=2.38.0",
+    "openpyxl>=3.1.5",
     "pypdf>=6.0.0",
     "python-multipart>=0.0.20",
     "uvicorn[standard]>=0.34.0",
@@ -40,3 +42,8 @@ ignore = []
 quote-style = "double"
 indent-style = "space"
 line-ending = "auto"
+
+[dependency-groups]
+dev = [
+    "ruff>=0.15.14",
+]
