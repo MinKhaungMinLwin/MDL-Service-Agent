@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from schedule_service.models import Candidate, ScheduleActivity
 
-
 DEFAULT_RRF_K = 60
 
 
 def rank_desc(scores: list[float]) -> list[int]:
+    """Return score indexes sorted descending."""
     return sorted(range(len(scores)), key=lambda index: scores[index], reverse=True)
 
 
@@ -21,6 +21,7 @@ def rrf_candidates(
     has_semantic: bool,
     rrf_k: int = DEFAULT_RRF_K,
 ) -> list[Candidate]:
+    """Merge keyword and semantic ranks with reciprocal rank fusion."""
     bm25_order = rank_desc(bm25_scores)
     bm25_ranks = {index: rank for rank, index in enumerate(bm25_order, start=1)}
     semantic_order = rank_desc(semantic_scores) if has_semantic else []

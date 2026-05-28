@@ -3,29 +3,26 @@
 from __future__ import annotations
 
 import json
-import os
-from pathlib import Path
-from urllib.parse import urlparse
 
+from common.config import load_env_file, required_env
+from common.openai_client import build_azure_openai_client
 from schedule_service.models import Candidate
 
 
 class ScheduleLLMValidator:
-    def __init__(self) -> None:
-        _load_env_file(Path("00_current_work/current_test_env/.env"))
-        from openai import AzureOpenAI
+    """Select the best schedule activity candidate with Azure OpenAI."""
 
-        endpoint = _required_env("AZURE_OPENAI_ENDPOINT")
-        parsed = urlparse(endpoint)
-        azure_endpoint = f"{parsed.scheme}://{parsed.netloc}/"
-        self.deployment = _required_env("AZURE_OPENAI_CHAT_DEPLOYMENT")
-        self.client = AzureOpenAI(
-            api_key=_required_env("AZURE_OPENAI_API_KEY"),
-            azure_endpoint=azure_endpoint,
-            api_version=os.getenv("AZURE_OPENAI_CHAT_API_VERSION", "2024-12-01-preview"),
+    def __init__(self) -> None:
+        """Create the Azure OpenAI chat client."""
+        load_env_file()
+        self.deployment = required_env("AZURE_OPENAI_CHAT_DEPLOYMENT")
+        self.client = build_azure_openai_client(
+            api_version_env="AZURE_OPENAI_CHAT_API_VERSION",
+            default_api_version="2024-12-01-preview",
         )
 
     def select_activity(self, query_text: str, candidates: list[Candidate]) -> dict[str, str]:
+        """Return the LLM-selected activity metadata for one query."""
         if not candidates:
             return _empty_selection("no_candidates")
 
@@ -80,6 +77,7 @@ class ScheduleLLMValidator:
 
 
 def _empty_selection(status: str = "") -> dict[str, str]:
+    """Return an empty LLM selection payload."""
     return {
         "llm_selected_activity_id": "",
         "llm_selected_rank": "",
@@ -90,6 +88,7 @@ def _empty_selection(status: str = "") -> dict[str, str]:
 
 
 def _parse_json_object(text: str) -> dict[str, object]:
+    """Parse the first JSON object returned by the LLM."""
     try:
         value = json.loads(text)
         return value if isinstance(value, dict) else {}
@@ -104,20 +103,3 @@ def _parse_json_object(text: str) -> dict[str, object]:
         except json.JSONDecodeError:
             return {}
 
-
-def _required_env(name: str) -> str:
-    value = os.getenv(name)
-    if not value:
-        raise RuntimeError(f"Missing required environment variable: {name}")
-    return value
-
-
-def _load_env_file(path: Path) -> None:
-    if not path.exists():
-        return
-    for line in path.read_text(encoding="utf-8").splitlines():
-        stripped = line.strip()
-        if not stripped or stripped.startswith("#") or "=" not in stripped:
-            continue
-        key, value = stripped.split("=", 1)
-        os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
