@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date, timedelta
-from typing import Optional
 
 _FC_DEFAULT_AFTER_FA_DAYS = 60
 _FC_DEFAULT_WINDOW_DAYS = 30
@@ -12,12 +11,12 @@ _FC_DEFAULT_WINDOW_DAYS = 30
 
 @dataclass
 class DateRange:
-    fa_earliest: Optional[date] = None
-    fa_latest: Optional[date] = None
-    fa_recommended: Optional[date] = None
-    fc_earliest: Optional[date] = None
-    fc_latest: Optional[date] = None
-    fc_recommended: Optional[date] = None
+    fa_earliest: date | None = None
+    fa_latest: date | None = None
+    fa_recommended: date | None = None
+    fc_earliest: date | None = None
+    fc_latest: date | None = None
+    fc_recommended: date | None = None
     sub_type: str = "UNKNOWN"
     confidence: float = 0.0
     notes: str = ""
@@ -25,7 +24,7 @@ class DateRange:
 
 def compute_date_range(
     vt_parsed: dict,
-    anchor_date: Optional[date],
+    anchor_date: date | None,
     sub_type: str,
     priority: int,
 ) -> DateRange:

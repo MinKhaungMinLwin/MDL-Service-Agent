@@ -52,10 +52,15 @@ def parse_validation_time(formula: str) -> dict:
     """Return structured dict with FA/FC day offsets from anchor date."""
     raw = formula.strip()
     base = {
-        "raw": raw, "valid": False, "anchor": "start",
-        "fa_lo_days": None, "fa_hi_days": None,
-        "fc_lo_days": None, "fc_hi_days": None,
-        "has_fa_rule": False, "has_fc_rule": False,
+        "raw": raw,
+        "valid": False,
+        "anchor": "start",
+        "fa_lo_days": None,
+        "fa_hi_days": None,
+        "fc_lo_days": None,
+        "fc_hi_days": None,
+        "has_fa_rule": False,
+        "has_fc_rule": False,
     }
     if raw in ("-", "", "Unmatch"):
         return base
@@ -67,42 +72,46 @@ def parse_validation_time(formula: str) -> dict:
     if m:
         anchor_lo, lo = _parse_anchor_offset(m.group(1) + m.group(2))
         anchor_hi, hi = _parse_anchor_offset(m.group(3) + m.group(4))
-        return {**base, "valid": True, "anchor": anchor_lo,
-                "fa_lo_days": lo, "fa_hi_days": hi,
-                "fc_lo_days": lo, "fc_hi_days": hi,
-                "has_fa_rule": True, "has_fc_rule": True}
+        return {
+            **base,
+            "valid": True,
+            "anchor": anchor_lo,
+            "fa_lo_days": lo,
+            "fa_hi_days": hi,
+            "fc_lo_days": lo,
+            "fc_hi_days": hi,
+            "has_fa_rule": True,
+            "has_fc_rule": True,
+        }
 
     # FC-only: start+3M<=FC<=start+5M
     m = re.fullmatch(_ANCHOR + _TERMS + _LEQ + r"FC" + _LEQ + _ANCHOR + _TERMS, f, re.IGNORECASE)
     if m:
         anchor_lo, lo = _parse_anchor_offset(m.group(1) + m.group(2))
         anchor_hi, hi = _parse_anchor_offset(m.group(3) + m.group(4))
-        return {**base, "valid": True, "anchor": anchor_lo,
-                "fc_lo_days": lo, "fc_hi_days": hi, "has_fc_rule": True}
+        return {**base, "valid": True, "anchor": anchor_lo, "fc_lo_days": lo, "fc_hi_days": hi, "has_fc_rule": True}
 
     # FA with bounds: start+4W<=FA<=start+6W
     m = re.fullmatch(_ANCHOR + _TERMS + _LEQ + r"FA" + _LEQ + _ANCHOR + _TERMS, f, re.IGNORECASE)
     if m:
         anchor_lo, lo = _parse_anchor_offset(m.group(1) + m.group(2))
         anchor_hi, hi = _parse_anchor_offset(m.group(3) + m.group(4))
-        return {**base, "valid": True, "anchor": anchor_lo,
-                "fa_lo_days": lo, "fa_hi_days": hi, "has_fa_rule": True}
+        return {**base, "valid": True, "anchor": anchor_lo, "fa_lo_days": lo, "fa_hi_days": hi, "has_fa_rule": True}
 
     # FA with strict <
-    m = re.fullmatch(_ANCHOR + _TERMS + _LEQ + r"FA" + _LEQ + _ANCHOR + _TERMS,
-                     f.replace("<=FA<", "<=FA<="), re.IGNORECASE)
+    m = re.fullmatch(
+        _ANCHOR + _TERMS + _LEQ + r"FA" + _LEQ + _ANCHOR + _TERMS, f.replace("<=FA<", "<=FA<="), re.IGNORECASE
+    )
     if m:
         anchor_lo, lo = _parse_anchor_offset(m.group(1) + m.group(2))
         anchor_hi, hi = _parse_anchor_offset(m.group(3) + m.group(4))
-        return {**base, "valid": True, "anchor": anchor_lo,
-                "fa_lo_days": lo, "fa_hi_days": hi, "has_fa_rule": True}
+        return {**base, "valid": True, "anchor": anchor_lo, "fa_lo_days": lo, "fa_hi_days": hi, "has_fa_rule": True}
 
     # FA with no lower offset: start<=FA<=start+2M
     m = re.fullmatch(r"(start|finish)" + _LEQ + r"FA" + _LEQ + _ANCHOR + _TERMS, f, re.IGNORECASE)
     if m:
         anchor_hi, hi = _parse_anchor_offset(m.group(2) + m.group(3))
-        return {**base, "valid": True, "anchor": m.group(1),
-                "fa_lo_days": 0, "fa_hi_days": hi, "has_fa_rule": True}
+        return {**base, "valid": True, "anchor": m.group(1), "fa_lo_days": 0, "fa_hi_days": hi, "has_fa_rule": True}
 
     # Multi-line: take first line
     if "\n" in raw:
