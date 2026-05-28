@@ -13,7 +13,6 @@ if __package__ in (None, ""):
     sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from datetime import date
-from typing import Optional
 
 from loguru import logger
 
@@ -48,10 +47,7 @@ def generate_schedule_file(
 
     rule_table = _load_rule_table(rule_path)
     activity_by_id = {activity.activity_id: activity for activity in schedule_activities}
-    output_rows = [
-        _format_schedule_row(mapping_json, row, activity_by_id, rule_table)
-        for row in mapping_rows
-    ]
+    output_rows = [_format_schedule_row(mapping_json, row, activity_by_id, rule_table) for row in mapping_rows]
 
     output_stem = _output_stem(mapping_json)
     if limit > 0:
@@ -64,7 +60,7 @@ def _format_schedule_row(
     mapping_json: Path,
     row: dict[str, Any],
     activity_by_id: dict[str, ScheduleActivity],
-    rule_table: Optional["RuleTable"],
+    rule_table: RuleTable | None,
 ) -> dict[str, Any]:
     """Format one generated schedule row, including FA/FC date ranges."""
     selected_activity_id = str(row.get("llm_selected_activity_id", "")).strip()
@@ -137,7 +133,7 @@ def _format_schedule_row(
     }
 
 
-def _load_rule_table(path: Path) -> Optional[RuleTable]:
+def _load_rule_table(path: Path) -> RuleTable | None:
     """Load rule table; return None if file is missing (graceful degradation)."""
     if not path.exists():
         _log(f"Validation rule file not found: {path} — date ranges will be skipped")
@@ -148,11 +144,11 @@ def _load_rule_table(path: Path) -> Optional[RuleTable]:
 
 
 def _resolve_anchor_date(
-    activity: Optional[ScheduleActivity],
+    activity: ScheduleActivity | None,
     start_date_str: str,
     finish_date_str: str,
     rule: ValidationRule,
-) -> Optional[date]:
+) -> date | None:
     """Pick start_date or finish_date as anchor based on rule activity keywords."""
     kws_lower = {k.lower() for k in rule.activity_keywords}
     use_finish = bool(kws_lower & _FINISH_DATE_KEYWORDS)
@@ -165,7 +161,7 @@ def _resolve_anchor_date(
         return None
 
 
-def _fmt_date(d: Optional[date]) -> str:
+def _fmt_date(d: date | None) -> str:
     return d.isoformat() if d is not None else ""
 
 
