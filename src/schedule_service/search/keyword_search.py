@@ -5,7 +5,6 @@ from __future__ import annotations
 import math
 import re
 
-
 TOKEN_PATTERN = re.compile(r"[a-z0-9]+")
 
 
@@ -35,7 +34,7 @@ class BM25Index:
     def score(self, query: str) -> list[float]:
         query_tokens = tokenize(query)
         scores: list[float] = []
-        for document, term_freq in zip(self.documents, self.term_freqs):
+        for document, term_freq in zip(self.documents, self.term_freqs, strict=True):
             doc_len = len(document)
             score = 0.0
             for token in query_tokens:

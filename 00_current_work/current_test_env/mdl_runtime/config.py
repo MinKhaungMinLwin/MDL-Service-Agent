@@ -1,7 +1,6 @@
 """Configuration for standalone current_test_env scripts.
 
-Values are loaded from this directory's `.env` and `.env.local` files first,
-then from the process environment.
+Values are loaded from the repository root `.env`, then from the process environment.
 """
 
 from __future__ import annotations
@@ -16,12 +15,12 @@ except ImportError:  # pragma: no cover - python-dotenv is optional at import ti
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+REPO_ROOT = BASE_DIR.parent.parent
 DATA_DIR = BASE_DIR / "data"
 OUTPUT_DIR = BASE_DIR / "output"
 
 if load_dotenv is not None:
-    load_dotenv(BASE_DIR / ".env", override=True)
-    load_dotenv(BASE_DIR / ".env.local", override=True)
+    load_dotenv(REPO_ROOT / ".env", override=False)
 
 
 def _env(*names: str, default: str = "") -> str:
@@ -34,7 +33,7 @@ def _env(*names: str, default: str = "") -> str:
 
 def required(value: str, label: str) -> str:
     if not value:
-        raise ValueError(f"{label} is not configured. Set it in {BASE_DIR / '.env'} or the process environment.")
+        raise ValueError(f"{label} is not configured. Set it in {REPO_ROOT / '.env'} or the process environment.")
     return value
 
 

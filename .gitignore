@@ -13,6 +13,7 @@ prompt-test/
 # Python/local runtime artifacts
 __pycache__/
 *.py[cod]
+*.egg-info/
 .venv/
 venv/
 .env
@@ -22,3 +23,9 @@ venv/
 # OS/editor noise
 .DS_Store
 Thumbs.db
+
+.claude/
+
+# Parser/chunker service code kept local
+src/parser_service/
+src/chunker_service/

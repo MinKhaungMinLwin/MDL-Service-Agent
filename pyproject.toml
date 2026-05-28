@@ -1,0 +1,49 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "doosan-mdl"
+version = "0.1.0"
+description = "Doosan MDL parsing and matching workspace"
+requires-python = ">=3.11"
+dependencies = [
+    "docling>=2.0.0",
+    "fastapi>=0.115.0",
+    "loguru>=0.7.3",
+    "neo4j>=5.28.0",
+    "openai>=2.38.0",
+    "openpyxl>=3.1.5",
+    "pypdf>=6.0.0",
+    "python-multipart>=0.0.20",
+    "uvicorn[standard]>=0.34.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.11.0",
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = []
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
+
+[dependency-groups]
+dev = [
+    "ruff>=0.15.14",
+]
