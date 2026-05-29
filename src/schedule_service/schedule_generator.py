@@ -1,10 +1,9 @@
-"""Generate baseline schedule outputs from schedule mapping results."""
+"""Generate FA/FC date ranges from MDL classified documents."""
 
 from __future__ import annotations
 
 import argparse
-import json
-import re
+import csv
 import sys
 from pathlib import Path
 from typing import Any
@@ -21,35 +20,74 @@ from schedule_service.models import ScheduleActivity
 from schedule_service.output_writer import write_schedule_outputs
 from schedule_service.rule_loader import DEFAULT_RULE_PATH, RuleTable, ValidationRule
 from schedule_service.schedule_loader import DEFAULT_SCHEDULE_PATH, load_schedule_activities
+from schedule_service.search.keyword_search import BM25Index
 
 DEFAULT_OUTPUT_DIR = Path("output/schedule_service")
 
 # Activity keywords that indicate finish_date should be used as anchor
 _FINISH_DATE_KEYWORDS = {"transportation", "delivery", "fob", "manufacturing", "fo b"}
 
+# Map MDL Deliverable values to terms used in validation_rule.csv keywords
+_DELIVERABLE_NORM: dict[str, str] = {
+    "P&I DIAGRAM": "P&ID",
+    "P&I DRAWING": "P&ID",
+    "P&ID": "P&ID",
+    "PIPING & INSTRUMENTATION DRAWING": "P&ID",
+    "PIPING AND INSTRUMENTATION DRAWING": "P&ID",
+    "PIPING AND INSTRUMENTATION DIAGRAM": "P&ID",
+    "GENERAL ARRANGEMENT": "General Arrangement Drawing",
+    "GA": "General Arrangement Drawing",
+    "GA DRAWING": "General Arrangement Drawing",
+    "ARRANGEMENT DRAWING": "General Arrangement Drawing",
+    "LAYOUT": "Layout Drawing",
+    "LAYOUT DRAWING": "Layout Drawing",
+    "CALCULATION": "Calculation sheet",
+    "SIZING CALCULATION": "Calculation sheet",
+    "TECHNICAL SPECIFICATION": "Technical Specification",
+    "SPECIFICATION": "Technical Specification",
+    "DATA SHEET": "Data Sheet",
+    "DATASHEET": "Data Sheet",
+    "OUTLINE DRAWING": "Outline Drawing",
+    "SINGLE LINE DIAGRAM": "Single Line Diagram",
+    "SLD": "Single Line Diagram",
+    "DETAIL": "Detail Drawing",
+    "DETAIL DRAWING": "Detail Drawing",
+    "ELEVATION": "Elevation Drawing",
+    "DIAGRAM": "Diagram",
+    "ISOMETRIC": "Isometric Drawing",
+    "ISOMETRIC DRAWING": "Isometric Drawing",
+    "FOUNDATION AND LOADING DATA": "Foundation and Loading Data",
+    "SYSTEM DESCRIPTION": "System Description",
+    "PLAN": "Plan",
+    "SCHEDULE": "Schedule",
+}
+
 
 def generate_schedule_file(
-    mapping_json: Path,
+    input_csv: Path,
     schedule_activities: list[ScheduleActivity],
     output_dir: Path,
     rule_path: Path = DEFAULT_RULE_PATH,
     limit: int = 0,
 ) -> tuple[Path, Path]:
-    """Generate baseline schedule outputs from a mapping JSON."""
-    _log(f"Reading schedule mapping: {mapping_json}")
-    mapping_rows = _read_mapping_rows(mapping_json)
-    original_row_count = len(mapping_rows)
+    """Generate FA/FC date ranges from an MDL classified CSV."""
+    _log(f"Reading MDL classified CSV: {input_csv}")
+    rows = _read_csv(input_csv)
+    original_count = len(rows)
     if limit > 0:
-        mapping_rows = mapping_rows[:limit]
-        _log(f"Limit enabled: processing first {len(mapping_rows)} of {original_row_count} rows")
-    if not mapping_rows:
-        raise ValueError(f"No mapping rows found in {mapping_json}")
+        rows = rows[:limit]
+        _log(f"Limit enabled: processing first {len(rows)} of {original_count} rows")
+    if not rows:
+        raise ValueError(f"No rows found in {input_csv}")
 
     rule_table = _load_rule_table(rule_path)
-    activity_by_id = {activity.activity_id: activity for activity in schedule_activities}
-    output_rows = [_format_schedule_row(mapping_json, row, activity_by_id, rule_table) for row in mapping_rows]
 
-    output_stem = _output_stem(mapping_json)
+    _log(f"Building BM25 index for {len(schedule_activities)} schedule activities")
+    bm25 = BM25Index([a.target_text for a in schedule_activities])
+
+    output_rows = [_format_schedule_row(row, schedule_activities, bm25, rule_table) for row in rows]
+
+    output_stem = _output_stem(input_csv)
     if limit > 0:
         output_stem = f"{output_stem}_limit{limit}"
     _log(f"Writing generated schedule with stem: {output_stem}")
@@ -57,79 +95,72 @@ def generate_schedule_file(
 
 
 def _format_schedule_row(
-    mapping_json: Path,
-    row: dict[str, Any],
-    activity_by_id: dict[str, ScheduleActivity],
+    row: dict[str, str],
+    activities: list[ScheduleActivity],
+    bm25: BM25Index,
     rule_table: RuleTable | None,
 ) -> dict[str, Any]:
-    """Format one generated schedule row, including FA/FC date ranges."""
-    selected_activity_id = str(row.get("llm_selected_activity_id", "")).strip()
-    activity = activity_by_id.get(selected_activity_id)
-    rank = _to_int(row.get("llm_selected_rank", ""))
-    selected_candidate = _candidate_fields(row, rank)
+    """Format one generated schedule row with FA/FC date ranges."""
+    title = row.get("Title", "").strip()
+    deliverable = row.get("Deliverable", "").strip()
+    equipment = row.get("Equipment", "").strip()
+    system = row.get("System", "").strip()
+    building = row.get("Building", "").strip()
 
-    if activity:
-        activity_name = activity.activity_name_clean or activity.activity_name
-        wbs_path = activity.wbs_path
-        start_date = activity.start_date
-        finish_date = activity.finish_date
-        status = "generated"
-    else:
-        activity_name = str(selected_candidate.get("activity_name", ""))
-        wbs_path = str(selected_candidate.get("wbs_path", ""))
-        start_date = str(selected_candidate.get("start_date", ""))
-        finish_date = str(selected_candidate.get("finish_date", ""))
-        status = "missing_activity" if selected_activity_id else "unmapped"
+    # Build rule match string: normalize(Deliverable) + "for" + best available scope
+    norm_del = _normalize_deliverable(deliverable)
+    scope = equipment or system or building
+    rule_query = f"{norm_del} for {scope}" if scope else norm_del
 
-    # Compute FA/FC date ranges via validation rule
-    sub_type = ""
-    date_range_status = "no_rule"
+    # Match validation rule: try scoped query first, fall back to bare title
+    rule: ValidationRule | None = None
+    if rule_table:
+        rule = rule_table.match(rule_query) or rule_table.match(title)
+
+    sub_type = rule.sub_type if rule else ""
+    rule_name = rule.item_name if rule else ""
+    vt_parsed: dict = rule.vt_parsed if rule else {}
+
+    # Match CCPP guide schedule activity via BM25
+    activity_query = " ".join(p for p in [equipment, system, norm_del, title] if p)
+    bm25_scores = bm25.score(activity_query)
+    top_idx = max(range(len(bm25_scores)), key=lambda idx: bm25_scores[idx])
+    activity = activities[top_idx]
+
+    # Compute FA/FC date ranges
     dr = DateRange()
-    if rule_table is not None:
-        document = row.get("document", "")
-        rule = rule_table.match(document)
-        if rule:
-            sub_type = rule.sub_type
-            if rule.sub_type == "SKIP":
-                date_range_status = "skip"
-            else:
-                anchor = _resolve_anchor_date(activity, start_date, finish_date, rule)
-                dr = compute_date_range(rule.vt_parsed, anchor, rule.sub_type, rule.priority)
-                date_range_status = "generated" if anchor is not None else "missing_date"
+    date_range_status = "no_rule"
+    if rule and sub_type == "SKIP":
+        date_range_status = "skip"
+    elif rule:
+        anchor = _resolve_anchor_date(activity, activity.start_date, activity.finish_date, rule)
+        dr = compute_date_range(vt_parsed, anchor, sub_type, rule.priority)
+        date_range_status = "generated" if anchor is not None else "missing_date"
 
     return {
-        "source_mapping_file": mapping_json.name,
-        "source_match_file": row.get("source_file", ""),
-        "document": row.get("document", ""),
-        "page": row.get("page", ""),
-        "search_query": row.get("search_query", ""),
-        "search_query_source": row.get("search_query_source", ""),
-        "keywords": row.get("keywords", ""),
-        "depth_context": row.get("depth_context", ""),
-        "selected_activity_id": selected_activity_id,
-        "selected_activity_name": activity_name,
-        "selected_activity_wbs_path": wbs_path,
-        "selected_activity_start_date": start_date,
-        "selected_activity_finish_date": finish_date,
-        "baseline_schedule_source": "ccpp_guide_activity",
-        "schedule_generation_status": status,
-        # Validation rule & submission type
+        "source_file": row.get("Source File", ""),
+        "document_no": row.get("Document No", "").strip(),
+        "title": title,
+        "deliverable": deliverable,
+        "equipment": equipment,
+        "system": system,
+        "building": building,
+        "rule_query": rule_query,
+        "matched_rule": rule_name,
         "submission_type": sub_type,
-        # FA date range
+        "matched_activity_id": activity.activity_id,
+        "matched_activity_name": activity.activity_name_clean or activity.activity_name,
+        "matched_activity_wbs_path": activity.wbs_path,
+        "matched_activity_start_date": activity.start_date,
+        "matched_activity_finish_date": activity.finish_date,
         "fa_earliest": _fmt_date(dr.fa_earliest),
-        "fa_latest": _fmt_date(dr.fa_latest),
         "fa_recommended": _fmt_date(dr.fa_recommended),
-        # FC date range
+        "fa_latest": _fmt_date(dr.fa_latest),
         "fc_earliest": _fmt_date(dr.fc_earliest),
-        "fc_latest": _fmt_date(dr.fc_latest),
         "fc_recommended": _fmt_date(dr.fc_recommended),
+        "fc_latest": _fmt_date(dr.fc_latest),
         "date_range_status": date_range_status,
         "date_range_confidence": f"{dr.confidence:.2f}" if dr.confidence else "",
-        # LLM metadata
-        "llm_selected_rank": row.get("llm_selected_rank", ""),
-        "llm_confidence": row.get("llm_confidence", ""),
-        "llm_status": row.get("llm_status", ""),
-        "llm_reason": row.get("llm_reason", ""),
     }
 
 
@@ -144,7 +175,7 @@ def _load_rule_table(path: Path) -> RuleTable | None:
 
 
 def _resolve_anchor_date(
-    activity: ScheduleActivity | None,
+    activity: ScheduleActivity,
     start_date_str: str,
     finish_date_str: str,
     rule: ValidationRule,
@@ -161,62 +192,40 @@ def _resolve_anchor_date(
         return None
 
 
+def _normalize_deliverable(deliverable: str) -> str:
+    return _DELIVERABLE_NORM.get(deliverable.strip().upper(), deliverable.strip())
+
+
 def _fmt_date(d: date | None) -> str:
     return d.isoformat() if d is not None else ""
 
 
-def _candidate_fields(row: dict[str, Any], rank: int | None) -> dict[str, Any]:
-    """Return selected candidate fields from a mapping row."""
-    if rank is None or rank < 1:
-        return {}
-    prefix = f"candidate_{rank}"
-    return {
-        "activity_name": row.get(f"{prefix}_activity_name", ""),
-        "wbs_path": row.get(f"{prefix}_wbs_path", ""),
-        "start_date": row.get(f"{prefix}_start_date", ""),
-        "finish_date": row.get(f"{prefix}_finish_date", ""),
-    }
+def _read_csv(path: Path) -> list[dict[str, str]]:
+    """Read an MDL classified CSV file."""
+    with path.open("r", encoding="utf-8-sig", newline="") as f:
+        return list(csv.DictReader(f))
 
 
-def _read_mapping_rows(path: Path) -> list[dict[str, Any]]:
-    """Read mapping rows from a JSON list."""
-    payload = json.loads(path.read_text(encoding="utf-8"))
-    if not isinstance(payload, list):
-        raise ValueError(f"Expected a JSON list in {path}")
-    return [row for row in payload if isinstance(row, dict)]
-
-
-def _output_stem(mapping_json: Path) -> str:
+def _output_stem(input_csv: Path) -> str:
     """Build the generated schedule output stem."""
-    stem = mapping_json.stem
-    if stem.startswith("schedule_mapping_"):
-        return f"generated_schedule_{stem.removeprefix('schedule_mapping_')}"
-    return f"generated_schedule_{stem}"
-
-
-def _to_int(value: Any) -> int | None:
-    """Parse a positive integer string."""
-    text = str(value).strip()
-    if not re.fullmatch(r"\d+", text):
-        return None
-    return int(text)
+    return f"generated_schedule_{input_csv.stem}"
 
 
 def main() -> None:
     """Run the schedule generator CLI."""
-    parser = argparse.ArgumentParser(description="Generate baseline schedule outputs from schedule mapping JSON files.")
+    parser = argparse.ArgumentParser(description="Generate FA/FC date ranges from MDL classified CSV files.")
     parser.add_argument("--schedule", type=Path, default=DEFAULT_SCHEDULE_PATH)
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
-    parser.add_argument("--limit", type=int, default=0, help="Process only the first N rows from each mapping file.")
-    parser.add_argument("inputs", nargs="+", type=Path, help="One or more schedule_mapping_*.json files.")
+    parser.add_argument("--limit", type=int, default=0, help="Process only the first N rows from each input CSV.")
+    parser.add_argument("inputs", nargs="+", type=Path, help="One or more *_MDL_classified.csv files.")
     args = parser.parse_args()
 
     _log(f"Loading schedule activities: {args.schedule}")
     activities = load_schedule_activities(args.schedule)
     _log(f"Loaded {len(activities)} schedule activities")
-    for mapping_json in args.inputs:
+    for input_csv in args.inputs:
         xlsx_path, json_path = generate_schedule_file(
-            mapping_json=mapping_json,
+            input_csv=input_csv,
             schedule_activities=activities,
             output_dir=args.output_dir,
             limit=args.limit,
