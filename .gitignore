@@ -31,3 +31,4 @@ src/parser_service/
 src/chunker_service/
 
 backup/
+.omc/

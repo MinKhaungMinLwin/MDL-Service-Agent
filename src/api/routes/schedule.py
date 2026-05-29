@@ -80,31 +80,31 @@ def schedule_map(
 
 @router.post(
     "/generate",
-    summary="Generate baseline schedule from mapping output",
+    summary="Generate FA/FC date ranges from MDL classified CSV",
     description=(
-        "Reads a schedule mapping JSON produced by /schedule/map, joins the selected "
-        "activity IDs back to the cleaned CCPP guide schedule, and writes baseline "
-        "generated schedule JSON/XLSX files under output/schedule_service."
+        "Reads an MDL classified CSV (*_MDL_classified.csv), matches each document row "
+        "against the validation rule table and CCPP guide schedule via BM25, and generates "
+        "FA/FC date ranges. Output is written under output/schedule_service."
     ),
 )
 def schedule_generate(
-    mapping_json: Annotated[
+    input_csv: Annotated[
         str,
         Query(
             min_length=1,
-            description="Path to a schedule mapping JSON file produced by /schedule/map.",
-            examples=["output/schedule_service/schedule_mapping_all_projects_section6_limit3.json"],
+            description="Path to an MDL classified CSV file.",
+            examples=["00_current_work/current_test_env/output/Fadhili_MDL_classified.csv"],
         ),
     ],
     limit: ScheduleLimit = 0,
 ) -> dict[str, object]:
-    """Generate a baseline schedule output from a schedule mapping JSON file."""
-    input_path = _existing_path(mapping_json)
-    logger.info("Generating baseline schedule from mapping JSON: {}", input_path)
+    """Generate FA/FC schedule date ranges from an MDL classified CSV."""
+    input_path = _existing_path(input_csv)
+    logger.info("Generating FA/FC date ranges from MDL classified CSV: {}", input_path)
 
     schedule_activities = load_schedule_activities(DEFAULT_SCHEDULE_PATH)
     xlsx_path, json_path = generate_schedule_file(
-        mapping_json=input_path,
+        input_csv=input_path,
         schedule_activities=schedule_activities,
         output_dir=SCHEDULE_OUTPUT_DIR,
         limit=limit,
