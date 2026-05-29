@@ -28,6 +28,7 @@ MODEL_DEPLOYMENT = AZURE_OPENAI_CHAT_DEPLOYMENT
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROMPT_FILE = os.path.join(SCRIPT_DIR, "prompts", "itb_keyword_extraction_v2.md")
+VERIFY_PROMPT_FILE = os.path.join(SCRIPT_DIR, "prompts", "itb_depth_verification.md")
 ABBREVIATION_RULES_PATH = REPO_ROOT / "src" / "common" / "normalization_rules" / "abbreviations.json"
 ITB_SECTION = os.getenv("ITB_SECTION", "7").strip()
 SECTION_CONFIG = {
@@ -63,6 +64,13 @@ OUTPUT_HEADER = [
     "Confidence",
     "Needs Review",
     "Reason",
+    "LLM Verify Valid",
+    "LLM Verify Severity",
+    "LLM Verify Issues",
+    "LLM Suggested Depths",
+    "LLM Suggested Keywords",
+    "LLM Suggested Search Query",
+    "LLM Verify Reason",
     "Chunk Text",
 ]
 TOKEN_HEADER = ["Document", "Page", "Prompt Tokens", "Completion Tokens", "Total Tokens", "Chunk Text"]
@@ -78,6 +86,7 @@ TARGETS = [
 
 MAX_TEST_CHUNKS = int(os.getenv("MAX_TEST_CHUNKS", "0"))
 ITB_BATCH_SIZE = max(1, int(os.getenv("ITB_BATCH_SIZE", "1")))
+ITB_ENABLE_LLM_VERIFY = os.getenv("ITB_ENABLE_LLM_VERIFY", "false").strip().lower() in {"1", "true", "yes", "y"}
 
 
 def load_abbreviation_rules() -> dict[str, str]:
@@ -183,10 +192,18 @@ def fallback_search_query(depths: list[str], keywords: str) -> str:
     return " ".join(fallback_terms).strip()
 
 
-def build_csv_row(doc_name: str, chunk: dict, hierarchy: str, parsed: dict, text: str) -> list[str]:
+def build_csv_row(
+    doc_name: str,
+    chunk: dict,
+    hierarchy: str,
+    parsed: dict,
+    text: str,
+    verification: dict | None = None,
+) -> list[str]:
     """Convert one structured model output to the CSV row schema."""
     pages = chunk.get("page_num", [])
     page_str = ", ".join(map(str, pages))
+    verification = verification or {}
     depth1 = as_text(parsed.get("depth_1"))
     depth2 = as_text(parsed.get("depth_2"))
     depth3 = as_text(parsed.get("depth_3"))
@@ -197,6 +214,7 @@ def build_csv_row(doc_name: str, chunk: dict, hierarchy: str, parsed: dict, text
     search_query_source = "llm" if search_query else "fallback"
     if not search_query:
         search_query = fallback_search_query([depth1, depth2, depth3, depth4, depth5], keywords)
+    suggested_depths = verification.get("suggested_depths")
 
     return [
         doc_name,
@@ -218,6 +236,13 @@ def build_csv_row(doc_name: str, chunk: dict, hierarchy: str, parsed: dict, text
         as_text(parsed.get("confidence")),
         as_text(parsed.get("needs_review")),
         as_text(parsed.get("reason")),
+        as_text(verification.get("is_valid")),
+        as_text(verification.get("severity")),
+        as_list_text(verification.get("issues")),
+        json.dumps(suggested_depths, ensure_ascii=False) if suggested_depths else "",
+        as_list_text(verification.get("suggested_keywords")),
+        as_text(verification.get("suggested_search_query")),
+        as_text(verification.get("reason")),
         text,
     ]
 
@@ -229,6 +254,7 @@ def build_json_record(
     parsed: dict,
     token_usage: dict,
     known_abbreviations: dict[str, str] | None = None,
+    verification: dict | None = None,
     error: str = "",
 ) -> dict:
     """Build the JSON source-of-truth record for one chunk."""
@@ -245,6 +271,7 @@ def build_json_record(
         "hierarchy_context": hierarchy,
         "known_abbreviations": known_abbreviations or {},
         "llm_output": parsed,
+        "llm_verification": verification or {},
         "token_usage": token_usage,
     }
     if error:
@@ -265,6 +292,24 @@ def build_chunk_payload(doc_name: str, chunk: dict, hierarchy: str, known_abbrev
         "hierarchy_context": hierarchy,
         "known_abbreviations": known_abbreviations,
         "chunk_text": chunk.get("text", ""),
+    }
+
+
+def build_verification_payload(doc_name: str, chunk: dict, hierarchy: str, parsed: dict) -> dict:
+    """Build one verifier payload from source chunk data and extractor output."""
+    return {
+        "source_input": {
+            "document": doc_name,
+            "chunk_id": chunk.get("chunk_id", ""),
+            "pages": chunk.get("page_num", []),
+            "section": chunk.get("section", ""),
+            "section_path": chunk.get("section_path", ""),
+            "chunk_type": chunk.get("chunk_type", ""),
+            "label": chunk.get("label", ""),
+            "hierarchy_context": hierarchy,
+            "chunk_text": chunk.get("text", ""),
+        },
+        "extractor_output": parsed,
     }
 
 
@@ -289,6 +334,21 @@ def extract_chunk_batch(client: AzureOpenAI, system_prompt: str, batch_payload: 
     }
     parsed = parse_json_output(output)
     return parse_batch_results(parsed, batch_payload), token_usage, ""
+
+
+def verify_extraction(client: AzureOpenAI, system_prompt: str, verification_payload: dict) -> dict:
+    """Verify one extracted ITB depth result with the chat model."""
+    response = client.chat.completions.create(
+        model=MODEL_DEPLOYMENT,
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": json.dumps(verification_payload, ensure_ascii=False)},
+        ],
+        temperature=0.0,
+        max_completion_tokens=2048,
+        response_format={"type": "json_object"},
+    )
+    return parse_json_output(response.choices[0].message.content or "{}")
 
 
 def parse_batch_results(parsed: dict, batch_payload: list[dict]) -> dict[str, dict]:
@@ -342,10 +402,11 @@ def main() -> None:
     """Run ITB chunk extraction and write structured outputs."""
     logger.info("ITB Keyword Extraction Test -> Structured JSON + CSV Export")
     logger.info(
-        "Runtime config: ITB_SECTION={}, MAX_TEST_CHUNKS={}, ITB_BATCH_SIZE={}",
+        "Runtime config: ITB_SECTION={}, MAX_TEST_CHUNKS={}, ITB_BATCH_SIZE={}, ITB_ENABLE_LLM_VERIFY={}",
         ITB_SECTION,
         MAX_TEST_CHUNKS,
         ITB_BATCH_SIZE,
+        ITB_ENABLE_LLM_VERIFY,
     )
     for target in TARGETS:
         logger.info("Target: {} (Pages {}~{})", target["doc_name"], target["min_page"], target["max_page"])
@@ -356,6 +417,14 @@ def main() -> None:
     with open(PROMPT_FILE, encoding="utf-8") as prompt_file:
         system_prompt = prompt_file.read()
     logger.info("System prompt loaded from {}", PROMPT_FILE)
+    verify_prompt = ""
+    if ITB_ENABLE_LLM_VERIFY:
+        if not os.path.exists(VERIFY_PROMPT_FILE):
+            logger.error("Verifier prompt file not found: {}", VERIFY_PROMPT_FILE)
+            return
+        with open(VERIFY_PROMPT_FILE, encoding="utf-8") as prompt_file:
+            verify_prompt = prompt_file.read()
+        logger.info("Verifier prompt loaded from {}", VERIFY_PROMPT_FILE)
     abbreviation_rules = load_abbreviation_rules()
     logger.info("Loaded {} abbreviation rules from {}", len(abbreviation_rules), ABBREVIATION_RULES_PATH)
 
@@ -481,7 +550,27 @@ def main() -> None:
                             parsed, _, error = failed_extraction(f"Missing model result for chunk_id: {chunk_id}")
                             logger.error("Missing model result for chunk_id: {}", chunk_id)
 
-                    writer.writerow(build_csv_row(doc_name, chunk, hierarchy, parsed, text))
+                    verification = {}
+                    if ITB_ENABLE_LLM_VERIFY and not error:
+                        try:
+                            verification = verify_extraction(
+                                client,
+                                verify_prompt,
+                                build_verification_payload(doc_name, chunk, hierarchy, parsed),
+                            )
+                        except Exception as exc:
+                            verification = {
+                                "is_valid": False,
+                                "severity": "error",
+                                "issues": [str(exc)],
+                                "suggested_depths": {},
+                                "suggested_keywords": [],
+                                "suggested_search_query": "",
+                                "reason": "LLM verification failed.",
+                            }
+                            logger.exception("Verification failed for chunk_id: {}", chunk_id)
+
+                    writer.writerow(build_csv_row(doc_name, chunk, hierarchy, parsed, text, verification))
                     json_records.append(
                         build_json_record(
                             doc_name,
@@ -490,6 +579,7 @@ def main() -> None:
                             parsed,
                             token_usage,
                             known_abbreviations=known_abbreviations,
+                            verification=verification,
                             error=error,
                         )
                     )
