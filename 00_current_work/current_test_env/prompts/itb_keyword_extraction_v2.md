@@ -38,11 +38,17 @@ Each result must include the original `chunk_id` and the extraction fields.
 
 Depth rules:
 - Start from `hierarchy_context`.
-- Fill `depth_1` to `depth_3` with meaningful ITB section hierarchy.
+- Normalize all depth values: remove section numbers, leading numbering, underscores, and raw breadcrumb artifacts. For example, use `Scope of Civil Works` instead of `7.1_Scope_of_Civil_Works`, and `HVAC Systems and Design Conditions` instead of `7.5.5_HVAC_Systems_and_Design_Conditions`.
+- Fill `depth_1` to `depth_3` with meaningful ITB section hierarchy or a clear technical subject from the chunk.
+- Do not blindly copy a broad parent label when a child section or chunk text identifies a clearer technical domain. For example, if `hierarchy_context` is `Scope of Civil Works > HVAC Systems and Design Conditions`, classify the chunk under `HVAC` / `HVAC Systems and Design Conditions`, not under the broad `Scope of Civil Works` domain.
+- If a child section is a clear technical domain such as HVAC, Mechanical Cooling, Ductwork, Fresh Air Requirements, Domestic Hot and Cold Water Services, Fire Protection, Electrical Building Services, Mechanical Building Services, or Plant Control, use that technical domain for the most relevant upper depth levels.
+- If `chunk_text` clearly describes a specific technical subject, fill `depth_3` with that subject even when `hierarchy_context` has only one or two levels.
 - Use `depth_4` only for a specific equipment, building, package, or item-level target.
 - Use `depth_5` only for a meaningful technical sub-scope.
 - Do not put deliverable names such as drawing, calculation, report, list, or procedure in any depth field.
+- Do not put requirements, design criteria, containment features, standby capacity, refrigerant rules, ventilation criteria, drainage rules, testing requirements, or standards compliance in `depth_4` or `depth_5`; put those terms in `keywords` and `search_query`.
 - Leave uncertain or generic depth fields blank.
+- Blank `depth_4` and `depth_5` are valid when no specific equipment, building, package, item-level target, or meaningful sub-scope is explicit.
 
 Keyword rules:
 - Extract 2-12 useful technical phrases for MDL matching.
@@ -55,6 +61,7 @@ Search query rules:
 - Build one concise comma-separated retrieval query.
 - Combine the most meaningful depth terms with the strongest keywords.
 - Prefer technical anchors over administrative section labels.
+- Do not include broad parent labels in the search query when they conflict with the chunk's technical subject. For HVAC, mechanical cooling, ductwork, fresh air, or domestic water service chunks, avoid adding `Scope of Civil Works` unless the civil scope is the actual technical subject.
 - Make the query directly usable for vector or hybrid search against MDL rows.
 
 Set `confidence` to:
