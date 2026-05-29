@@ -11,7 +11,7 @@ from typing import Any
 if __package__ in (None, ""):
     sys.path.append(str(Path(__file__).resolve().parents[1]))
 
-from datetime import date
+from datetime import date, timedelta
 
 from loguru import logger
 
@@ -23,6 +23,9 @@ from schedule_service.schedule_loader import DEFAULT_SCHEDULE_PATH, load_schedul
 from schedule_service.search.keyword_search import BM25Index
 
 DEFAULT_OUTPUT_DIR = Path("output/schedule_service")
+
+# All dates in the CCPP guide schedule are relative to this template NTP
+TEMPLATE_NTP = date(2007, 3, 1)
 
 # Activity keywords that indicate finish_date should be used as anchor
 _FINISH_DATE_KEYWORDS = {"transportation", "delivery", "fob", "manufacturing", "fo b"}
@@ -69,8 +72,16 @@ def generate_schedule_file(
     output_dir: Path,
     rule_path: Path = DEFAULT_RULE_PATH,
     limit: int = 0,
+    ntp_date: str = "",
 ) -> tuple[Path, Path]:
-    """Generate FA/FC date ranges from an MDL classified CSV."""
+    """Generate FA/FC date ranges from an MDL classified CSV.
+
+    Args:
+        ntp_date: Real project NTP date in ISO format (e.g. "2024-01-15").
+                  All guide schedule template dates are shifted by
+                  (ntp_date - 2007-03-01) to produce real-world dates.
+                  If omitted, template dates (2007–2009) are used as-is.
+    """
     _log(f"Reading MDL classified CSV: {input_csv}")
     rows = _read_csv(input_csv)
     original_count = len(rows)
@@ -80,14 +91,25 @@ def generate_schedule_file(
     if not rows:
         raise ValueError(f"No rows found in {input_csv}")
 
+    shift_days = _compute_shift(ntp_date)
+    if shift_days:
+        _log(f"NTP shift: {ntp_date} → {shift_days:+d} days from template NTP {TEMPLATE_NTP}")
+    else:
+        _log("No NTP date provided — using guide schedule template dates")
+
     rule_table = _load_rule_table(rule_path)
 
     _log(f"Building BM25 index for {len(schedule_activities)} schedule activities")
     bm25 = BM25Index([a.target_text for a in schedule_activities])
 
-    output_rows = [_format_schedule_row(row, schedule_activities, bm25, rule_table) for row in rows]
+    output_rows = [
+        _format_schedule_row(row, schedule_activities, bm25, rule_table, shift_days)
+        for row in rows
+    ]
 
     output_stem = _output_stem(input_csv)
+    if ntp_date:
+        output_stem = f"{output_stem}_ntp{ntp_date}"
     if limit > 0:
         output_stem = f"{output_stem}_limit{limit}"
     _log(f"Writing generated schedule with stem: {output_stem}")
@@ -99,6 +121,7 @@ def _format_schedule_row(
     activities: list[ScheduleActivity],
     bm25: BM25Index,
     rule_table: RuleTable | None,
+    shift_days: int = 0,
 ) -> dict[str, Any]:
     """Format one generated schedule row with FA/FC date ranges."""
     title = row.get("Title", "").strip()
@@ -133,7 +156,7 @@ def _format_schedule_row(
     if rule and sub_type == "SKIP":
         date_range_status = "skip"
     elif rule:
-        anchor = _resolve_anchor_date(activity, activity.start_date, activity.finish_date, rule)
+        anchor = _resolve_anchor_date(activity, activity.start_date, activity.finish_date, rule, shift_days)
         dr = compute_date_range(vt_parsed, anchor, sub_type, rule.priority)
         date_range_status = "generated" if anchor is not None else "missing_date"
 
@@ -162,6 +185,7 @@ def _format_schedule_row(
         "fc_latest": _fmt_date(dr.fc_latest),
         "date_range_status": date_range_status,
         "date_range_confidence": f"{dr.confidence:.2f}" if dr.confidence else "",
+        "ntp_shift_days": shift_days if shift_days else "",
     }
 
 
@@ -180,17 +204,30 @@ def _resolve_anchor_date(
     start_date_str: str,
     finish_date_str: str,
     rule: ValidationRule,
+    shift_days: int = 0,
 ) -> date | None:
-    """Pick start_date or finish_date as anchor based on rule activity keywords."""
+    """Pick start_date or finish_date as anchor, then apply NTP shift."""
     kws_lower = {k.lower() for k in rule.activity_keywords}
     use_finish = bool(kws_lower & _FINISH_DATE_KEYWORDS)
     date_str = finish_date_str if use_finish else start_date_str
     if not date_str:
         return None
     try:
-        return date.fromisoformat(date_str)
+        template_date = date.fromisoformat(date_str)
+        return template_date + timedelta(days=shift_days)
     except ValueError:
         return None
+
+
+def _compute_shift(ntp_date: str) -> int:
+    """Return days to shift guide schedule dates given a real project NTP date."""
+    if not ntp_date:
+        return 0
+    try:
+        return (date.fromisoformat(ntp_date) - TEMPLATE_NTP).days
+    except ValueError:
+        logger.warning("Invalid ntp_date '{}' — using template dates", ntp_date)
+        return 0
 
 
 def _normalize_deliverable(deliverable: str) -> str:
@@ -218,6 +255,7 @@ def main() -> None:
     parser.add_argument("--schedule", type=Path, default=DEFAULT_SCHEDULE_PATH)
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
     parser.add_argument("--limit", type=int, default=0, help="Process only the first N rows from each input CSV.")
+    parser.add_argument("--ntp-date", default="", help="Real project NTP date in ISO format (e.g. 2024-01-15). Shifts all guide schedule dates accordingly.")
     parser.add_argument("inputs", nargs="+", type=Path, help="One or more *_MDL_classified.csv files.")
     args = parser.parse_args()
 
@@ -230,6 +268,7 @@ def main() -> None:
             schedule_activities=activities,
             output_dir=args.output_dir,
             limit=args.limit,
+            ntp_date=args.ntp_date,
         )
         logger.info("Wrote generated schedule workbook: {}", xlsx_path)
         logger.info("Wrote generated schedule JSON: {}", json_path)

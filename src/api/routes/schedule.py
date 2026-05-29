@@ -97,11 +97,25 @@ def schedule_generate(
             examples=["00_current_work/current_test_env/output/Fadhili_MDL_classified.csv"],
         ),
     ],
+    ntp_date: Annotated[
+        str,
+        Query(
+            description=(
+                "Real project NTP date in ISO format (e.g. 2024-01-15). "
+                "All guide schedule template dates (anchored at 2007-03-01) are shifted "
+                "by (ntp_date - 2007-03-01) to produce real-world FA/FC dates. "
+                "If omitted, template dates are used as-is."
+            ),
+            examples=["2024-01-15"],
+        ),
+    ] = "",
     limit: ScheduleLimit = 0,
 ) -> dict[str, object]:
     """Generate FA/FC schedule date ranges from an MDL classified CSV."""
     input_path = _existing_path(input_csv)
     logger.info("Generating FA/FC date ranges from MDL classified CSV: {}", input_path)
+    if ntp_date:
+        logger.info("NTP date: {}", ntp_date)
 
     schedule_activities = load_schedule_activities(DEFAULT_SCHEDULE_PATH)
     xlsx_path, json_path = generate_schedule_file(
@@ -109,6 +123,7 @@ def schedule_generate(
         schedule_activities=schedule_activities,
         output_dir=SCHEDULE_OUTPUT_DIR,
         limit=limit,
+        ntp_date=ntp_date,
     )
     return _file_response("generated_schedule", input_path, xlsx_path, json_path)
 
