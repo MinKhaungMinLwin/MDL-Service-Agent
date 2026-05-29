@@ -8,7 +8,7 @@ from functools import lru_cache
 from pathlib import Path
 
 RULES_DIR = Path(__file__).resolve().parent / "normalization_rules"
-SCHEDULE_ABBREVIATIONS_PATH = RULES_DIR / "schedule_abbreviations.json"
+ABBREVIATIONS_PATH = RULES_DIR / "abbreviations.json"
 
 
 def build_schedule_target_text(activity_name: str, wbs_path: str, activity_id: str) -> str:
@@ -26,7 +26,7 @@ def build_schedule_target_text(activity_name: str, wbs_path: str, activity_id: s
 def expand_schedule_abbreviations(text: str) -> str:
     """Expand known schedule abbreviations without removing the original text."""
     expanded = text
-    for abbreviation, full_name in _schedule_abbreviations():
+    for abbreviation, full_name in _abbreviations():
         expanded = _replace_token(expanded, abbreviation, full_name)
     return normalize_space(expanded)
 
@@ -53,9 +53,9 @@ def join_unique_texts(texts: list[str]) -> str:
 
 
 @lru_cache(maxsize=1)
-def _schedule_abbreviations() -> tuple[tuple[str, str], ...]:
-    """Load schedule abbreviation replacements."""
-    rules = json.loads(SCHEDULE_ABBREVIATIONS_PATH.read_text(encoding="utf-8"))
+def _abbreviations() -> tuple[tuple[str, str], ...]:
+    """Load abbreviation replacements."""
+    rules = json.loads(ABBREVIATIONS_PATH.read_text(encoding="utf-8"))
     replacements = []
     for canonical, variants in rules.items():
         if isinstance(variants, str):

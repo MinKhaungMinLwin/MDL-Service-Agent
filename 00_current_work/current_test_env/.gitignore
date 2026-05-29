@@ -2,3 +2,10 @@
 .env.local
 __pycache__/
 *.py[cod]
+
+# Embedding cache (can exceed GitHub's 100MB limit)
+output/schedule_service/cache/
+
+# Test/limit run outputs
+output/schedule_service/*_limit*.json
+output/schedule_service/*_limit*.xlsx
