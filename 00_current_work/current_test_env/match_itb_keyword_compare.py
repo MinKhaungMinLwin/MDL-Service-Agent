@@ -73,23 +73,55 @@ def get_all_depths(row: dict) -> list[str]:
     return result
 
 
-def is_depth_missing(row: dict) -> bool:
-    """True when at least 1st Depth is absent or an ERROR occurred."""
+def get_depth_failure_type(row: dict) -> str | None:
+    """
+    Returns the failure reason for a row, or None if the row is fine.
+      'EMPTY'       — 1st Depth is blank or nan (extraction never ran / returned nothing)
+      'API_ERROR'   — 1st Depth starts with 'ERROR,' (LLM API call failed, e.g. timeout)
+      'ALL_GENERIC' — Depths are filled but every value is a generic label like "General"
+    """
     d1 = str(row.get("1st Depth", "")).strip()
-    return not d1 or d1.lower() == "nan" or d1.upper().startswith("ERROR")
+    if not d1 or d1.lower() == "nan":
+        return "EMPTY"
+    if d1.upper().startswith("ERROR"):
+        return "API_ERROR"
+    if len(get_all_depths(row)) == 0:
+        return "ALL_GENERIC"
+    return None
+
+
+def is_depth_missing(row: dict) -> bool:
+    return get_depth_failure_type(row) is not None
 
 
 # ── Goal 1: missing-depth report ─────────────────────────────────────────────
 
+_FAILURE_LABELS = {
+    "EMPTY":       "Blank 1st Depth — extraction never ran or returned nothing",
+    "API_ERROR":   "API call failed — transient error, safe to retry",
+    "ALL_GENERIC": "All depths are generic labels — needs manual review or re-extraction",
+}
+
 def report_missing_depths(df: pd.DataFrame) -> pd.DataFrame:
-    missing = df[df.apply(is_depth_missing, axis=1)]
+    tmp = df.copy()
+    tmp["_failure_type"] = tmp.apply(get_depth_failure_type, axis=1)
+    missing = tmp[tmp["_failure_type"].notna()].copy()
+
     print(f"\n[Depth Check] Total rows: {len(df)}")
-    print(f"[Depth Check] Rows with missing/error 1st Depth: {len(missing)}")
-    if len(missing):
-        for _, row in missing.iterrows():
-            print(f"  Page {row.get('Page','?')}: 1st='{row.get('1st Depth','')}' "
-                  f"| 2nd='{row.get('2nd Depth','')}' | Chunk: {str(row.get('Chunk Text',''))[:60]}…")
-    return missing
+    print(f"[Depth Check] Rows with depth issues: {len(missing)}")
+
+    for ftype, label in _FAILURE_LABELS.items():
+        group = missing[missing["_failure_type"] == ftype]
+        if group.empty:
+            continue
+        print(f"\n  [{ftype}] {label} — {len(group)} row(s):")
+        for _, row in group.iterrows():
+            print(f"    Page {row.get('Page','?')}: "
+                  f"1st='{row.get('1st Depth','')}' | "
+                  f"Chunk: {str(row.get('Chunk Text',''))[:60]}…")
+
+    # Return without the internal helper column
+    return missing.drop(columns=["_failure_type"])
 
 
 # ── Goal 2: LLM keyword extraction from depth ────────────────────────────────
@@ -372,10 +404,13 @@ def main():
 
         output_rows.append(out)
 
-    # Append missing-depth rows (flagged, no match results)
+    # Append missing-depth rows (flagged by type, no match results)
+    skip_counts: dict[str, int] = {}
     for _, row in missing_df.iterrows():
         out = row.to_dict()
-        out["Depth_Keywords"] = "[MISSING DEPTH — SKIPPED]"
+        ftype = get_depth_failure_type(out) or "UNKNOWN"
+        skip_counts[ftype] = skip_counts.get(ftype, 0) + 1
+        out["Depth_Keywords"] = f"[SKIPPED — {ftype}]"
         out["Search_Query_Used"] = ""
         for i in range(TOP_K):
             out[f"KW_Doc_{i+1}"]  = ""
@@ -386,7 +421,11 @@ def main():
     result_df.to_csv(OUTPUT_CSV, index=False, encoding="utf-8-sig")
     print(f"\n[Done] Results saved → {OUTPUT_CSV}")
     print(f"  Rows processed : {len(process_df)}")
-    print(f"  Rows skipped   : {len(missing_df)}  (missing/error depth)")
+    if skip_counts:
+        for ftype, count in skip_counts.items():
+            print(f"  Rows skipped [{ftype}]: {count}")
+    else:
+        print("  Rows skipped   : 0")
 
 
 if __name__ == "__main__":
