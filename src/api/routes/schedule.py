@@ -9,6 +9,7 @@ from fastapi import APIRouter, HTTPException, Query
 from loguru import logger
 
 from schedule_service.activity_mapper import map_file
+from schedule_service.candidate_extractor import extract_candidates
 from schedule_service.schedule_generator import generate_schedule_file
 from schedule_service.schedule_loader import DEFAULT_SCHEDULE_PATH, load_schedule_activities
 
@@ -110,6 +111,53 @@ def schedule_generate(
         limit=limit,
     )
     return _file_response("generated_schedule", input_path, xlsx_path, json_path)
+
+
+@router.post(
+    "/candidates",
+    summary="Extract MDL document candidates from ITB matching CSV",
+    description=(
+        "Reads an ITB matching CSV (output_match_*.csv), parses Matched_Doc_1..N columns, "
+        "filters by score threshold, deduplicates, and writes an MDL candidate CSV "
+        "compatible with *_MDL_classified.csv that can be fed into /schedule/generate."
+    ),
+)
+def schedule_candidates(
+    input_csv: Annotated[
+        str,
+        Query(
+            min_length=1,
+            description="Path to an ITB matching CSV file.",
+            examples=["00_current_work/current_test_env/output/output_match_all_projects_section6.csv"],
+        ),
+    ],
+    score_threshold: Annotated[
+        float,
+        Query(gt=0.0, le=2.0, description="Minimum final score to include a matched document."),
+    ] = 0.85,
+    top_n: Annotated[
+        int,
+        Query(gt=0, le=20, description="Number of Matched_Doc_N columns to consider per row."),
+    ] = 5,
+    limit: ScheduleLimit = 0,
+) -> dict[str, object]:
+    """Extract MDL candidates from ITB matching CSV and write a candidate CSV."""
+    input_path = _existing_path(input_csv)
+    logger.info("Extracting MDL candidates from: {}", input_path)
+
+    csv_path = extract_candidates(
+        input_csv=input_path,
+        output_dir=SCHEDULE_OUTPUT_DIR,
+        score_threshold=score_threshold,
+        top_n=top_n,
+        limit=limit,
+    )
+    return {
+        "kind": "mdl_candidates",
+        "input_path": str(input_path),
+        "output_dir": str(csv_path.parent),
+        "files": {"csv": str(csv_path)},
+    }
 
 
 def _file_response(kind: str, input_path: Path, xlsx_path: Path, json_path: Path) -> dict[str, object]:
