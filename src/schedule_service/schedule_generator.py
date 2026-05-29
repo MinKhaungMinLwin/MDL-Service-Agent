@@ -145,6 +145,7 @@ def _format_schedule_row(
         "equipment": equipment,
         "system": system,
         "building": building,
+        "itb_sources": row.get("itb_sources", ""),
         "rule_query": rule_query,
         "matched_rule": rule_name,
         "submission_type": sub_type,
