@@ -29,3 +29,5 @@ Thumbs.db
 # Parser/chunker service code kept local
 src/parser_service/
 src/chunker_service/
+
+backup/
