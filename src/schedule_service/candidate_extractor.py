@@ -19,26 +19,52 @@ DEFAULT_SCORE_THRESHOLD = 0.85
 DEFAULT_TOP_N = 5          # how many Matched_Doc_N per row to consider
 DEFAULT_OUTPUT_DIR = Path("output/schedule_service")
 
-# Known deliverable keywords to extract from title (longest match first)
+# Known deliverable keywords to extract from title (longest/most specific first)
 _DELIVERABLE_KEYWORDS: list[str] = [
+    # P&ID variants
     "P&I DIAGRAM", "P&ID", "PIPING AND INSTRUMENTATION DIAGRAM",
+    # Arrangement / Layout
     "GENERAL ARRANGEMENT", "GA DRAWING",
-    "SINGLE LINE DIAGRAM",
-    "CALCULATION SHEET", "CALCULATION",
-    "DATA SHEET",
-    "OUTLINE DRAWING",
-    "TECHNICAL SPECIFICATION", "SPECIFICATION",
-    "ISOMETRIC DRAWING", "ISOMETRIC",
-    "SYSTEM DESCRIPTION",
-    "FOUNDATION AND LOADING DATA",
+    "ARRANGEMENT DRAWING", "ARRANGEMENT",
     "LAYOUT DRAWING", "LAYOUT",
-    "ARRANGEMENT DRAWING",
-    "DETAIL DRAWING", "DETAIL",
-    "ELEVATION",
-    "PERFORMANCE CURVE", "PERFORMANCE DATA",
-    "CONTROL DESCRIPTION", "CONTROL PHILOSOPHY",
-    "CABLE SCHEDULE", "SCHEDULE",
+    # Electrical diagrams
+    "SINGLE LINE DIAGRAM",
+    # Calculation
+    "CALCULATION SHEET", "CALCULATION",
+    # Data sheet
+    "DATA SHEET",
+    # Drawings
+    "OUTLINE DRAWING", "ISOMETRIC DRAWING", "DETAIL DRAWING", "ELEVATION",
     "DRAWING",
+    # Specification / Criteria / Requirements
+    "TECHNICAL SPECIFICATION", "SPECIFICATION",
+    "DESIGN CRITERIA", "CRITERIA",
+    "DESIGN REQUIREMENTS", "REQUIREMENTS",
+    # Descriptions / Overviews
+    "SYSTEM DESCRIPTION", "CONTROL DESCRIPTION", "CONTROL PHILOSOPHY",
+    "OVERVIEW", "SUMMARY",
+    # Lists / Schedules / Databases
+    "INSTRUMENT LIST", "CABLE SCHEDULE", "SCHEDULE",
+    "LIST", "DATABASE",
+    # Test / Procedure
+    "TEST PROCEDURE", "TEST REPORT", "TEST",
+    "PROCEDURE",
+    # Reports / Studies
+    "STUDY REPORT", "DESIGN REPORT", "HAZARDOUS AREA CLASSIFICATION",
+    "REPORT", "STUDY",
+    # Models / Curves
+    "MODEL", "CURVES", "CURVE",
+    # Schematics
+    "SCHEMATICS", "SCHEMATIC",
+    # Notes
+    "GENERAL NOTES", "NOTES",
+    # Other
+    "FOUNDATION AND LOADING DATA",
+    "PERFORMANCE CURVE", "PERFORMANCE DATA",
+    "OPERATIONAL DATA", "DATA",
+    "SETTINGS",
+    "ISOMETRIC",
+    "DETAIL",
     "DIAGRAM",
 ]
 
