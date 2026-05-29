@@ -18,6 +18,7 @@ RETRIEVAL_MODE = os.getenv("ITB_RETRIEVAL_MODE", "keyword").strip().lower()
 BM25_CANDIDATE_LIMIT = int(os.getenv("ITB_BM25_CANDIDATES", "100"))
 BM25_OUTPUT_LIMIT = int(os.getenv("ITB_BM25_OUTPUT_LIMIT", "20"))
 ENABLE_VECTOR_RERANK = os.getenv("ITB_ENABLE_VECTOR_RERANK", "true").lower() in {"1", "true", "yes", "y"}
+RRF_K = 60
 
 
 def get_depth_context(row):
@@ -293,6 +294,14 @@ def semantic_search_mdl_by_terms(conn, query_term_embeddings):
     return merge_semantic_candidates(term_candidates)
 
 
+def rrf_score(*ranks):
+    return sum(
+        1.0 / (RRF_K + rank)
+        for rank in ranks
+        if rank is not None
+    )
+
+
 def merge_retrieval_candidates(keyword_candidates, semantic_candidates):
     merged = {}
 
@@ -309,16 +318,40 @@ def merge_retrieval_candidates(keyword_candidates, semantic_candidates):
                 "embedding": candidate.get("embedding") or merged[key].get("embedding"),
                 "matched_terms": candidate.get("matched_terms", []),
             })
-            merged[key]["retrieval_rank"] = min(
-                merged[key].get("bm25_rank") or BM25_CANDIDATE_LIMIT + 1,
-                candidate.get("semantic_rank") or BM25_CANDIDATE_LIMIT + 1,
-            )
         else:
             merged[key] = dict(candidate)
 
-    return sorted(
+    for candidate in merged.values():
+        candidate["rrf_score"] = rrf_score(
+            candidate.get("bm25_rank"),
+            candidate.get("semantic_rank"),
+        )
+
+    ranked_candidates = sorted(
         merged.values(),
+        key=lambda candidate: (
+            candidate.get("rrf_score") or 0.0,
+            candidate.get("bm25_score") or 0.0,
+            candidate.get("semantic_score") or 0.0,
+        ),
+        reverse=True,
+    )
+    for rank, candidate in enumerate(ranked_candidates, start=1):
+        candidate["retrieval_rank"] = rank
+
+    return ranked_candidates
+
+
+def sort_single_retrieval_candidates(candidates):
+    ranked_candidates = sorted(
+        candidates,
         key=lambda candidate: candidate.get("retrieval_rank") or BM25_CANDIDATE_LIMIT + 1,
+    )
+    for rank, candidate in enumerate(ranked_candidates, start=1):
+        candidate["retrieval_rank"] = rank
+    return sorted(
+        ranked_candidates,
+        key=lambda candidate: candidate.get("retrieval_rank"),
     )
 
 
@@ -333,9 +366,9 @@ def retrieve_candidates(conn, retrieval_mode, depth_filter_query, query_term_emb
         semantic_candidates = semantic_search_mdl_by_terms(conn, query_term_embeddings)
 
     if retrieval_mode == "keyword":
-        candidates = keyword_candidates
+        candidates = sort_single_retrieval_candidates(keyword_candidates)
     elif retrieval_mode == "semantic":
-        candidates = semantic_candidates
+        candidates = sort_single_retrieval_candidates(semantic_candidates)
     else:
         candidates = merge_retrieval_candidates(keyword_candidates, semantic_candidates)
 
@@ -357,6 +390,8 @@ def format_candidate(candidate):
         parts.append(f"BM25: {candidate['bm25_score']:.4f}")
     if candidate.get("semantic_score") is not None:
         parts.append(f"Semantic: {candidate['semantic_score']:.4f}")
+    if candidate.get("rrf_score") is not None:
+        parts.append(f"RRF: {candidate['rrf_score']:.4f}")
     score_text = " / ".join(parts) if parts else "No score"
     return f"[{project}] {candidate['title']} ({score_text})"
 
@@ -384,6 +419,7 @@ def format_json_candidate(candidate, rank):
         "deliverable": json_safe_value(candidate.get("deliverable")),
         "bm25_score": candidate.get("bm25_score"),
         "semantic_score": candidate.get("semantic_score"),
+        "rrf_score": candidate.get("rrf_score"),
         "vector_score": candidate.get("vector_score"),
         "matched_terms": candidate.get("matched_terms", []),
     }
