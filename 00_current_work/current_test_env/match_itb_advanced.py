@@ -13,6 +13,8 @@ from mdl_runtime.neo4j_connection import Neo4jConnection
 
 DEPTH_COLUMNS = ("1st Depth", "2nd Depth", "3rd Depth", "4th Depth", "5th Depth")
 FULLTEXT_INDEX_NAME = "test_mdl_document_fulltext_idx"
+VECTOR_INDEX_NAME = "test_mdl_document_vector_idx"
+RETRIEVAL_MODE = os.getenv("ITB_RETRIEVAL_MODE", "keyword").strip().lower()
 BM25_CANDIDATE_LIMIT = int(os.getenv("ITB_BM25_CANDIDATES", "100"))
 BM25_OUTPUT_LIMIT = int(os.getenv("ITB_BM25_OUTPUT_LIMIT", "20"))
 ENABLE_VECTOR_RERANK = os.getenv("ITB_ENABLE_VECTOR_RERANK", "true").lower() in {"1", "true", "yes", "y"}
@@ -75,21 +77,21 @@ def build_depth_filter_query(row):
 
 
 def build_vector_query(row, depth_filter_terms):
-    search_query = str(row.get("Search Query", "")).strip()
-    if search_query and search_query.lower() != "nan":
-        return search_query
+    return " ".join(depth_filter_terms).strip()
 
-    keywords = str(row.get("Keywords", "")).strip()
-    if keywords.lower() == "nan":
-        keywords = ""
 
-    parts = []
-    if depth_filter_terms:
-        parts.extend(depth_filter_terms[-2:])
-    if keywords:
-        parts.append(keywords)
+def split_phrase_terms(text):
+    if not text or text.lower() == "nan":
+        return []
+    return [
+        term.strip()
+        for term in re.split(r"[,;\n]+", text)
+        if term.strip()
+    ]
 
-    return " ".join(parts).strip()
+
+def build_vector_terms(row, depth_filter_terms):
+    return unique_preserve_order(depth_filter_terms)
 
 
 def cosine_similarity(left, right):
@@ -110,13 +112,36 @@ def cosine_similarity(left, right):
     return dot / ((left_norm ** 0.5) * (right_norm ** 0.5))
 
 
-def rerank_candidates_by_vector(bm25_candidates, query_embedding):
+def get_candidate_key(candidate):
+    doc_id = candidate.get("doc_id")
+    if doc_id:
+        return f"doc_id:{doc_id}"
+    return "|".join(
+        str(candidate.get(field, ""))
+        for field in ("source_file", "document_no", "title")
+    )
+
+
+def max_cosine_similarity(query_embeddings, candidate_embedding):
+    scores = [
+        score for score in (
+            cosine_similarity(query_embedding, candidate_embedding)
+            for query_embedding in query_embeddings
+        )
+        if score is not None
+    ]
+    if not scores:
+        return None
+    return max(scores)
+
+
+def rerank_candidates_by_vector(candidates, query_embeddings):
     reranked_candidates = []
-    for bm25_rank, candidate in enumerate(bm25_candidates, start=1):
+    for retrieval_rank, candidate in enumerate(candidates, start=1):
         reranked_candidate = dict(candidate)
-        reranked_candidate["bm25_rank"] = bm25_rank
-        reranked_candidate["vector_score"] = cosine_similarity(
-            query_embedding,
+        reranked_candidate.setdefault("retrieval_rank", retrieval_rank)
+        reranked_candidate["vector_score"] = max_cosine_similarity(
+            query_embeddings,
             reranked_candidate.pop("embedding", None),
         )
         reranked_candidates.append(reranked_candidate)
@@ -126,7 +151,7 @@ def rerank_candidates_by_vector(bm25_candidates, query_embedding):
         key=lambda candidate: (
             candidate["vector_score"] is not None,
             candidate["vector_score"] or -1.0,
-            -candidate["bm25_rank"],
+            -candidate["retrieval_rank"],
         ),
         reverse=True,
     )
@@ -167,13 +192,13 @@ def bm25_search_mdl(conn, depth_filter_query, limit=BM25_CANDIDATE_LIMIT):
            node.study_survey AS study_survey,
            node.deliverable AS deliverable,
            node.embedding AS embedding,
-           score
+           score AS bm25_score
     ORDER BY score DESC
     LIMIT $limit
     """
 
     with conn.session() as session:
-        return [
+        candidates = [
             dict(record)
             for record in session.run(
                 query,
@@ -182,6 +207,139 @@ def bm25_search_mdl(conn, depth_filter_query, limit=BM25_CANDIDATE_LIMIT):
                 limit=limit,
             )
         ]
+    for rank, candidate in enumerate(candidates, start=1):
+        candidate["bm25_rank"] = rank
+        candidate["retrieval_rank"] = rank
+    return candidates
+
+
+def semantic_search_mdl(conn, query_embedding, query_term, limit=BM25_CANDIDATE_LIMIT):
+    if not query_embedding:
+        return []
+
+    query = f"""
+    CALL db.index.vector.queryNodes("{VECTOR_INDEX_NAME}", $limit, $embedding)
+    YIELD node, score
+    WHERE NOT coalesce(node.source_file, "") CONTAINS "R&N_MDL"
+    RETURN node.doc_id AS doc_id,
+           node.source_file AS source_file,
+           node.document_no AS document_no,
+           node.title AS title,
+           node.system AS system,
+           node.equipment AS equipment,
+           node.building AS building,
+           node.study_survey AS study_survey,
+           node.deliverable AS deliverable,
+           node.embedding AS embedding,
+           score AS semantic_score
+    ORDER BY score DESC
+    LIMIT $limit
+    """
+
+    with conn.session() as session:
+        candidates = [
+            dict(record)
+            for record in session.run(
+                query,
+                embedding=query_embedding,
+                limit=limit,
+            )
+        ]
+    for rank, candidate in enumerate(candidates, start=1):
+        candidate["semantic_rank"] = rank
+        candidate["retrieval_rank"] = rank
+        candidate["matched_terms"] = [query_term]
+    return candidates
+
+
+def merge_semantic_candidates(term_candidates):
+    merged = {}
+
+    for candidate in term_candidates:
+        key = get_candidate_key(candidate)
+        if key not in merged:
+            merged[key] = dict(candidate)
+            continue
+
+        existing = merged[key]
+        existing["matched_terms"] = unique_preserve_order(
+            existing.get("matched_terms", []) + candidate.get("matched_terms", [])
+        )
+        if candidate.get("semantic_score", 0.0) > existing.get("semantic_score", 0.0):
+            existing.update({
+                "semantic_rank": candidate.get("semantic_rank"),
+                "semantic_score": candidate.get("semantic_score"),
+                "embedding": candidate.get("embedding") or existing.get("embedding"),
+            })
+        existing["retrieval_rank"] = min(
+            existing.get("retrieval_rank") or BM25_CANDIDATE_LIMIT + 1,
+            candidate.get("semantic_rank") or BM25_CANDIDATE_LIMIT + 1,
+        )
+
+    return sorted(
+        merged.values(),
+        key=lambda candidate: (
+            -(len(candidate.get("matched_terms", []))),
+            -(candidate.get("semantic_score") or 0.0),
+            candidate.get("retrieval_rank") or BM25_CANDIDATE_LIMIT + 1,
+        ),
+    )
+
+
+def semantic_search_mdl_by_terms(conn, query_term_embeddings):
+    term_candidates = []
+    for query_term, query_embedding in query_term_embeddings:
+        term_candidates.extend(semantic_search_mdl(conn, query_embedding, query_term))
+    return merge_semantic_candidates(term_candidates)
+
+
+def merge_retrieval_candidates(keyword_candidates, semantic_candidates):
+    merged = {}
+
+    for candidate in keyword_candidates:
+        key = get_candidate_key(candidate)
+        merged[key] = dict(candidate)
+
+    for candidate in semantic_candidates:
+        key = get_candidate_key(candidate)
+        if key in merged:
+            merged[key].update({
+                "semantic_rank": candidate.get("semantic_rank"),
+                "semantic_score": candidate.get("semantic_score"),
+                "embedding": candidate.get("embedding") or merged[key].get("embedding"),
+                "matched_terms": candidate.get("matched_terms", []),
+            })
+            merged[key]["retrieval_rank"] = min(
+                merged[key].get("bm25_rank") or BM25_CANDIDATE_LIMIT + 1,
+                candidate.get("semantic_rank") or BM25_CANDIDATE_LIMIT + 1,
+            )
+        else:
+            merged[key] = dict(candidate)
+
+    return sorted(
+        merged.values(),
+        key=lambda candidate: candidate.get("retrieval_rank") or BM25_CANDIDATE_LIMIT + 1,
+    )
+
+
+def retrieve_candidates(conn, retrieval_mode, depth_filter_query, query_term_embeddings):
+    keyword_candidates = []
+    semantic_candidates = []
+
+    if retrieval_mode in {"keyword", "hybrid"}:
+        keyword_candidates = bm25_search_mdl(conn, depth_filter_query)
+
+    if retrieval_mode in {"semantic", "hybrid"}:
+        semantic_candidates = semantic_search_mdl_by_terms(conn, query_term_embeddings)
+
+    if retrieval_mode == "keyword":
+        candidates = keyword_candidates
+    elif retrieval_mode == "semantic":
+        candidates = semantic_candidates
+    else:
+        candidates = merge_retrieval_candidates(keyword_candidates, semantic_candidates)
+
+    return candidates, keyword_candidates, semantic_candidates
 
 
 def format_candidate(candidate):
@@ -191,10 +349,16 @@ def format_candidate(candidate):
         .replace("_classified.csv", "")
         .replace(".xlsx", "")
     )
+    parts = []
     vector_score = candidate.get("vector_score")
     if vector_score is not None:
-        return f"[{project}] {candidate['title']} (Vector: {vector_score:.4f} / BM25: {candidate['score']:.4f})"
-    return f"[{project}] {candidate['title']} (BM25: {candidate['score']:.4f})"
+        parts.append(f"Vector: {vector_score:.4f}")
+    if candidate.get("bm25_score") is not None:
+        parts.append(f"BM25: {candidate['bm25_score']:.4f}")
+    if candidate.get("semantic_score") is not None:
+        parts.append(f"Semantic: {candidate['semantic_score']:.4f}")
+    score_text = " / ".join(parts) if parts else "No score"
+    return f"[{project}] {candidate['title']} ({score_text})"
 
 
 def json_safe_value(value):
@@ -206,7 +370,9 @@ def json_safe_value(value):
 def format_json_candidate(candidate, rank):
     return {
         "rank": rank,
-        "bm25_rank": int(candidate.get("bm25_rank", rank)),
+        "retrieval_rank": candidate.get("retrieval_rank"),
+        "bm25_rank": candidate.get("bm25_rank"),
+        "semantic_rank": candidate.get("semantic_rank"),
         "doc_id": json_safe_value(candidate.get("doc_id")),
         "source_file": json_safe_value(candidate.get("source_file")),
         "document_no": json_safe_value(candidate.get("document_no")),
@@ -216,8 +382,10 @@ def format_json_candidate(candidate, rank):
         "system": json_safe_value(candidate.get("system")),
         "study_survey": json_safe_value(candidate.get("study_survey")),
         "deliverable": json_safe_value(candidate.get("deliverable")),
-        "bm25_score": float(candidate.get("score", 0.0)),
+        "bm25_score": candidate.get("bm25_score"),
+        "semantic_score": candidate.get("semantic_score"),
         "vector_score": candidate.get("vector_score"),
+        "matched_terms": candidate.get("matched_terms", []),
     }
 
 
@@ -226,8 +394,12 @@ def build_json_record(
     depth_filter_query,
     depth_filter_terms,
     vector_query,
+    vector_terms,
+    retrieval_mode,
     vector_rerank_enabled,
-    bm25_candidates,
+    retrieval_candidates,
+    keyword_candidate_count,
+    semantic_candidate_count,
     vector_candidate_count,
     top_matches,
 ):
@@ -243,8 +415,12 @@ def build_json_record(
         "depth_filter_query": depth_filter_query,
         "depth_filter_terms": depth_filter_terms,
         "vector_query": vector_query,
+        "vector_terms": vector_terms,
+        "retrieval_mode": retrieval_mode,
         "vector_rerank_enabled": vector_rerank_enabled,
-        "bm25_candidate_count": len(bm25_candidates),
+        "retrieval_candidate_count": len(retrieval_candidates),
+        "keyword_candidate_count": keyword_candidate_count,
+        "semantic_candidate_count": semantic_candidate_count,
         "vector_candidate_count": vector_candidate_count,
         "keywords": json_safe_value(source_row.get("Keywords", "")),
         "search_query": json_safe_value(source_row.get("Search Query", "")),
@@ -271,35 +447,44 @@ def process_file(csv_path, output_path, conn, embedding_service):
         logger.info("No target rows. Skipping.")
         return
 
-    logger.info("Running Neo4j BM25 depth keyword filtering...")
+    logger.info("Running Neo4j candidate retrieval (mode: {})...", RETRIEVAL_MODE)
     new_rows = []
     json_records = []
 
     vector_embeddings = {}
-    if ENABLE_VECTOR_RERANK:
-        vector_queries = []
+    if embedding_service is not None:
+        vector_terms = []
         for _, source_row in target_df.iterrows():
             _, depth_filter_terms = build_depth_filter_query(source_row)
-            vector_query = build_vector_query(source_row, depth_filter_terms)
-            if vector_query:
-                vector_queries.append(vector_query)
+            vector_terms.extend(build_vector_terms(source_row, depth_filter_terms))
 
-        unique_vector_queries = unique_preserve_order(vector_queries)
-        logger.info("Embedding {} unique vector rerank queries...", len(unique_vector_queries))
-        embeddings = embedding_service.embed_batch(unique_vector_queries)
-        vector_embeddings = dict(zip(unique_vector_queries, embeddings))
+        unique_vector_terms = unique_preserve_order(vector_terms)
+        logger.info("Embedding {} unique vector terms...", len(unique_vector_terms))
+        embeddings = embedding_service.embed_batch(unique_vector_terms)
+        vector_embeddings = dict(zip(unique_vector_terms, embeddings))
 
     for _, source_row in tqdm(target_df.iterrows(), total=len(target_df)):
         depth_filter_query, depth_filter_terms = build_depth_filter_query(source_row)
         vector_query = build_vector_query(source_row, depth_filter_terms)
-        bm25_candidates = bm25_search_mdl(conn, depth_filter_query)
-        if ENABLE_VECTOR_RERANK and vector_query:
+        vector_terms = build_vector_terms(source_row, depth_filter_terms)
+        query_term_embeddings = [
+            (term, vector_embeddings[term])
+            for term in vector_terms
+            if term in vector_embeddings
+        ]
+        retrieval_candidates, keyword_candidates, semantic_candidates = retrieve_candidates(
+            conn,
+            RETRIEVAL_MODE,
+            depth_filter_query,
+            query_term_embeddings,
+        )
+        if ENABLE_VECTOR_RERANK and query_term_embeddings:
             reranked_candidates = rerank_candidates_by_vector(
-                bm25_candidates,
-                vector_embeddings.get(vector_query),
+                retrieval_candidates,
+                [embedding for _, embedding in query_term_embeddings],
             )
         else:
-            reranked_candidates = bm25_candidates
+            reranked_candidates = retrieval_candidates
         vector_candidate_count = sum(
             1 for candidate in reranked_candidates
             if candidate.get("vector_score") is not None
@@ -311,8 +496,12 @@ def process_file(csv_path, output_path, conn, embedding_service):
         row["Depth_Filter_Query"] = depth_filter_query
         row["Depth_Filter_Terms"] = ", ".join(depth_filter_terms)
         row["Vector_Query"] = vector_query
+        row["Vector_Terms"] = ", ".join(vector_terms)
+        row["Retrieval_Mode"] = RETRIEVAL_MODE
         row["Vector_Rerank_Enabled"] = ENABLE_VECTOR_RERANK
-        row["BM25_Candidate_Count"] = len(bm25_candidates)
+        row["Retrieval_Candidate_Count"] = len(retrieval_candidates)
+        row["Keyword_Candidate_Count"] = len(keyword_candidates)
+        row["Semantic_Candidate_Count"] = len(semantic_candidates)
         row["Vector_Candidate_Count"] = vector_candidate_count
         row["Search_Queries"] = depth_filter_query
 
@@ -327,8 +516,12 @@ def process_file(csv_path, output_path, conn, embedding_service):
                 depth_filter_query,
                 depth_filter_terms,
                 vector_query,
+                vector_terms,
+                RETRIEVAL_MODE,
                 ENABLE_VECTOR_RERANK,
-                bm25_candidates,
+                retrieval_candidates,
+                len(keyword_candidates),
+                len(semantic_candidates),
                 vector_candidate_count,
                 top_matches,
             )
@@ -346,8 +539,12 @@ def process_file(csv_path, output_path, conn, embedding_service):
         "Depth_Filter_Query",
         "Depth_Filter_Terms",
         "Vector_Query",
+        "Vector_Terms",
+        "Retrieval_Mode",
         "Vector_Rerank_Enabled",
-        "BM25_Candidate_Count",
+        "Retrieval_Candidate_Count",
+        "Keyword_Candidate_Count",
+        "Semantic_Candidate_Count",
         "Vector_Candidate_Count",
         "Keywords",
         "Search Query",
@@ -371,7 +568,8 @@ def process_file(csv_path, output_path, conn, embedding_service):
 
 
 def main():
-    embedding_service = UnifiedEmbeddingService.build_default() if ENABLE_VECTOR_RERANK else None
+    needs_embedding = ENABLE_VECTOR_RERANK or RETRIEVAL_MODE in {"semantic", "hybrid"}
+    embedding_service = UnifiedEmbeddingService.build_default() if needs_embedding else None
     conn = Neo4jConnection()
     conn.connect()
 
