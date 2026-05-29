@@ -298,6 +298,7 @@ def build_chunk_payload(doc_name: str, chunk: dict, hierarchy: str, known_abbrev
 def build_verification_payload(doc_name: str, chunk: dict, hierarchy: str, parsed: dict) -> dict:
     """Build one verifier payload from source chunk data and extractor output."""
     return {
+        "chunk_id": chunk.get("chunk_id", ""),
         "source_input": {
             "document": doc_name,
             "chunk_id": chunk.get("chunk_id", ""),
@@ -336,19 +337,23 @@ def extract_chunk_batch(client: AzureOpenAI, system_prompt: str, batch_payload: 
     return parse_batch_results(parsed, batch_payload), token_usage, ""
 
 
-def verify_extraction(client: AzureOpenAI, system_prompt: str, verification_payload: dict) -> dict:
-    """Verify one extracted ITB depth result with the chat model."""
+def verify_extraction_batch(
+    client: AzureOpenAI,
+    system_prompt: str,
+    verification_payloads: list[dict],
+) -> dict[str, dict]:
+    """Verify a batch of extracted ITB depth results with the chat model."""
     response = client.chat.completions.create(
         model=MODEL_DEPLOYMENT,
         messages=[
             {"role": "system", "content": system_prompt},
-            {"role": "user", "content": json.dumps(verification_payload, ensure_ascii=False)},
+            {"role": "user", "content": json.dumps({"verifications": verification_payloads}, ensure_ascii=False)},
         ],
         temperature=0.0,
-        max_completion_tokens=2048,
+        max_completion_tokens=min(8192, 2048 * len(verification_payloads)),
         response_format={"type": "json_object"},
     )
-    return parse_json_output(response.choices[0].message.content or "{}")
+    return parse_batch_results(parse_json_output(response.choices[0].message.content or "{}"), verification_payloads)
 
 
 def parse_batch_results(parsed: dict, batch_payload: list[dict]) -> dict[str, dict]:
@@ -532,6 +537,35 @@ def main() -> None:
                     logger.exception("Batch processing failed")
 
                 token_usage = split_token_usage(batch_token_usage, len(batch))
+                verifications_by_id = {}
+                if ITB_ENABLE_LLM_VERIFY and not batch_error:
+                    verification_payloads = []
+                    for item in batch:
+                        chunk = item["chunk"]
+                        chunk_id = as_text(chunk.get("chunk_id"))
+                        parsed = results_by_id.get(chunk_id)
+                        if parsed is not None:
+                            verification_payloads.append(
+                                build_verification_payload(doc_name, chunk, item["hierarchy"], parsed)
+                            )
+                    if verification_payloads:
+                        try:
+                            verifications_by_id = verify_extraction_batch(client, verify_prompt, verification_payloads)
+                        except Exception as exc:
+                            verifications_by_id = {
+                                as_text(payload.get("chunk_id")): {
+                                    "is_valid": False,
+                                    "severity": "error",
+                                    "issues": [str(exc)],
+                                    "suggested_depths": {},
+                                    "suggested_keywords": [],
+                                    "suggested_search_query": "",
+                                    "reason": "LLM verification failed.",
+                                }
+                                for payload in verification_payloads
+                            }
+                            logger.exception("Verification batch failed")
+
                 for item in batch:
                     chunk = item["chunk"]
                     hierarchy = item["hierarchy"]
@@ -550,25 +584,7 @@ def main() -> None:
                             parsed, _, error = failed_extraction(f"Missing model result for chunk_id: {chunk_id}")
                             logger.error("Missing model result for chunk_id: {}", chunk_id)
 
-                    verification = {}
-                    if ITB_ENABLE_LLM_VERIFY and not error:
-                        try:
-                            verification = verify_extraction(
-                                client,
-                                verify_prompt,
-                                build_verification_payload(doc_name, chunk, hierarchy, parsed),
-                            )
-                        except Exception as exc:
-                            verification = {
-                                "is_valid": False,
-                                "severity": "error",
-                                "issues": [str(exc)],
-                                "suggested_depths": {},
-                                "suggested_keywords": [],
-                                "suggested_search_query": "",
-                                "reason": "LLM verification failed.",
-                            }
-                            logger.exception("Verification failed for chunk_id: {}", chunk_id)
+                    verification = verifications_by_id.get(chunk_id, {}) if ITB_ENABLE_LLM_VERIFY and not error else {}
 
                     writer.writerow(build_csv_row(doc_name, chunk, hierarchy, parsed, text, verification))
                     json_records.append(

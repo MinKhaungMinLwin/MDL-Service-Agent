@@ -52,6 +52,10 @@ Depth rules:
 - Avoid redundant depth levels. Do not use both `Civil Works` and `Scope of Civil Works` as separate depths unless they represent different hierarchy levels in a useful way.
 - Use `depth_3` for the main technical subject when the chunk is a focused requirement, such as materials, insulation, testing, fire/smoke dampers, fresh air intake, air filtration, domestic water supply, spill containment, drainage, foundation design, concrete durability, or structural steel connections.
 - Keep `depth_4` as a named target only. Generic locations or parts such as `roofs`, `safety rails`, `connections`, `containment`, `criteria`, `requirements`, or combined topic phrases should usually stay in `depth_3` or `keywords`, not `depth_4`.
+- Never place administrative or procedural labels such as `Quality Control Submittals`, `Design Information Submission`, `Design Criteria`, `Approval`, `Submission`, or `Procedure` in `depth_4` or `depth_5`. These belong in `depth_2`/`depth_3`, `keywords`, or `search_query`.
+- Do not infer a discipline/domain such as Mechanical, Electrical, HVAC, Civil, or I&C from nearby sections unless the current chunk text or current section title explicitly supports it.
+- For generic submission, design information, approval, procedure, quality control, or administrative requirement chunks, keep the broader source domain and use the generic subject as `depth_2`/`depth_3`; do not force the chunk into Mechanical/Electrical/HVAC unless the text explicitly names that discipline.
+- Prefer stable normalized domain labels such as `Civil Works`, `Building Services`, `Mechanical Building Services`, `Electrical Building Services`, `HVAC`, or `Plant Control and Operational System`; avoid using section-title wording like `Scope of Civil Works` as a repeated depth when `Civil Works` is sufficient.
 
 Keyword rules:
 - Extract 2-12 useful technical phrases for MDL matching.
@@ -59,6 +63,9 @@ Keyword rules:
 - Include explicit numeric anchors when they are important for retrieval, such as pressures, temperatures, percentages, capacities, clearances, design margins, flow/ventilation rates, testing frequencies, and standard numbers.
 - Exclude administrative filler such as shall, provide, include, contractor, owner, requirement, data, information, general, detail, other, and note.
 - De-emphasize deliverable/admin terms such as drawing, calculation, report, schedule, approval, submission, and procedure unless the deliverable itself is the explicit technical target.
+- For broad list chunks, choose the strongest 8-12 retrieval anchors instead of copying every listed phrase. Keep terms concise and noun-focused.
+- Do not introduce named tests, systems, or formal deliverables unless they are explicitly stated in the current chunk or clearly present in the current section title. For example, do not add `plate load test` when the chunk only states `EV1`, `EV2`, and test frequency.
+- Preserve exact source scope for methodology/process terms. Use `dewatering methodology` or `settlement monitoring` when the chunk says methodology/monitoring; do not promote them to named systems unless the source says `system`.
 - Preserve important acronyms, vendor markers, proper nouns, units, and symbols.
 - Use `known_abbreviations` to understand acronyms, but keep common acronyms when they are useful for search.
 
@@ -69,6 +76,7 @@ Search query rules:
 - Do not include broad parent labels in the search query when they conflict with the chunk's technical subject. For HVAC, mechanical cooling, ductwork, fresh air, or domestic water service chunks, avoid adding `Scope of Civil Works` unless the civil scope is the actual technical subject.
 - Keep the search query focused on retrieval anchors, not procedural language. Prefer `Ductwork, SMACNA, fire dampers, NFPA 90A` over `submit drawings for approval`.
 - Remove redundancy between depth and keywords while preserving the strongest anchors.
+- Keep the search query concise. Avoid repeating the same parent scope in multiple forms, and avoid long sentence-like phrases.
 - Make the query directly usable for vector or hybrid search against MDL rows.
 
 Set `confidence` to:
