@@ -49,11 +49,16 @@ Depth rules:
 - Do not put requirements, design criteria, containment features, standby capacity, refrigerant rules, ventilation criteria, drainage rules, testing requirements, or standards compliance in `depth_4` or `depth_5`; put those terms in `keywords` and `search_query`.
 - Leave uncertain or generic depth fields blank.
 - Blank `depth_4` and `depth_5` are valid when no specific equipment, building, package, item-level target, or meaningful sub-scope is explicit.
+- Avoid redundant depth levels. Do not use both `Civil Works` and `Scope of Civil Works` as separate depths unless they represent different hierarchy levels in a useful way.
+- Use `depth_3` for the main technical subject when the chunk is a focused requirement, such as materials, insulation, testing, fire/smoke dampers, fresh air intake, air filtration, domestic water supply, spill containment, drainage, foundation design, concrete durability, or structural steel connections.
+- Keep `depth_4` as a named target only. Generic locations or parts such as `roofs`, `safety rails`, `connections`, `containment`, `criteria`, `requirements`, or combined topic phrases should usually stay in `depth_3` or `keywords`, not `depth_4`.
 
 Keyword rules:
 - Extract 2-12 useful technical phrases for MDL matching.
 - Prefer equipment, systems, buildings, study/survey terms, standards, operating conditions, quantities, and parameters.
+- Include explicit numeric anchors when they are important for retrieval, such as pressures, temperatures, percentages, capacities, clearances, design margins, flow/ventilation rates, testing frequencies, and standard numbers.
 - Exclude administrative filler such as shall, provide, include, contractor, owner, requirement, data, information, general, detail, other, and note.
+- De-emphasize deliverable/admin terms such as drawing, calculation, report, schedule, approval, submission, and procedure unless the deliverable itself is the explicit technical target.
 - Preserve important acronyms, vendor markers, proper nouns, units, and symbols.
 - Use `known_abbreviations` to understand acronyms, but keep common acronyms when they are useful for search.
 
@@ -62,6 +67,8 @@ Search query rules:
 - Combine the most meaningful depth terms with the strongest keywords.
 - Prefer technical anchors over administrative section labels.
 - Do not include broad parent labels in the search query when they conflict with the chunk's technical subject. For HVAC, mechanical cooling, ductwork, fresh air, or domestic water service chunks, avoid adding `Scope of Civil Works` unless the civil scope is the actual technical subject.
+- Keep the search query focused on retrieval anchors, not procedural language. Prefer `Ductwork, SMACNA, fire dampers, NFPA 90A` over `submit drawings for approval`.
+- Remove redundancy between depth and keywords while preserving the strongest anchors.
 - Make the query directly usable for vector or hybrid search against MDL rows.
 
 Set `confidence` to:
