@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 from urllib.parse import urlparse
 
-DEFAULT_ENV_PATH = Path(".env")
+DEFAULT_ENV_PATH = Path(__file__).resolve().parents[2] / ".env"
 
 
 def load_env_file(path: Path = DEFAULT_ENV_PATH) -> None:

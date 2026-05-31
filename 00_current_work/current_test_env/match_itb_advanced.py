@@ -7,12 +7,12 @@ import sys
 from pathlib import Path
 
 from loguru import logger
-from mdl_runtime.config import OUTPUT_DIR, REPO_ROOT
-from mdl_runtime.embeddings import UnifiedEmbeddingService
-from mdl_runtime.neo4j_connection import Neo4jConnection
+from standalone_config import OUTPUT_DIR, REPO_ROOT
 
 sys.path.append(str(REPO_ROOT / "src"))
 
+from common.embedding_client import AzureEmbeddingService
+from common.neo4j_client import Neo4jConnection
 from matching_service.models import MatchingConfig
 from matching_service.ranking import CrossEncoderReranker
 from matching_service.repository import MDLSearchRepository
@@ -30,7 +30,7 @@ def main() -> None:
         output_limit=int(os.getenv("ITB_OUTPUT_LIMIT", "100")),
     )
     embedding_service = (
-        UnifiedEmbeddingService.build_default()
+        AzureEmbeddingService()
         if config.retrieval_mode in {"semantic", "hybrid"}
         else None
     )

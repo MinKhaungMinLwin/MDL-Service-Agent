@@ -7,20 +7,12 @@ import sys
 from pathlib import Path
 
 from loguru import logger
-from mdl_runtime.config import (
-    AZURE_OPENAI_API_KEY,
-    AZURE_OPENAI_CHAT_API_VERSION,
-    AZURE_OPENAI_CHAT_DEPLOYMENT,
-    AZURE_OPENAI_ENDPOINT,
-    BASE_DIR,
-    OUTPUT_DIR,
-    REPO_ROOT,
-    required,
-)
-from openai import AzureOpenAI
+from standalone_config import BASE_DIR, OUTPUT_DIR, REPO_ROOT
 
 sys.path.append(str(REPO_ROOT / "src"))
 
+from common.config import required_env
+from common.openai_client import build_azure_openai_client
 from itb_service.loader import load_abbreviation_rules
 from itb_service.models import ITBExtractionConfig, ITBTarget
 from itb_service.prompts import load_prompt
@@ -46,15 +38,14 @@ def main() -> None:
     output_stem = f"output_itb_section{section}_focused"
     enable_verification = _env_flag("ITB_ENABLE_LLM_VERIFY")
     config = ITBExtractionConfig(
-        model=AZURE_OPENAI_CHAT_DEPLOYMENT,
+        model=required_env("AZURE_OPENAI_CHAT_DEPLOYMENT"),
         batch_size=max(1, int(os.getenv("ITB_BATCH_SIZE", "1"))),
         max_chunks=int(os.getenv("MAX_TEST_CHUNKS", "0")),
         enable_verification=enable_verification,
     )
-    client = AzureOpenAI(
-        api_version=AZURE_OPENAI_CHAT_API_VERSION,
-        azure_endpoint=AZURE_OPENAI_ENDPOINT,
-        api_key=required(AZURE_OPENAI_API_KEY, "AZURE_OPENAI_API_KEY"),
+    client = build_azure_openai_client(
+        api_version_env="AZURE_OPENAI_CHAT_API_VERSION",
+        default_api_version="2024-12-01-preview",
     )
     service = ITBExtractionService(
         client=client,

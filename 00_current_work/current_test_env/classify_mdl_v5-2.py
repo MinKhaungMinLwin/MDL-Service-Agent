@@ -6,20 +6,12 @@ import os
 import sys
 from pathlib import Path
 
-from mdl_runtime.config import (
-    AZURE_OPENAI_API_KEY,
-    AZURE_OPENAI_CHAT_API_VERSION,
-    AZURE_OPENAI_CHAT_DEPLOYMENT,
-    AZURE_OPENAI_ENDPOINT,
-    DATA_DIR,
-    OUTPUT_DIR,
-    REPO_ROOT,
-    required,
-)
-from openai import AzureOpenAI
+from standalone_config import DATA_DIR, OUTPUT_DIR, REPO_ROOT
 
 sys.path.append(str(REPO_ROOT / "src"))
 
+from common.config import required_env
+from common.openai_client import build_azure_openai_client
 from mdl_service.classification import MDLClassifier, load_system_prompt
 from mdl_service.loader import list_excel_files
 from mdl_service.service import MDLClassificationService
@@ -35,16 +27,15 @@ PROMPT_FILE = Path(
 def main() -> None:
     """Classify requested or discoverable MDL workbooks."""
     system_prompt = load_system_prompt(PROMPT_FILE)
-    client = AzureOpenAI(
-        api_version=AZURE_OPENAI_CHAT_API_VERSION,
-        azure_endpoint=AZURE_OPENAI_ENDPOINT,
-        api_key=required(AZURE_OPENAI_API_KEY, "AZURE_OPENAI_API_KEY"),
+    client = build_azure_openai_client(
+        api_version_env="AZURE_OPENAI_CHAT_API_VERSION",
+        default_api_version="2024-12-01-preview",
         timeout=1200.0,
     )
     service = MDLClassificationService(
         classifier=MDLClassifier(
             client=client,
-            model=AZURE_OPENAI_CHAT_DEPLOYMENT,
+            model=required_env("AZURE_OPENAI_CHAT_DEPLOYMENT"),
             system_prompt=system_prompt,
         )
     )

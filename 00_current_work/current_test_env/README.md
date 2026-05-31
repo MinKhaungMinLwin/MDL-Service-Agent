@@ -1,14 +1,14 @@
 # Current Test Environment
 
-This folder is a standalone MDL/ITB matching test environment. It no longer imports modules from the legacy `master-document-list-project-main/backend` project.
+This folder contains standalone wrappers and local artifacts for the MDL/ITB matching services under `src/`.
 
 ## Runtime Modules
 
-The local `mdl_runtime/` package replaces the small subset of legacy backend code that these scripts used:
+The wrappers use the shared runtime modules under `src/common/`:
 
-- `mdl_runtime.config`: loads `.env`, `.env.local`, and environment variables.
-- `mdl_runtime.neo4j_connection`: Neo4j driver/session wrapper.
-- `mdl_runtime.embeddings`: Azure OpenAI embedding client with the same `UnifiedEmbeddingService.build_default()` API used by the old scripts.
+- `common.config`: loads the repository root `.env` and environment variables.
+- `common.neo4j_client`: Neo4j driver/session wrapper.
+- `common.embedding_client`: Azure OpenAI embedding client.
 
 ## Main Flow
 
@@ -21,33 +21,25 @@ The local `mdl_runtime/` package replaces the small subset of legacy backend cod
    - Reads classified MDL CSV files from `output/`.
    - Embeds title/classification text.
    - Writes `TestMDLDocument` nodes to Neo4j.
-   - Creates `test_mdl_document_vector_idx`.
+   - Creates the Neo4j full-text and vector indexes.
 
 3. `test_itb_extraction.py`
    - Reads parsed ITB chunk JSON files from `data/itb_chunks/`.
-   - Uses `itb_keyword_extraction_prompt.md`.
+   - Uses `prompts/itb_keyword_extraction_v2.md`.
    - Writes ITB hierarchy, keyword, and LLM-generated search query CSV files under `output/`.
 
-4. `match_itb_fadhili_only.py` or `match_itb_advanced.py`
-   - Embeds the ITB `Search Query` column when available; otherwise falls back to meaningful Depth + Keyword queries.
-   - Searches the Neo4j vector index.
+4. `match_itb_advanced.py`
+   - Retrieves MDL candidates from ITB depth values.
+   - Supports `keyword`, `semantic`, and `hybrid` retrieval through `ITB_RETRIEVAL_MODE`.
+   - Uses cross-encoder reranking and writes the top 100 candidates.
    - Writes matched MDL candidates under `output/`.
 
 ## Setup
 
 ```powershell
-# 1. 환경변수 파일 복사 (필수 인증키 기입 필요)
-Copy-Item .env.example .env
-
-# 2. 파이썬 가상환경 생성 및 활성화 (Windows)
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-
-# 3. 패키지 설치
-# (uv가 설치되어 있다면 'uv pip install -r requirements.txt' 권장)
-pip install -r requirements.txt
+# Run from the repository root.
+Copy-Item 00_current_work/current_test_env/.env.example .env
+uv sync
 ```
 
 Then fill in `AZURE_OPENAI_API_KEY`, `NEO4J_PASSWORD`, and any non-default endpoint/database values.
-
-Run scripts from this directory so relative prompt/data paths stay predictable.

@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import sys
 
-from mdl_runtime.config import EMBEDDING_DIMENSIONS, OUTPUT_DIR, REPO_ROOT
-from mdl_runtime.embeddings import UnifiedEmbeddingService
-from mdl_runtime.neo4j_connection import Neo4jConnection
+from standalone_config import OUTPUT_DIR, REPO_ROOT
 
 sys.path.append(str(REPO_ROOT / "src"))
 
+from common.config import env_int
+from common.embedding_client import AzureEmbeddingService
+from common.neo4j_client import Neo4jConnection
 from mdl_service.models import MDLIngestConfig
 from mdl_service.repository import MDLRepository
 from mdl_service.service import MDLIngestService
@@ -17,11 +18,11 @@ from mdl_service.service import MDLIngestService
 
 def main() -> None:
     """Ingest every classified MDL CSV from the current test output directory."""
-    config = MDLIngestConfig(embedding_dimensions=EMBEDDING_DIMENSIONS)
+    config = MDLIngestConfig(embedding_dimensions=env_int("EMBEDDING_DIMENSIONS", 1536))
     with Neo4jConnection() as conn:
         service = MDLIngestService(
             repository=MDLRepository(conn, config),
-            embedding_service=UnifiedEmbeddingService.build_default(),
+            embedding_service=AzureEmbeddingService(),
             config=config,
         )
         service.setup()
