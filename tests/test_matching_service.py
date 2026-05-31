@@ -12,6 +12,7 @@ import pandas as pd
 from matching_service.models import MatchingConfig
 from matching_service.query import build_cross_encoder_query, build_depth_filter_query
 from matching_service.ranking import CrossEncoderReranker, build_candidate_text
+from matching_service.repository import MDLSearchRepository
 from matching_service.retrieval import DepthRetriever
 from matching_service.service import MatchingService
 from schedule_service.candidate_extractor import _parse_matched_doc
@@ -55,6 +56,14 @@ class MatchingServiceTest(unittest.TestCase):
         text = build_candidate_text({"title": "GENERAL ARRANGEMENT", "others": "Fresh Air Intake"})
 
         self.assertIn("Others: Fresh Air Intake", text)
+
+    def test_matching_setup_recreates_stale_fulltext_index(self) -> None:
+        conn = _RecordingConnection(index_properties=["title", "text_content"])
+
+        MDLSearchRepository(conn, MatchingConfig()).setup_fulltext_index()
+
+        self.assertIn("DROP INDEX test_mdl_document_fulltext_idx", conn.calls[1][0])
+        self.assertIn("CREATE FULLTEXT INDEX test_mdl_document_fulltext_idx", conn.calls[2][0])
 
     def test_service_reranks_top_200_and_outputs_top_100(self) -> None:
         reranker = _RecordingReranker()
@@ -159,6 +168,39 @@ class _RecordingReranker:
             {**item, "cross_encoder_score": float(201 - index), "final_rank": index}
             for index, item in enumerate(candidates[:top_k], start=1)
         ]
+
+
+class _RecordingConnection:
+    def __init__(self, index_properties: list[str]) -> None:
+        self.calls: list[tuple[str, dict]] = []
+        self.index_properties = index_properties
+
+    def session(self):
+        return _RecordingSession(self.calls, self.index_properties)
+
+
+class _RecordingSession:
+    def __init__(self, calls: list[tuple[str, dict]], index_properties: list[str]) -> None:
+        self.calls = calls
+        self.index_properties = index_properties
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+        pass
+
+    def run(self, query: str, **parameters):
+        self.calls.append((query, parameters))
+        return _RecordingResult(self.index_properties if "SHOW INDEXES" in query else None)
+
+
+class _RecordingResult:
+    def __init__(self, index_properties: list[str] | None) -> None:
+        self.index_properties = index_properties
+
+    def single(self):
+        return {"properties": self.index_properties} if self.index_properties is not None else None
 
 
 def _source_row() -> dict[str, str]:

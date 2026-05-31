@@ -6,6 +6,17 @@ from typing import Any
 
 from mdl_service.models import MDLIngestConfig
 
+FULLTEXT_PROPERTIES = [
+    "title",
+    "equipment",
+    "building",
+    "system",
+    "study_survey",
+    "others",
+    "deliverable",
+    "text_content",
+]
+
 
 class MDLRepository:
     """Create MDL schema objects and upsert classified documents."""
@@ -23,22 +34,7 @@ class MDLRepository:
                 FOR (n:{self.config.node_label}) REQUIRE n.doc_id IS UNIQUE
                 """
             )
-            session.run(
-                f"""
-                CREATE FULLTEXT INDEX {self.config.fulltext_index_name} IF NOT EXISTS
-                FOR (n:{self.config.node_label})
-                ON EACH [
-                    n.title,
-                    n.equipment,
-                    n.building,
-                    n.system,
-                    n.study_survey,
-                    n.others,
-                    n.deliverable,
-                    n.text_content
-                ]
-                """
-            )
+            self._setup_fulltext_index(session)
             session.run(
                 f"""
                 CREATE VECTOR INDEX {self.config.vector_index_name} IF NOT EXISTS
@@ -75,3 +71,31 @@ class MDLRepository:
                 """,
                 batch=records,
             )
+
+    def _setup_fulltext_index(self, session: Any) -> None:
+        result = session.run(
+            """
+            SHOW INDEXES YIELD name, type, properties
+            WHERE name = $index_name AND type = "FULLTEXT"
+            RETURN properties
+            """,
+            index_name=self.config.fulltext_index_name,
+        ).single()
+        if result and set(result["properties"]) != set(FULLTEXT_PROPERTIES):
+            session.run(f"DROP INDEX {self.config.fulltext_index_name} IF EXISTS")
+        session.run(
+            f"""
+            CREATE FULLTEXT INDEX {self.config.fulltext_index_name} IF NOT EXISTS
+            FOR (n:{self.config.node_label})
+            ON EACH [
+                n.title,
+                n.equipment,
+                n.building,
+                n.system,
+                n.study_survey,
+                n.others,
+                n.deliverable,
+                n.text_content
+            ]
+            """
+        )

@@ -79,13 +79,23 @@ class MDLServiceTest(unittest.TestCase):
         repository.upsert_batch([{"doc_id": "doc-1", "embedding": [1.0, 0.0, 0.0]}])
 
         self.assertIn("CREATE CONSTRAINT test_mdl_doc_id_unique", conn.calls[0][0])
-        self.assertIn("CREATE FULLTEXT INDEX test_mdl_document_fulltext_idx", conn.calls[1][0])
-        self.assertIn("n.others", conn.calls[1][0])
-        self.assertIn("CREATE VECTOR INDEX test_mdl_document_vector_idx", conn.calls[2][0])
-        self.assertIn("`vector.dimensions`: 3", conn.calls[2][0])
-        self.assertIn("MERGE (n:TestMDLDocument", conn.calls[3][0])
-        self.assertIn("n.others = record.others", conn.calls[3][0])
-        self.assertEqual(conn.calls[3][1]["batch"][0]["doc_id"], "doc-1")
+        self.assertIn("SHOW INDEXES", conn.calls[1][0])
+        self.assertIn("CREATE FULLTEXT INDEX test_mdl_document_fulltext_idx", conn.calls[2][0])
+        self.assertIn("n.others", conn.calls[2][0])
+        self.assertIn("CREATE VECTOR INDEX test_mdl_document_vector_idx", conn.calls[3][0])
+        self.assertIn("`vector.dimensions`: 3", conn.calls[3][0])
+        self.assertIn("MERGE (n:TestMDLDocument", conn.calls[4][0])
+        self.assertIn("n.others = record.others", conn.calls[4][0])
+        self.assertEqual(conn.calls[4][1]["batch"][0]["doc_id"], "doc-1")
+
+    def test_repository_recreates_stale_fulltext_index(self) -> None:
+        conn = _RecordingConnection(index_properties=["title", "text_content"])
+        repository = MDLRepository(conn, MDLIngestConfig())
+
+        repository.setup_schema()
+
+        self.assertIn("DROP INDEX test_mdl_document_fulltext_idx", conn.calls[2][0])
+        self.assertIn("CREATE FULLTEXT INDEX test_mdl_document_fulltext_idx", conn.calls[3][0])
 
     def test_ingest_service_embeds_and_upserts_in_batches(self) -> None:
         repository = _RecordingRepository()
@@ -137,16 +147,18 @@ class _FakeClassifier:
 
 
 class _RecordingConnection:
-    def __init__(self) -> None:
+    def __init__(self, index_properties: list[str] | None = None) -> None:
         self.calls: list[tuple[str, dict]] = []
+        self.index_properties = index_properties
 
     def session(self):
-        return _RecordingSession(self.calls)
+        return _RecordingSession(self.calls, self.index_properties)
 
 
 class _RecordingSession:
-    def __init__(self, calls: list[tuple[str, dict]]) -> None:
+    def __init__(self, calls: list[tuple[str, dict]], index_properties: list[str] | None) -> None:
         self.calls = calls
+        self.index_properties = index_properties
 
     def __enter__(self):
         return self
@@ -154,8 +166,17 @@ class _RecordingSession:
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:
         pass
 
-    def run(self, query: str, **parameters) -> None:
+    def run(self, query: str, **parameters):
         self.calls.append((query, parameters))
+        return _RecordingResult(self.index_properties if "SHOW INDEXES" in query else None)
+
+
+class _RecordingResult:
+    def __init__(self, index_properties: list[str] | None) -> None:
+        self.index_properties = index_properties
+
+    def single(self):
+        return {"properties": self.index_properties} if self.index_properties is not None else None
 
 
 class _RecordingRepository:

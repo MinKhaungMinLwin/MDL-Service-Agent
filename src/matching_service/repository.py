@@ -6,6 +6,17 @@ from typing import Any
 
 from matching_service.models import Candidate, MatchingConfig
 
+FULLTEXT_PROPERTIES = [
+    "title",
+    "equipment",
+    "building",
+    "system",
+    "study_survey",
+    "others",
+    "deliverable",
+    "text_content",
+]
+
 
 class MDLSearchRepository:
     """Query MDL documents stored in Neo4j full-text and vector indexes."""
@@ -17,6 +28,16 @@ class MDLSearchRepository:
     def setup_fulltext_index(self) -> None:
         """Create the MDL full-text index if needed."""
         with self.conn.session() as session:
+            result = session.run(
+                """
+                SHOW INDEXES YIELD name, type, properties
+                WHERE name = $index_name AND type = "FULLTEXT"
+                RETURN properties
+                """,
+                index_name=self.config.fulltext_index_name,
+            ).single()
+            if result and set(result["properties"]) != set(FULLTEXT_PROPERTIES):
+                session.run(f"DROP INDEX {self.config.fulltext_index_name} IF EXISTS")
             session.run(f"""
             CREATE FULLTEXT INDEX {self.config.fulltext_index_name} IF NOT EXISTS
             FOR (n:{self.config.node_label})
