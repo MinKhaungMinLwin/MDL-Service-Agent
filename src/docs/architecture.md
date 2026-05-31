@@ -44,18 +44,18 @@ a schedule showing when each technical document must be submitted (FA date, FC d
              └─▶ ccpp_guide_schedule_clean.json   (4039 activities, dates, WBS)
 
  [B] Historical MDL Excel files (*_MDL.xlsx)
-       └─ classify_mdl_v5-2.py  (LLM, script)
+       └─ uv run mdl-classify  (LLM CLI)
              └─▶ *_MDL_classified.csv   (Title, Equipment, System, Deliverable)
-                   └─ save_to_neo4j_test.py  (script)
+                   └─ uv run mdl-ingest  (CLI)
                          └─▶ Neo4j: MDL document nodes + HNSW vector index
 
  [C] ITB PDF
        └─ /parser + /chunker  (API)
              └─▶ ITB chunks JSON  (page, text, hierarchy)
-                   └─ test_itb_extraction.py  (LLM, script)
+                   └─ uv run itb-extract  (LLM CLI)
                          └─▶ output_itb_section*.csv
                                (1st–5th Depth, Keywords, Search Query per chunk)
-                               └─ match_itb_advanced.py  (Neo4j vector search, script)
+                               └─ uv run itb-match  (Neo4j vector search CLI)
                                      └─▶ output_match_*.csv
                                            (each ITB chunk + Matched_Doc_1..20)
 
@@ -250,7 +250,7 @@ OUTPUT: generated_schedule_*.json
 ```
 ITB chunk (one technical requirement)
   │
-  │  Neo4j vector search (match_itb_advanced.py)
+  │  Neo4j vector search (uv run itb-match)
   │  embeds Search Query → finds similar MDL docs from historical projects
   │
   ├─▶ Matched_Doc_1  [Fadhili] GTG - P&I DIAGRAM (score 0.93)
@@ -298,8 +298,8 @@ The `itb_sources` column is the end-to-end traceability link:
    - ScheduleActivity.po_finish_date always ""
    - Needs client-provided PO date mapping per project
 
-3. ITB workflow (chunking, extraction, Neo4j matching) not in src/ API
-   - Still standalone scripts in 00_current_work/current_test_env/
+3. ITB workflow (chunking, extraction, Neo4j matching) is CLI-first, not fully exposed as API routes
+   - Use `uv run itb-extract` and `uv run itb-match`
 
 4. No final MDL Excel formatter
    - generated_schedule_*.xlsx is an internal table, not the client deliverable

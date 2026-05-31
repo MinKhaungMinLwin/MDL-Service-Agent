@@ -9,6 +9,10 @@ from typing import Any
 
 from mdl_service.models import BatchClassification, ClassificationResult
 
+DEFAULT_CLASSIFICATION_PROMPT_PATH = (
+    Path(__file__).resolve().parent / "prompts" / "ccpp_document_classification_prompt_260423.md"
+)
+
 
 def load_system_prompt(path: str | Path) -> str:
     """Load the classification prompt and enforce structured output mode."""

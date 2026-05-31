@@ -28,11 +28,21 @@ dev = [
     "ruff>=0.11.0",
 ]
 
+[project.scripts]
+mdl-classify = "mdl_service.cli:classify"
+mdl-ingest = "mdl_service.cli:ingest"
+itb-extract = "itb_service.cli:extract"
+itb-match = "matching_service.cli:match"
+
 [tool.setuptools]
 package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+mdl_service = ["prompts/*.md"]
+itb_service = ["prompts/*.md"]
 
 [tool.ruff]
 line-length = 120

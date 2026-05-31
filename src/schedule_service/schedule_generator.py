@@ -255,7 +255,11 @@ def main() -> None:
     parser.add_argument("--schedule", type=Path, default=DEFAULT_SCHEDULE_PATH)
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
     parser.add_argument("--limit", type=int, default=0, help="Process only the first N rows from each input CSV.")
-    parser.add_argument("--ntp-date", default="", help="Real project NTP date in ISO format (e.g. 2024-01-15). Shifts all guide schedule dates accordingly.")
+    parser.add_argument(
+        "--ntp-date",
+        default="",
+        help="Real project NTP date in ISO format (e.g. 2024-01-15). Shifts all guide schedule dates accordingly.",
+    )
     parser.add_argument("inputs", nargs="+", type=Path, help="One or more *_MDL_classified.csv files.")
     args = parser.parse_args()
 

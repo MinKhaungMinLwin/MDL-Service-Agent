@@ -65,7 +65,7 @@ src/
     validation_rule.csv                     5918 FA/FI/SKIP rules (semicolon-delimited)
     activity_base_date_policy.csv           Base date policy per activity type
 
-00_current_work/current_test_env/output/
+output/current_test_env/
   output_itb_section6_focused.csv           ITB keyword extraction (Section 6)
   output_itb_section7_focused.csv           ITB keyword extraction (Section 7)
   output_match_all_projects_section6.csv    ITB → MDL Neo4j matches (Section 6)
@@ -288,7 +288,7 @@ from schedule_service.schedule_loader import load_schedule_activities, DEFAULT_S
 from pathlib import Path
 acts = load_schedule_activities(DEFAULT_SCHEDULE_PATH)
 generate_schedule_file(
-    Path('00_current_work/current_test_env/output/Fadhili_MDL_classified.csv'),
+    Path('output/current_test_env/Fadhili_MDL_classified.csv'),
     acts, Path('output/schedule_service'), limit=10
 )
 "

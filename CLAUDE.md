@@ -6,7 +6,7 @@ Automates MDL (Master Document List) generation for CCPP EPC projects.
 Given an ITB (client requirements PDF) and historical MDL references,
 produces FA/FC submission dates for each technical document.
 
-**Detailed docs:** `src/docs/architecture.md` (full pipeline + diagrams) and `src/docs/codebase.md` (file map + module details).
+**Detailed docs:** `src/docs/architecture.md` (full pipeline + diagrams), `src/docs/codebase.md` (file map + module details), and `src/docs/workflows.md` (CLI commands).
 
 ---
 
@@ -51,7 +51,7 @@ Answers: "When should each MDL document be submitted?"
 
 **Full connected pipeline:**
 ```
-[offline script]  match_itb_advanced.py  →  output_match_*.csv
+[CLI]  uv run itb-match  →  output_match_*.csv
                                                     │
                           ┌─────────────────────────┤
                           │                         │
@@ -79,8 +79,8 @@ Answers: "When should each MDL document be submitted?"
 ```
 04_data/schedule_sources/processed/ccpp_guide_schedule_260527_clean.json  ← 4039 activities
 04_data/schedule_sources/rules/validation_rule.csv                         ← 5918 FA/FI rules
-00_current_work/current_test_env/output/output_match_*.csv                 ← ITB matching output
-00_current_work/current_test_env/output/*_MDL_classified.csv               ← classified MDL data
+output/current_test_env/output_match_*.csv                                  ← ITB matching output
+output/current_test_env/*_MDL_classified.csv                                ← classified MDL data
 output/schedule_service/                                                    ← API outputs
 ```
 
@@ -94,14 +94,14 @@ PYTHONPATH=src uvicorn api.main:app --reload --port 8000
 
 # Full pipeline: ITB matching → MDL candidates → FA/FC dates
 curl -X POST "http://localhost:8000/schedule/candidates" \
-  --get --data-urlencode "input_csv=00_current_work/current_test_env/output/output_match_all_projects_section6.csv"
+  --get --data-urlencode "input_csv=output/current_test_env/output_match_all_projects_section6.csv"
 
 curl -X POST "http://localhost:8000/schedule/generate" \
   --get --data-urlencode "input_csv=output/schedule_service/mdl_candidates_output_match_all_projects_section6.csv"
 
 # Or use historical MDL directly
 curl -X POST "http://localhost:8000/schedule/generate" \
-  --get --data-urlencode "input_csv=00_current_work/current_test_env/output/Fadhili_MDL_classified.csv" -d "limit=50"
+  --get --data-urlencode "input_csv=output/current_test_env/Fadhili_MDL_classified.csv" -d "limit=50"
 
 # Lint / test
 ruff check src/

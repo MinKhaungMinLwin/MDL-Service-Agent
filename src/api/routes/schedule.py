@@ -40,7 +40,7 @@ def schedule_map(
         Query(
             min_length=1,
             description="Path to an ITB matching CSV file inside the running app/container.",
-            examples=["00_current_work/current_test_env/output/output_match_all_projects_section6.csv"],
+            examples=["output/current_test_env/output_match_all_projects_section6.csv"],
         ),
     ],
     retrieve_k: Annotated[
@@ -94,7 +94,7 @@ def schedule_generate(
         Query(
             min_length=1,
             description="Path to an MDL classified CSV file.",
-            examples=["00_current_work/current_test_env/output/Fadhili_MDL_classified.csv"],
+            examples=["output/current_test_env/Fadhili_MDL_classified.csv"],
         ),
     ],
     ntp_date: Annotated[
@@ -143,7 +143,7 @@ def schedule_candidates(
         Query(
             min_length=1,
             description="Path to an ITB matching CSV file.",
-            examples=["00_current_work/current_test_env/output/output_match_all_projects_section6.csv"],
+            examples=["output/current_test_env/output_match_all_projects_section6.csv"],
         ),
     ],
     score_threshold: Annotated[
