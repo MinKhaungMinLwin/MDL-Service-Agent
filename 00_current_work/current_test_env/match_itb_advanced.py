@@ -4,20 +4,20 @@ import re
 
 import pandas as pd
 from loguru import logger
-from tqdm import tqdm
-
 from mdl_runtime.config import OUTPUT_DIR
+from mdl_runtime.cross_encoder_reranker import CrossEncoderReranker
 from mdl_runtime.embeddings import UnifiedEmbeddingService
 from mdl_runtime.neo4j_connection import Neo4jConnection
-
+from tqdm import tqdm
 
 DEPTH_COLUMNS = ("1st Depth", "2nd Depth", "3rd Depth", "4th Depth", "5th Depth")
 FULLTEXT_INDEX_NAME = "test_mdl_document_fulltext_idx"
 VECTOR_INDEX_NAME = "test_mdl_document_vector_idx"
 RETRIEVAL_MODE = os.getenv("ITB_RETRIEVAL_MODE", "keyword").strip().lower()
-BM25_CANDIDATE_LIMIT = int(os.getenv("ITB_BM25_CANDIDATES", "100"))
-BM25_OUTPUT_LIMIT = int(os.getenv("ITB_BM25_OUTPUT_LIMIT", "20"))
-ENABLE_VECTOR_RERANK = os.getenv("ITB_ENABLE_VECTOR_RERANK", "true").lower() in {"1", "true", "yes", "y"}
+RETRIEVAL_CANDIDATE_LIMIT = int(os.getenv("ITB_RETRIEVAL_CANDIDATES", "200"))
+OUTPUT_LIMIT = int(os.getenv("ITB_OUTPUT_LIMIT", "100"))
+CROSS_ENCODER_MODEL = os.getenv("ITB_CROSS_ENCODER_MODEL", "cross-encoder/ms-marco-MiniLM-L6-v2")
+CROSS_ENCODER_BATCH_SIZE = int(os.getenv("ITB_CROSS_ENCODER_BATCH_SIZE", "32"))
 RRF_K = 60
 
 
@@ -77,40 +77,8 @@ def build_depth_filter_query(row):
     return " OR ".join(clauses), terms
 
 
-def build_vector_query(row, depth_filter_terms):
-    return " ".join(depth_filter_terms).strip()
-
-
-def split_phrase_terms(text):
-    if not text or text.lower() == "nan":
-        return []
-    return [
-        term.strip()
-        for term in re.split(r"[,;\n]+", text)
-        if term.strip()
-    ]
-
-
 def build_vector_terms(row, depth_filter_terms):
     return unique_preserve_order(depth_filter_terms)
-
-
-def cosine_similarity(left, right):
-    if not left or not right or len(left) != len(right):
-        return None
-
-    dot = 0.0
-    left_norm = 0.0
-    right_norm = 0.0
-    for left_value, right_value in zip(left, right):
-        dot += left_value * right_value
-        left_norm += left_value * left_value
-        right_norm += right_value * right_value
-
-    if left_norm == 0.0 or right_norm == 0.0:
-        return None
-
-    return dot / ((left_norm ** 0.5) * (right_norm ** 0.5))
 
 
 def get_candidate_key(candidate):
@@ -120,41 +88,6 @@ def get_candidate_key(candidate):
     return "|".join(
         str(candidate.get(field, ""))
         for field in ("source_file", "document_no", "title")
-    )
-
-
-def max_cosine_similarity(query_embeddings, candidate_embedding):
-    scores = [
-        score for score in (
-            cosine_similarity(query_embedding, candidate_embedding)
-            for query_embedding in query_embeddings
-        )
-        if score is not None
-    ]
-    if not scores:
-        return None
-    return max(scores)
-
-
-def rerank_candidates_by_vector(candidates, query_embeddings):
-    reranked_candidates = []
-    for retrieval_rank, candidate in enumerate(candidates, start=1):
-        reranked_candidate = dict(candidate)
-        reranked_candidate.setdefault("retrieval_rank", retrieval_rank)
-        reranked_candidate["vector_score"] = max_cosine_similarity(
-            query_embeddings,
-            reranked_candidate.pop("embedding", None),
-        )
-        reranked_candidates.append(reranked_candidate)
-
-    return sorted(
-        reranked_candidates,
-        key=lambda candidate: (
-            candidate["vector_score"] is not None,
-            candidate["vector_score"] or -1.0,
-            -candidate["retrieval_rank"],
-        ),
-        reverse=True,
     )
 
 
@@ -175,7 +108,7 @@ def setup_fulltext_index(conn):
         """)
 
 
-def bm25_search_mdl(conn, depth_filter_query, limit=BM25_CANDIDATE_LIMIT):
+def bm25_search_mdl(conn, depth_filter_query, limit=RETRIEVAL_CANDIDATE_LIMIT):
     if not depth_filter_query:
         return []
 
@@ -192,7 +125,6 @@ def bm25_search_mdl(conn, depth_filter_query, limit=BM25_CANDIDATE_LIMIT):
            node.building AS building,
            node.study_survey AS study_survey,
            node.deliverable AS deliverable,
-           node.embedding AS embedding,
            score AS bm25_score
     ORDER BY score DESC
     LIMIT $limit
@@ -214,7 +146,7 @@ def bm25_search_mdl(conn, depth_filter_query, limit=BM25_CANDIDATE_LIMIT):
     return candidates
 
 
-def semantic_search_mdl(conn, query_embedding, query_term, limit=BM25_CANDIDATE_LIMIT):
+def semantic_search_mdl(conn, query_embedding, query_term, limit=RETRIEVAL_CANDIDATE_LIMIT):
     if not query_embedding:
         return []
 
@@ -231,7 +163,6 @@ def semantic_search_mdl(conn, query_embedding, query_term, limit=BM25_CANDIDATE_
            node.building AS building,
            node.study_survey AS study_survey,
            node.deliverable AS deliverable,
-           node.embedding AS embedding,
            score AS semantic_score
     ORDER BY score DESC
     LIMIT $limit
@@ -270,21 +201,20 @@ def merge_semantic_candidates(term_candidates):
             existing.update({
                 "semantic_rank": candidate.get("semantic_rank"),
                 "semantic_score": candidate.get("semantic_score"),
-                "embedding": candidate.get("embedding") or existing.get("embedding"),
             })
-        existing["retrieval_rank"] = min(
-            existing.get("retrieval_rank") or BM25_CANDIDATE_LIMIT + 1,
-            candidate.get("semantic_rank") or BM25_CANDIDATE_LIMIT + 1,
-        )
-
-    return sorted(
+    ranked_candidates = sorted(
         merged.values(),
         key=lambda candidate: (
-            -(len(candidate.get("matched_terms", []))),
-            -(candidate.get("semantic_score") or 0.0),
-            candidate.get("retrieval_rank") or BM25_CANDIDATE_LIMIT + 1,
+            candidate.get("semantic_score") or 0.0,
+            len(candidate.get("matched_terms", [])),
         ),
+        reverse=True,
     )
+    for rank, candidate in enumerate(ranked_candidates, start=1):
+        candidate["semantic_rank"] = rank
+        candidate["retrieval_rank"] = rank
+
+    return ranked_candidates
 
 
 def semantic_search_mdl_by_terms(conn, query_term_embeddings):
@@ -315,7 +245,6 @@ def merge_retrieval_candidates(keyword_candidates, semantic_candidates):
             merged[key].update({
                 "semantic_rank": candidate.get("semantic_rank"),
                 "semantic_score": candidate.get("semantic_score"),
-                "embedding": candidate.get("embedding") or merged[key].get("embedding"),
                 "matched_terms": candidate.get("matched_terms", []),
             })
         else:
@@ -345,7 +274,7 @@ def merge_retrieval_candidates(keyword_candidates, semantic_candidates):
 def sort_single_retrieval_candidates(candidates):
     ranked_candidates = sorted(
         candidates,
-        key=lambda candidate: candidate.get("retrieval_rank") or BM25_CANDIDATE_LIMIT + 1,
+        key=lambda candidate: candidate.get("retrieval_rank") or RETRIEVAL_CANDIDATE_LIMIT + 1,
     )
     for rank, candidate in enumerate(ranked_candidates, start=1):
         candidate["retrieval_rank"] = rank
@@ -383,9 +312,8 @@ def format_candidate(candidate):
         .replace(".xlsx", "")
     )
     parts = []
-    vector_score = candidate.get("vector_score")
-    if vector_score is not None:
-        parts.append(f"Vector: {vector_score:.4f}")
+    if candidate.get("cross_encoder_score") is not None:
+        parts.append(f"CrossEncoder: {candidate['cross_encoder_score']:.4f}")
     if candidate.get("bm25_score") is not None:
         parts.append(f"BM25: {candidate['bm25_score']:.4f}")
     if candidate.get("semantic_score") is not None:
@@ -405,6 +333,7 @@ def json_safe_value(value):
 def format_json_candidate(candidate, rank):
     return {
         "rank": rank,
+        "final_rank": candidate.get("final_rank"),
         "retrieval_rank": candidate.get("retrieval_rank"),
         "bm25_rank": candidate.get("bm25_rank"),
         "semantic_rank": candidate.get("semantic_rank"),
@@ -420,7 +349,7 @@ def format_json_candidate(candidate, rank):
         "bm25_score": candidate.get("bm25_score"),
         "semantic_score": candidate.get("semantic_score"),
         "rrf_score": candidate.get("rrf_score"),
-        "vector_score": candidate.get("vector_score"),
+        "cross_encoder_score": candidate.get("cross_encoder_score"),
         "matched_terms": candidate.get("matched_terms", []),
     }
 
@@ -429,14 +358,13 @@ def build_json_record(
     source_row,
     depth_filter_query,
     depth_filter_terms,
-    vector_query,
     vector_terms,
     retrieval_mode,
-    vector_rerank_enabled,
     retrieval_candidates,
     keyword_candidate_count,
     semantic_candidate_count,
-    vector_candidate_count,
+    cross_encoder_query,
+    cross_encoder_candidate_count,
     top_matches,
 ):
     return {
@@ -450,14 +378,13 @@ def build_json_record(
         "depth_context": get_depth_context(source_row),
         "depth_filter_query": depth_filter_query,
         "depth_filter_terms": depth_filter_terms,
-        "vector_query": vector_query,
         "vector_terms": vector_terms,
         "retrieval_mode": retrieval_mode,
-        "vector_rerank_enabled": vector_rerank_enabled,
         "retrieval_candidate_count": len(retrieval_candidates),
         "keyword_candidate_count": keyword_candidate_count,
         "semantic_candidate_count": semantic_candidate_count,
-        "vector_candidate_count": vector_candidate_count,
+        "cross_encoder_query": cross_encoder_query,
+        "cross_encoder_candidate_count": cross_encoder_candidate_count,
         "keywords": json_safe_value(source_row.get("Keywords", "")),
         "search_query": json_safe_value(source_row.get("Search Query", "")),
         "candidates": [
@@ -472,7 +399,7 @@ def json_output_path(csv_output_path):
     return f"{root}.json"
 
 
-def process_file(csv_path, output_path, conn, embedding_service):
+def process_file(csv_path, output_path, conn, embedding_service, cross_encoder_reranker):
     logger.info("Reading input file: {}", csv_path)
     df = pd.read_csv(csv_path)
 
@@ -497,11 +424,10 @@ def process_file(csv_path, output_path, conn, embedding_service):
         unique_vector_terms = unique_preserve_order(vector_terms)
         logger.info("Embedding {} unique vector terms...", len(unique_vector_terms))
         embeddings = embedding_service.embed_batch(unique_vector_terms)
-        vector_embeddings = dict(zip(unique_vector_terms, embeddings))
+        vector_embeddings = dict(zip(unique_vector_terms, embeddings, strict=True))
 
     for _, source_row in tqdm(target_df.iterrows(), total=len(target_df)):
         depth_filter_query, depth_filter_terms = build_depth_filter_query(source_row)
-        vector_query = build_vector_query(source_row, depth_filter_terms)
         vector_terms = build_vector_terms(source_row, depth_filter_terms)
         query_term_embeddings = [
             (term, vector_embeddings[term])
@@ -514,34 +440,28 @@ def process_file(csv_path, output_path, conn, embedding_service):
             depth_filter_query,
             query_term_embeddings,
         )
-        if ENABLE_VECTOR_RERANK and query_term_embeddings:
-            reranked_candidates = rerank_candidates_by_vector(
-                retrieval_candidates,
-                [embedding for _, embedding in query_term_embeddings],
-            )
-        else:
-            reranked_candidates = retrieval_candidates
-        vector_candidate_count = sum(
-            1 for candidate in reranked_candidates
-            if candidate.get("vector_score") is not None
+        cross_encoder_query = " > ".join(depth_filter_terms)
+        cross_encoder_candidates = retrieval_candidates[:RETRIEVAL_CANDIDATE_LIMIT]
+        top_matches = cross_encoder_reranker.rerank(
+            cross_encoder_query,
+            cross_encoder_candidates,
+            top_k=OUTPUT_LIMIT,
         )
-        top_matches = reranked_candidates[:BM25_OUTPUT_LIMIT]
 
         row = source_row.to_dict()
         row["Depth_Context"] = get_depth_context(source_row)
         row["Depth_Filter_Query"] = depth_filter_query
         row["Depth_Filter_Terms"] = ", ".join(depth_filter_terms)
-        row["Vector_Query"] = vector_query
         row["Vector_Terms"] = ", ".join(vector_terms)
         row["Retrieval_Mode"] = RETRIEVAL_MODE
-        row["Vector_Rerank_Enabled"] = ENABLE_VECTOR_RERANK
         row["Retrieval_Candidate_Count"] = len(retrieval_candidates)
         row["Keyword_Candidate_Count"] = len(keyword_candidates)
         row["Semantic_Candidate_Count"] = len(semantic_candidates)
-        row["Vector_Candidate_Count"] = vector_candidate_count
+        row["Cross_Encoder_Query"] = cross_encoder_query
+        row["Cross_Encoder_Candidate_Count"] = len(cross_encoder_candidates)
         row["Search_Queries"] = depth_filter_query
 
-        for i in range(BM25_OUTPUT_LIMIT):
+        for i in range(OUTPUT_LIMIT):
             col_name = f"Matched_Doc_{i + 1}"
             row[col_name] = format_candidate(top_matches[i]) if i < len(top_matches) else ""
 
@@ -551,14 +471,13 @@ def process_file(csv_path, output_path, conn, embedding_service):
                 source_row,
                 depth_filter_query,
                 depth_filter_terms,
-                vector_query,
                 vector_terms,
                 RETRIEVAL_MODE,
-                ENABLE_VECTOR_RERANK,
                 retrieval_candidates,
                 len(keyword_candidates),
                 len(semantic_candidates),
-                vector_candidate_count,
+                cross_encoder_query,
+                len(cross_encoder_candidates),
                 top_matches,
             )
         )
@@ -574,21 +493,20 @@ def process_file(csv_path, output_path, conn, embedding_service):
         "Depth_Context",
         "Depth_Filter_Query",
         "Depth_Filter_Terms",
-        "Vector_Query",
         "Vector_Terms",
         "Retrieval_Mode",
-        "Vector_Rerank_Enabled",
         "Retrieval_Candidate_Count",
         "Keyword_Candidate_Count",
         "Semantic_Candidate_Count",
-        "Vector_Candidate_Count",
+        "Cross_Encoder_Query",
+        "Cross_Encoder_Candidate_Count",
         "Keywords",
         "Search Query",
         "Search Query Source",
         "Search_Queries",
         "Chunk Text",
     ]
-    match_cols = [f"Matched_Doc_{i + 1}" for i in range(BM25_OUTPUT_LIMIT)]
+    match_cols = [f"Matched_Doc_{i + 1}" for i in range(OUTPUT_LIMIT)]
 
     result_df = pd.DataFrame(new_rows)
     final_cols = [c for c in base_cols if c in result_df.columns] + match_cols
@@ -604,8 +522,12 @@ def process_file(csv_path, output_path, conn, embedding_service):
 
 
 def main():
-    needs_embedding = ENABLE_VECTOR_RERANK or RETRIEVAL_MODE in {"semantic", "hybrid"}
+    needs_embedding = RETRIEVAL_MODE in {"semantic", "hybrid"}
     embedding_service = UnifiedEmbeddingService.build_default() if needs_embedding else None
+    cross_encoder_reranker = CrossEncoderReranker(
+        CROSS_ENCODER_MODEL,
+        batch_size=CROSS_ENCODER_BATCH_SIZE,
+    )
     conn = Neo4jConnection()
     conn.connect()
 
@@ -624,7 +546,7 @@ def main():
         setup_fulltext_index(conn)
         for file_pair in files_to_process:
             if os.path.exists(file_pair["in"]):
-                process_file(file_pair["in"], file_pair["out"], conn, embedding_service)
+                process_file(file_pair["in"], file_pair["out"], conn, embedding_service, cross_encoder_reranker)
             else:
                 logger.warning("Input file not found: {}", file_pair["in"])
     finally:
