@@ -8,7 +8,7 @@ from pathlib import Path
 from common.text_normalizer import build_schedule_target_text
 from schedule_service.models import ScheduleActivity
 
-DEFAULT_SCHEDULE_PATH = Path("04_data/schedule_sources/processed/ccpp_guide_schedule_260527_clean.json")
+DEFAULT_SCHEDULE_PATH = Path("data/schedule_sources/processed/ccpp_guide_schedule_260527_clean.json")
 
 
 def load_schedule_activities(schedule_path: Path) -> list[ScheduleActivity]:

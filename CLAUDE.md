@@ -6,7 +6,7 @@ Automates MDL (Master Document List) generation for CCPP EPC projects.
 Given an ITB (client requirements PDF) and historical MDL references,
 produces FA/FC submission dates for each technical document.
 
-**Detailed docs:** `src/docs/architecture.md` (full pipeline + diagrams), `src/docs/codebase.md` (file map + module details), and `src/docs/workflows.md` (CLI commands).
+**Detailed docs:** `docs/architecture.md` (full pipeline + diagrams), `docs/codebase.md` (file map + module details), and `docs/workflows.md` (CLI commands).
 
 ---
 
@@ -77,8 +77,8 @@ Answers: "When should each MDL document be submitted?"
 ## Key data files
 
 ```
-04_data/schedule_sources/processed/ccpp_guide_schedule_260527_clean.json  ← 4039 activities
-04_data/schedule_sources/rules/validation_rule.csv                         ← 5918 FA/FI rules
+data/schedule_sources/processed/ccpp_guide_schedule_260527_clean.json  ← 4039 activities
+data/schedule_sources/rules/validation_rule.csv                         ← 5918 FA/FI rules
 output/current_test_env/output_match_*.csv                                  ← ITB matching output
 output/current_test_env/*_MDL_classified.csv                                ← classified MDL data
 output/schedule_service/                                                    ← API outputs
@@ -113,7 +113,7 @@ python -m pytest src/ -v
 ## Known gaps
 
 1. **Anchor dates are 2007–2009** — guide schedule template dates, not real PO dates. `ScheduleActivity.po_finish_date` always `""`.
-2. **ITB + MDL classification scripts not in `src/`** — still standalone scripts in `00_current_work/`.
+2. **ITB + MDL classification are CLI-first** — exposed through `mdl-classify`, `mdl-ingest`, `itb-extract`, and `itb-match`.
 3. **`/schedule/map` output not connected to `/schedule/generate`** — activity lookup happens independently via BM25.
 4. **Semantic cache disabled** — `del cache_dir` in `SemanticIndex.build()` re-embeds 4039 activities every `/schedule/map` call.
 5. **No final MDL Excel formatter** — output is an internal table, not the client deliverable.

@@ -6,13 +6,13 @@ This repository keeps runtime code, reference documents, source data, and genera
 
 | Path | Purpose |
 | --- | --- |
-| `src/` | Runtime source code, prompts packaged with services, API routes, and docs. |
+| `src/` | Runtime source code, API routes, and prompts packaged with services. |
 | `tests/` | Unit tests for MDL, ITB, matching, and schedule behavior. |
-| `03_reference_docs/` | Proposals, prompt feedback, vendor docs, and system notes. |
-| `04_data/current_test_env/data/` | Current MDL workbooks and parsed ITB chunk JSON used by local workflows. |
-| `04_data/sample_documents/project_samples/` | Project sample ITB/MDL source documents. |
-| `04_data/source_archives/SourceData/` | Original SourceData zip archives. |
-| `04_data/schedule_sources/` | Raw/processed guide schedule files and validation rules. |
+| `references/` | Proposals, prompt feedback, vendor docs, and system notes. |
+| `data/current_test_env/data/` | Current MDL workbooks and parsed ITB chunk JSON used by local workflows. |
+| `data/sample_documents/project_samples/` | Project sample ITB/MDL source documents. |
+| `data/source_archives/SourceData/` | Original SourceData zip archives. |
+| `data/schedule_sources/` | Raw/processed guide schedule files and validation rules. |
 | `output/current_test_env/` | Generated MDL classification, ITB extraction, and ITB-to-MDL matching outputs. |
 | `output/schedule_service/` | Generated schedule API/CLI outputs. |
 | `01_legacy_poc/` | First POC code kept as historical reference only. |
@@ -21,7 +21,7 @@ This repository keeps runtime code, reference documents, source data, and genera
 
 ## Current Workflow
 
-Runtime Python code should live in `src/`, not under `00_current_work/`.
+Runtime Python code should live in `src/`, not in temporary work folders.
 
 Use these CLI commands from the repository root:
 
@@ -32,4 +32,4 @@ uv run itb-extract --section 7
 uv run itb-match
 ```
 
-See `src/docs/workflows.md` for command details and default paths.
+See `docs/workflows.md` for command details and default paths.

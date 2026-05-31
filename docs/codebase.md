@@ -58,7 +58,7 @@ src/
 ## Key data files (outside src/)
 
 ```
-04_data/schedule_sources/
+data/schedule_sources/
   processed/
     ccpp_guide_schedule_260527_clean.json   4039 CCPP schedule activities
   rules/

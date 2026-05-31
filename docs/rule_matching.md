@@ -62,7 +62,7 @@
 
 ## Validation Rule — Structure and How to Read
 
-File: `04_data/schedule_sources/rules/validation_rule.csv` (semicolon-delimited, 5918 rows)
+File: `data/schedule_sources/rules/validation_rule.csv` (semicolon-delimited, 5918 rows)
 
 ```
 Priority ; Item                  ; MDL Document Keyword              ; Activity Keyword ; Pur. ; Validation Time
@@ -95,7 +95,7 @@ score = |kw_tokens ∩ doc_tokens| / |kw_tokens|
 
 ## CCPP Guide Schedule — Structure and Anchor Date
 
-File: `04_data/schedule_sources/processed/ccpp_guide_schedule_260527_clean.json` (4039 activities)
+File: `data/schedule_sources/processed/ccpp_guide_schedule_260527_clean.json` (4039 activities)
 
 ```json
 {

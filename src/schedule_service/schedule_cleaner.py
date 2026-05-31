@@ -15,8 +15,8 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Font, PatternFill
 from openpyxl.utils import get_column_letter
 
-DEFAULT_INPUT = Path("04_data/schedule_sources/raw/ccpp guide schedule_260527.xlsx")
-DEFAULT_OUTPUT_DIR = Path("04_data/schedule_sources/processed")
+DEFAULT_INPUT = Path("data/schedule_sources/raw/ccpp guide schedule_260527.xlsx")
+DEFAULT_OUTPUT_DIR = Path("data/schedule_sources/processed")
 DEFAULT_OUTPUT_STEM = "ccpp_guide_schedule_260527_clean"
 PREFERRED_SHEET = "Sheet1 (2)"
 
@@ -207,7 +207,7 @@ def _build_metadata(
         "row_type_counts": row_type_counts,
         "generated_at": datetime.now().isoformat(timespec="seconds"),
         "notes": [
-            "Source workbook is kept separately under 04_data/schedule_sources/raw.",
+            "Source workbook is kept separately under data/schedule_sources/raw.",
             "start_date and finish_date are normalized when a known date format is detected.",
             "wbs_path is derived from the latest parent WBS rows above each row.",
         ],

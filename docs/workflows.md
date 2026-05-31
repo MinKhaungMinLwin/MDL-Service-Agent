@@ -10,7 +10,7 @@ uv run mdl-classify
 
 Defaults:
 
-- input data: `04_data/current_test_env/data`
+- input data: `data/current_test_env/data`
 - output CSV files: `output/current_test_env`
 - packaged prompt: `src/mdl_service/prompts/ccpp_document_classification_prompt_260423.md`
 
@@ -33,7 +33,7 @@ uv run itb-extract --section 7
 
 Defaults:
 
-- input chunks: `04_data/current_test_env/data/itb_chunks/R&N_ITB_chunks.json`
+- input chunks: `data/current_test_env/data/itb_chunks/R&N_ITB_chunks.json`
 - output CSV/JSON/token files: `output/current_test_env`
 - packaged prompts: `src/itb_service/prompts/`
 

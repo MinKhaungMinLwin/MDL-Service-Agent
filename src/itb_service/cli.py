@@ -15,7 +15,7 @@ from itb_service.models import ITBExtractionConfig, ITBTarget
 from itb_service.prompts import DEFAULT_EXTRACTION_PROMPT_PATH, DEFAULT_VERIFICATION_PROMPT_PATH, load_prompt
 from itb_service.service import ITBExtractionService
 
-DEFAULT_DATA_DIR = Path("04_data") / "current_test_env" / "data"
+DEFAULT_DATA_DIR = Path("data") / "current_test_env" / "data"
 DEFAULT_CHUNKS_DIR = DEFAULT_DATA_DIR / "itb_chunks"
 DEFAULT_OUTPUT_DIR = Path("output") / "current_test_env"
 DEFAULT_ABBREVIATION_RULES_PATH = Path("src") / "common" / "normalization_rules" / "abbreviations.json"

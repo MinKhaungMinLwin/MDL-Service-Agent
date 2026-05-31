@@ -9,9 +9,8 @@ __pycache__
 .codex
 .claude
 
-00_current_work
-03_reference_docs
-04_data
+references
+data
 output
 
 .env

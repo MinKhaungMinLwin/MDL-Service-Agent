@@ -16,7 +16,7 @@ from mdl_service.models import MDLIngestConfig
 from mdl_service.repository import MDLRepository
 from mdl_service.service import MDLClassificationService, MDLIngestService
 
-DEFAULT_DATA_DIR = Path("04_data") / "current_test_env" / "data"
+DEFAULT_DATA_DIR = Path("data") / "current_test_env" / "data"
 DEFAULT_OUTPUT_DIR = Path("output") / "current_test_env"
 
 

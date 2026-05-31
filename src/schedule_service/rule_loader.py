@@ -9,7 +9,7 @@ from pathlib import Path
 
 from schedule_service.vt_parser import parse_validation_time
 
-DEFAULT_RULE_PATH = Path("04_data/schedule_sources/rules/validation_rule.csv")
+DEFAULT_RULE_PATH = Path("data/schedule_sources/rules/validation_rule.csv")
 
 _TOKEN_RE = re.compile(r"[a-z0-9&]+")
 _MIN_TOKEN_LEN = 2
