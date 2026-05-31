@@ -1,6 +1,6 @@
 """Extract MDL document candidates from ITB matching CSV output.
 
-Reads an ITB matching CSV (output_match_*.csv) that contains Matched_Doc_1..20
+Reads an ITB matching CSV (output_match_*.csv) that contains Matched_Doc_1..N
 columns, parses each matched document name into structured fields, filters by
 score threshold, deduplicates, and writes an MDL candidate CSV compatible with
 the *_MDL_classified.csv format so it can be fed into /schedule/generate.
@@ -108,7 +108,6 @@ def extract_candidates(
     for row in rows:
         itb_doc = row.get("Document", "").strip()
         itb_page = row.get("Page", "").strip()
-        itb_query = row.get("Search Query", "").strip()
 
         for i in range(1, top_n + 1):
             raw = row.get(f"Matched_Doc_{i}", "").strip()
@@ -147,12 +146,10 @@ def extract_candidates(
 
 def _parse_matched_doc(raw: str) -> dict[str, Any]:
     """Parse one Matched_Doc_N string into structured fields."""
-    # Extract score
-    m_score = re.search(r'최종점수:\s*([\d.]+)', raw)
-    score = float(m_score.group(1)) if m_score else 0.0
+    score = _extract_score(raw)
 
     # Strip score suffix
-    text = re.sub(r'\s*\(최종점수:[^)]+\)', '', raw).strip()
+    text = re.sub(r"\s*\([^)]*(?:CrossEncoder|Vector|BM25|Semantic|RRF|최종점수)[^)]*\)\s*$", "", raw).strip()
 
     # Strip [Project] prefix
     text = re.sub(r'^\[.+?\]\s*', '', text)
@@ -193,6 +190,19 @@ def _parse_matched_doc(raw: str) -> dict[str, Any]:
         "deliverable": deliverable,
         "score": score,
     }
+
+
+def _extract_score(raw: str) -> float:
+    """Extract the best available matching score from a formatted candidate."""
+    for pattern in (
+        r"CrossEncoder:\s*([-+]?\d*\.?\d+)",
+        r"Vector:\s*([-+]?\d*\.?\d+)",
+        r"최종점수:\s*([-+]?\d*\.?\d+)",
+    ):
+        match = re.search(pattern, raw)
+        if match:
+            return float(match.group(1))
+    return 0.0
 
 
 def _extract_deliverable(title: str) -> str:

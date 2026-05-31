@@ -1,8 +1,10 @@
-"""Cross-encoder reranking for retrieved MDL document candidates."""
+"""Rank retrieved MDL document candidates."""
 
 from __future__ import annotations
 
 from typing import Any
+
+from matching_service.models import Candidate
 
 
 class CrossEncoderReranker:
@@ -12,29 +14,19 @@ class CrossEncoderReranker:
         try:
             from sentence_transformers import CrossEncoder
         except ImportError as exc:
-            raise RuntimeError(
-                "Cross-encoder reranking requires sentence-transformers. "
-                "Install the current test environment dependencies first."
-            ) from exc
+            raise RuntimeError("Cross-encoder reranking requires sentence-transformers.") from exc
 
         self.model_name = model_name
         self.batch_size = batch_size
         self.model = CrossEncoder(model_name)
 
-    def rerank(self, query_text: str, candidates: list[dict], top_k: int) -> list[dict]:
+    def rerank(self, query_text: str, candidates: list[Candidate], top_k: int) -> list[Candidate]:
         """Score candidates in one batch and return the best matches."""
         if not query_text or not candidates:
             return []
 
-        pairs = [
-            (query_text, build_candidate_text(candidate))
-            for candidate in candidates
-        ]
-        scores = self.model.predict(
-            pairs,
-            batch_size=self.batch_size,
-            show_progress_bar=False,
-        )
+        pairs = [(query_text, build_candidate_text(candidate)) for candidate in candidates]
+        scores = self.model.predict(pairs, batch_size=self.batch_size, show_progress_bar=False)
 
         reranked_candidates = []
         for candidate, score in zip(candidates, scores, strict=True):
@@ -51,7 +43,6 @@ class CrossEncoderReranker:
         )
         for rank, candidate in enumerate(reranked_candidates, start=1):
             candidate["final_rank"] = rank
-
         return reranked_candidates[:top_k]
 
 

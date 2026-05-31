@@ -1,0 +1,104 @@
+"""Neo4j repository for MDL keyword and semantic retrieval."""
+
+from __future__ import annotations
+
+from typing import Any
+
+from matching_service.models import Candidate, MatchingConfig
+
+
+class MDLSearchRepository:
+    """Query MDL documents stored in Neo4j full-text and vector indexes."""
+
+    def __init__(self, conn: Any, config: MatchingConfig) -> None:
+        self.conn = conn
+        self.config = config
+
+    def setup_fulltext_index(self) -> None:
+        """Create the MDL full-text index if needed."""
+        with self.conn.session() as session:
+            session.run(f"""
+            CREATE FULLTEXT INDEX {self.config.fulltext_index_name} IF NOT EXISTS
+            FOR (n:{self.config.node_label})
+            ON EACH [
+                n.title,
+                n.equipment,
+                n.building,
+                n.system,
+                n.study_survey,
+                n.deliverable,
+                n.text_content
+            ]
+            """)
+
+    def search_keyword(self, depth_filter_query: str) -> list[Candidate]:
+        """Search MDL documents through the Neo4j full-text index."""
+        if not depth_filter_query:
+            return []
+
+        query = """
+        CALL db.index.fulltext.queryNodes($index_name, $search_query, {limit: $limit})
+        YIELD node, score
+        WHERE NOT coalesce(node.source_file, "") CONTAINS $excluded_source_text
+        RETURN node.doc_id AS doc_id,
+               node.source_file AS source_file,
+               node.document_no AS document_no,
+               node.title AS title,
+               node.system AS system,
+               node.equipment AS equipment,
+               node.building AS building,
+               node.study_survey AS study_survey,
+               node.deliverable AS deliverable,
+               score AS bm25_score
+        ORDER BY score DESC
+        LIMIT $limit
+        """
+        candidates = self._run(
+            query,
+            index_name=self.config.fulltext_index_name,
+            search_query=depth_filter_query,
+            excluded_source_text=self.config.excluded_source_text,
+            limit=self.config.retrieval_candidate_limit,
+        )
+        for rank, candidate in enumerate(candidates, start=1):
+            candidate["bm25_rank"] = rank
+            candidate["retrieval_rank"] = rank
+        return candidates
+
+    def search_semantic(self, query_embedding: list[float], query_term: str) -> list[Candidate]:
+        """Search MDL documents through the Neo4j vector index."""
+        if not query_embedding:
+            return []
+
+        query = f"""
+        CALL db.index.vector.queryNodes("{self.config.vector_index_name}", $limit, $embedding)
+        YIELD node, score
+        WHERE NOT coalesce(node.source_file, "") CONTAINS $excluded_source_text
+        RETURN node.doc_id AS doc_id,
+               node.source_file AS source_file,
+               node.document_no AS document_no,
+               node.title AS title,
+               node.system AS system,
+               node.equipment AS equipment,
+               node.building AS building,
+               node.study_survey AS study_survey,
+               node.deliverable AS deliverable,
+               score AS semantic_score
+        ORDER BY score DESC
+        LIMIT $limit
+        """
+        candidates = self._run(
+            query,
+            embedding=query_embedding,
+            excluded_source_text=self.config.excluded_source_text,
+            limit=self.config.retrieval_candidate_limit,
+        )
+        for rank, candidate in enumerate(candidates, start=1):
+            candidate["semantic_rank"] = rank
+            candidate["retrieval_rank"] = rank
+            candidate["matched_terms"] = [query_term]
+        return candidates
+
+    def _run(self, query: str, **parameters: Any) -> list[Candidate]:
+        with self.conn.session() as session:
+            return [dict(record) for record in session.run(query, **parameters)]

@@ -148,11 +148,11 @@ def schedule_candidates(
     ],
     score_threshold: Annotated[
         float,
-        Query(gt=0.0, le=2.0, description="Minimum final score to include a matched document."),
+        Query(description="Minimum final score to include a matched document."),
     ] = 0.85,
     top_n: Annotated[
         int,
-        Query(gt=0, le=20, description="Number of Matched_Doc_N columns to consider per row."),
+        Query(gt=0, le=100, description="Number of Matched_Doc_N columns to consider per row."),
     ] = 5,
     limit: ScheduleLimit = 0,
 ) -> dict[str, object]:
