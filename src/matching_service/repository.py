@@ -26,6 +26,7 @@ class MDLSearchRepository:
                 n.building,
                 n.system,
                 n.study_survey,
+                n.others,
                 n.deliverable,
                 n.text_content
             ]
@@ -48,6 +49,7 @@ class MDLSearchRepository:
                node.equipment AS equipment,
                node.building AS building,
                node.study_survey AS study_survey,
+               node.others AS others,
                node.deliverable AS deliverable,
                score AS bm25_score
         ORDER BY score DESC
@@ -82,6 +84,7 @@ class MDLSearchRepository:
                node.equipment AS equipment,
                node.building AS building,
                node.study_survey AS study_survey,
+               node.others AS others,
                node.deliverable AS deliverable,
                score AS semantic_score
         ORDER BY score DESC

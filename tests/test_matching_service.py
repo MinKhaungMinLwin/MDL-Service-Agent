@@ -11,7 +11,7 @@ import pandas as pd
 
 from matching_service.models import MatchingConfig
 from matching_service.query import build_cross_encoder_query, build_depth_filter_query
-from matching_service.ranking import CrossEncoderReranker
+from matching_service.ranking import CrossEncoderReranker, build_candidate_text
 from matching_service.retrieval import DepthRetriever
 from matching_service.service import MatchingService
 from schedule_service.candidate_extractor import _parse_matched_doc
@@ -50,6 +50,11 @@ class MatchingServiceTest(unittest.TestCase):
         )
 
         self.assertEqual([(item["doc_id"], item["final_rank"]) for item in reranked], [("B", 1), ("C", 2)])
+
+    def test_cross_encoder_candidate_text_includes_other_scope(self) -> None:
+        text = build_candidate_text({"title": "GENERAL ARRANGEMENT", "others": "Fresh Air Intake"})
+
+        self.assertIn("Others: Fresh Air Intake", text)
 
     def test_service_reranks_top_200_and_outputs_top_100(self) -> None:
         reranker = _RecordingReranker()

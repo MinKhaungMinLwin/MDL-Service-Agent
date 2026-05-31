@@ -1,0 +1,91 @@
+"""Application services for MDL classification and ingestion."""
+
+from __future__ import annotations
+
+import time
+from collections.abc import Callable
+from pathlib import Path
+from typing import Any
+
+from loguru import logger
+
+from mdl_service.classification import MDLClassifier
+from mdl_service.loader import extract_titles_from_excel, load_ingest_records
+from mdl_service.models import MDLIngestConfig
+from mdl_service.output import write_classified_csv
+from mdl_service.repository import MDLRepository
+
+
+class MDLClassificationService:
+    """Classify MDL titles from Excel and write a downstream-compatible CSV."""
+
+    def __init__(
+        self,
+        classifier: MDLClassifier,
+        batch_size: int = 20,
+        batch_delay_seconds: float = 1.0,
+        sleep: Callable[[float], None] = time.sleep,
+    ) -> None:
+        if batch_size <= 0:
+            raise ValueError("batch_size must be positive")
+        self.classifier = classifier
+        self.batch_size = batch_size
+        self.batch_delay_seconds = batch_delay_seconds
+        self.sleep = sleep
+
+    def classify_file(self, input_path: str | Path, output_path: str | Path) -> int:
+        """Classify all titles from one MDL workbook."""
+        titles = extract_titles_from_excel(input_path)
+        logger.info("Extracted {} MDL titles from {}", len(titles), input_path)
+        rows = []
+        for start in range(0, len(titles), self.batch_size):
+            batch = titles[start : start + self.batch_size]
+            results = self.classifier.classify_titles([item.title for item in batch])
+            rows.extend(item.to_csv_row(result) for item, result in zip(batch, results, strict=True))
+            if start + self.batch_size < len(titles):
+                self.sleep(self.batch_delay_seconds)
+        if rows:
+            write_classified_csv(output_path, rows)
+        return len(rows)
+
+
+class MDLIngestService:
+    """Embed classified MDL documents and upsert them into Neo4j."""
+
+    def __init__(
+        self,
+        repository: MDLRepository,
+        embedding_service: Any,
+        config: MDLIngestConfig,
+    ) -> None:
+        self.repository = repository
+        self.embedding_service = embedding_service
+        self.config = config
+
+    def setup(self) -> None:
+        """Create the schema required for MDL ingestion and matching."""
+        self.repository.setup_schema()
+
+    def ingest_directory(self, directory: str | Path) -> int:
+        """Ingest every classified MDL CSV in a directory."""
+        paths = sorted(Path(directory).glob("*_classified.csv"))
+        return sum(self.ingest_file(path) for path in paths)
+
+    def ingest_file(self, csv_path: str | Path) -> int:
+        """Embed and upsert every classified MDL document in one CSV."""
+        records = load_ingest_records(csv_path)
+        logger.info("Ingesting {} MDL documents from {}", len(records), csv_path)
+        for start in range(0, len(records), self.config.batch_size):
+            batch = records[start : start + self.config.batch_size]
+            embeddings = self._embed_texts([record["text_content"] for record in batch])
+            if len(embeddings) != len(batch):
+                raise ValueError("Embedding service returned an unexpected number of embeddings")
+            for record, embedding in zip(batch, embeddings, strict=True):
+                record["embedding"] = embedding
+            self.repository.upsert_batch(batch)
+        return len(records)
+
+    def _embed_texts(self, texts: list[str]) -> list[list[float]]:
+        if hasattr(self.embedding_service, "embed_texts"):
+            return self.embedding_service.embed_texts(texts)
+        return self.embedding_service.embed_batch(texts)

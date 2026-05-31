@@ -134,6 +134,7 @@ def _format_json_candidate(candidate: Candidate, rank: int) -> dict[str, Any]:
         "building": _json_safe_value(candidate.get("building")),
         "system": _json_safe_value(candidate.get("system")),
         "study_survey": _json_safe_value(candidate.get("study_survey")),
+        "others": _json_safe_value(candidate.get("others")),
         "deliverable": _json_safe_value(candidate.get("deliverable")),
         "bm25_score": candidate.get("bm25_score"),
         "semantic_score": candidate.get("semantic_score"),

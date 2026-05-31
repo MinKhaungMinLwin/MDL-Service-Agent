@@ -54,6 +54,7 @@ def build_candidate_text(candidate: dict[str, Any]) -> str:
         ("System", "system"),
         ("Building", "building"),
         ("Study/Survey", "study_survey"),
+        ("Others", "others"),
         ("Deliverable", "deliverable"),
     )
     return "\n".join(
