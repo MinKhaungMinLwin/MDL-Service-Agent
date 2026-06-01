@@ -24,7 +24,7 @@ BASE_COLUMNS = [
     "5th Depth",
     "Depth_Context",
     "Depth_Filter_Query",
-    "Depth_Filter_Terms",
+    "Depth_Keywords",
     "Vector_Terms",
     "Retrieval_Mode",
     "Retrieval_Candidate_Count",
