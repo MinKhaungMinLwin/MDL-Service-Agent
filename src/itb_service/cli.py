@@ -10,9 +10,10 @@ from loguru import logger
 
 from common.config import required_env
 from common.openai_client import build_azure_openai_client
+from common.prompts import load_prompt
 from itb_service.loader import load_abbreviation_rules
 from itb_service.models import ITBExtractionConfig, ITBTarget
-from itb_service.prompts import DEFAULT_EXTRACTION_PROMPT_PATH, DEFAULT_VERIFICATION_PROMPT_PATH, load_prompt
+from itb_service.prompts import DEFAULT_EXTRACTION_PROMPT_PATH, DEFAULT_VERIFICATION_PROMPT_PATH
 from itb_service.service import ITBExtractionService
 
 DEFAULT_DATA_DIR = Path("data") / "current_test_env" / "data"

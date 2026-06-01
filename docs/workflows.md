@@ -65,3 +65,25 @@ uv run itb-match --retrieval-mode hybrid
 ```
 
 Use `--help` on any command to see path and runtime overrides.
+
+## ITB To MDL Ground Truth
+
+Build a blind candidate pool from the top matching results for sections 6 and 7:
+
+```powershell
+uv run itb-eval-build-ground-truth --pool-only
+```
+
+Generate resumable LLM-assisted silver ground truth with full LLM verification:
+
+```powershell
+uv run itb-eval-build-ground-truth --verify
+```
+
+Defaults:
+
+- input matching JSON files: `output/current_test_env/matching/<retrieval-mode>`
+- pooled candidates per mode and ITB chunk: `20`
+- output ground-truth files: `output/current_test_env/evaluation/ground_truth`
+- LLM judge payloads do not expose retrieval mode, rank, or score
+- verification runs for every LLM judgment

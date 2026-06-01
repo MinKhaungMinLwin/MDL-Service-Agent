@@ -5,7 +5,8 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from itb_service.extraction import parse_batch_results, parse_json_output
+from common.llm_json import parse_json_output
+from itb_service.extraction import parse_batch_results
 
 
 def verify_extraction_batch(

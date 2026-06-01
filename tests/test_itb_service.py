@@ -9,7 +9,8 @@ import unittest
 from pathlib import Path
 from types import SimpleNamespace
 
-from itb_service.extraction import fallback_search_query, parse_batch_results, parse_json_output
+from common.llm_json import parse_json_output
+from itb_service.extraction import fallback_search_query, parse_batch_results
 from itb_service.loader import find_known_abbreviations, load_target_chunks, normalize_hierarchy, prepare_chunks
 from itb_service.models import OUTPUT_HEADER, ITBExtractionConfig, ITBTarget
 from itb_service.output import build_csv_row
@@ -52,7 +53,7 @@ class ITBServiceTest(unittest.TestCase):
         self.assertEqual(query, "HVAC Fresh Air Intake SMACNA NFPA 90A")
 
     def test_parses_batch_results_and_builds_matching_csv_contract(self) -> None:
-        parsed = parse_json_output('prefix {\"results\":[{\"chunk_id\":\"chunk-1\",\"depth_1\":\"HVAC\"}]} suffix')
+        parsed = parse_json_output('{"results":[{"chunk_id":"chunk-1","depth_1":"HVAC"}]}')
         results = parse_batch_results(parsed, [{"chunk_id": "chunk-1"}])
         row = build_csv_row(
             "R&N_ITB",
