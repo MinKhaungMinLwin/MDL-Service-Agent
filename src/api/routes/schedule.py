@@ -109,6 +109,16 @@ def schedule_generate(
             examples=["2024-01-15"],
         ),
     ] = "",
+    rule_csv: Annotated[
+        str,
+        Query(
+            description=(
+                "Optional path to a custom validation rule CSV. "
+                "Defaults to data/schedule_sources/rules/validation_rule.csv when omitted."
+            ),
+            examples=["data/schedule_sources/rules/mock_validation_rule.csv"],
+        ),
+    ] = "",
     limit: ScheduleLimit = 0,
 ) -> dict[str, object]:
     """Generate FA/FC schedule date ranges from an MDL classified CSV."""
@@ -117,11 +127,17 @@ def schedule_generate(
     if ntp_date:
         logger.info("NTP date: {}", ntp_date)
 
+    from schedule_service.rule_loader import DEFAULT_RULE_PATH
+    rule_path = _existing_path(rule_csv) if rule_csv else DEFAULT_RULE_PATH
+    if rule_csv:
+        logger.info("Using custom rule file: {}", rule_path)
+
     schedule_activities = load_schedule_activities(DEFAULT_SCHEDULE_PATH)
     xlsx_path, json_path = generate_schedule_file(
         input_csv=input_path,
         schedule_activities=schedule_activities,
         output_dir=SCHEDULE_OUTPUT_DIR,
+        rule_path=rule_path,
         limit=limit,
         ntp_date=ntp_date,
     )
