@@ -17,7 +17,7 @@ from itb_service.service import ITBExtractionService
 
 DEFAULT_DATA_DIR = Path("data") / "current_test_env" / "data"
 DEFAULT_CHUNKS_DIR = DEFAULT_DATA_DIR / "itb_chunks"
-DEFAULT_OUTPUT_DIR = Path("output") / "current_test_env"
+DEFAULT_OUTPUT_DIR = Path("output") / "current_test_env" / "itb_extract"
 DEFAULT_ABBREVIATION_RULES_PATH = Path("src") / "common" / "normalization_rules" / "abbreviations.json"
 SECTION_CONFIG = {
     "6": {"min_page": 79, "max_page": 97},
@@ -47,6 +47,7 @@ def extract(argv: list[str] | None = None) -> None:
         batch_size=max(1, args.batch_size),
         max_chunks=args.max_chunks,
         enable_verification=args.verify,
+        requested_section=args.section,
     )
     client = build_azure_openai_client(
         api_version_env="AZURE_OPENAI_CHAT_API_VERSION",
@@ -72,7 +73,9 @@ def extract(argv: list[str] | None = None) -> None:
         ],
         csv_path=args.output_dir / f"{output_stem}.csv",
         json_path=args.output_dir / f"{output_stem}.json",
-        token_path=args.output_dir / "output_itb_tokens.csv",
+        token_path=args.output_dir / f"{output_stem}_tokens.csv",
+        rejected_csv_path=args.output_dir / f"{output_stem}_rejected.csv",
+        rejected_json_path=args.output_dir / f"{output_stem}_rejected.json",
     )
     logger.info("Extracted {} ITB chunks for section {}", count, args.section)
 

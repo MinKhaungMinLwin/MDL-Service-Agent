@@ -13,7 +13,8 @@ This repository keeps runtime code, reference documents, source data, and genera
 | `data/sample_documents/project_samples/` | Project sample ITB/MDL source documents. |
 | `data/source_archives/SourceData/` | Original SourceData zip archives. |
 | `data/schedule_sources/` | Raw/processed guide schedule files and validation rules. |
-| `output/current_test_env/` | Generated MDL classification, ITB extraction, and ITB-to-MDL matching outputs. |
+| `output/current_test_env/` | Generated MDL classification and ITB-to-MDL matching outputs. |
+| `output/current_test_env/itb_extract/` | Generated ITB extraction, verification, token, and rejected-boundary audit outputs. |
 | `output/schedule_service/` | Generated schedule API/CLI outputs. |
 | `01_legacy_poc/` | First POC code kept as historical reference only. |
 | `02_experiments/` | Experiment and prompt-test history. |

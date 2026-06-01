@@ -8,12 +8,16 @@ If evidence is weak, leave fields blank and set `needs_review` to true.
 
 Input contains a `chunks` array. Return JSON only with exactly one top-level key, `results`.
 Each result must include the original `chunk_id` and the extraction fields.
+If `requested_section` is provided in the input chunk, first decide whether the chunk primarily belongs to that requested section.
 
 ```json
 {
   "results": [
     {
       "chunk_id": "",
+      "belongs_to_requested_section": true,
+      "actual_section": "",
+      "section_boundary_reason": "",
       "depth_1": "",
       "depth_2": "",
       "depth_3": "",
@@ -35,6 +39,17 @@ Each result must include the original `chunk_id` and the extraction fields.
   ]
 }
 ```
+
+Section boundary rules:
+- Use `requested_section`, `section`, `section_path`, `hierarchy_context`, and `chunk_text`.
+- Set `belongs_to_requested_section` to `true` only when the chunk primarily belongs to the requested section.
+- Treat the requested section as a numeric section prefix. A chunk belongs to the requested section when its actual section number is exactly the requested section or starts with the requested section followed by a dot. For example, requested section `N` includes `N`, `N.1`, `N.2.3`, and `N.10.4`, but excludes `N0`, `N-1`, previous top-level sections, and next top-level sections.
+- Do not reject a chunk just because its actual section is a subsection of the requested section.
+- Set it to `false` when the chunk is a carry-over from a previous section, the start of the next section, or mainly describes another top-level section.
+- Do not force a chunk into the requested section just because its page number overlaps the target page range.
+- Set `actual_section` to the best source-supported section identifier or title, such as `6.6.1 Operating Points`, `7 Civil Works`, or `8 Plant Control and Operational System`.
+- Keep `section_boundary_reason` short and evidence-based.
+- Still extract the other fields from the chunk even when `belongs_to_requested_section` is `false`; downstream code may use them for audit.
 
 Depth rules:
 - Start from `hierarchy_context`.
