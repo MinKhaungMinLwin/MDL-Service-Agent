@@ -9,9 +9,16 @@ from pathlib import Path
 
 import pandas as pd
 
+from common.text_normalizer import expand_abbreviation_terms
 from matching_service.cli import _files_to_process
 from matching_service.models import MatchingConfig
-from matching_service.query import build_cross_encoder_query, build_depth_filter_query, get_keyword_terms
+from matching_service.query import (
+    build_cross_encoder_query,
+    build_depth_filter_query,
+    build_fulltext_query,
+    build_semantic_query,
+    get_keyword_terms,
+)
 from matching_service.ranking import CrossEncoderReranker, build_candidate_text
 from matching_service.repository import MDLSearchRepository
 from matching_service.retrieval import DepthRetriever
@@ -23,24 +30,42 @@ class MatchingServiceTest(unittest.TestCase):
     def test_builds_depth_only_queries(self) -> None:
         query, terms = build_depth_filter_query(_source_row())
 
-        self.assertEqual(query, '"Building Services" OR HVAC OR "Fresh Air Intake"')
+        self.assertEqual(
+            query,
+            '"Building Services" OR HVAC OR "Fresh Air Intake" OR "Heating Ventilating and Air Conditioning"',
+        )
         self.assertEqual(
             build_cross_encoder_query(terms, ["Fresh Air Intake"]),
-            "Depth:\nBuilding Services > HVAC > Fresh Air Intake\n\nKeywords:\nFresh Air Intake",
+            "Depth:\nBuilding Services > HVAC > Fresh Air Intake\n\n"
+            "Keywords:\nFresh Air Intake\n\n"
+            "Expanded terms:\nHeating Ventilating and Air Conditioning",
+        )
+        self.assertEqual(build_fulltext_query(["Fresh Air Intake"]), '"Fresh Air Intake"')
+        self.assertEqual(
+            build_semantic_query(terms, ["Fresh Air Intake"]),
+            "Building Services, HVAC, Fresh Air Intake, Heating Ventilating and Air Conditioning",
         )
 
-    def test_retrieval_modes_search_with_depth_terms(self) -> None:
+    def test_expands_only_detected_abbreviation_tokens(self) -> None:
+        self.assertEqual(
+            expand_abbreviation_terms(["GTG cooling air", "TARGET"]),
+            ["GTG cooling air", "TARGET", "Gas Turbine Generator cooling air"],
+        )
+
+    def test_retrieval_modes_search_with_depth_and_keyword_queries(self) -> None:
         repository = _RetrievalRepository()
         for mode, expected_doc_id in (("keyword", "KW"), ("semantic", "SEM"), ("hybrid", "SEM")):
             with self.subTest(mode=mode):
                 result = DepthRetriever(repository, MatchingConfig(retrieval_mode=mode)).retrieve(
                     "HVAC",
-                    [("HVAC", [0.0, 1.0])],
+                    '"Fresh Air Intake"',
+                    "HVAC, Fresh Air Intake",
+                    [0.0, 1.0],
                 )
                 self.assertEqual(result.candidates[0]["doc_id"], expected_doc_id)
 
-        self.assertEqual(repository.depth_queries, ["HVAC", "HVAC"])
-        self.assertEqual(repository.semantic_terms, ["HVAC", "HVAC"])
+        self.assertEqual(repository.fulltext_queries, ["HVAC", '"Fresh Air Intake"', "HVAC", '"Fresh Air Intake"'])
+        self.assertEqual(repository.semantic_queries, ["HVAC, Fresh Air Intake", "HVAC, Fresh Air Intake"])
         self.assertEqual(get_keyword_terms(_source_row()), ["Fresh Air Intake"])
 
     def test_cross_encoder_reranks_and_limits_candidates(self) -> None:
@@ -115,7 +140,15 @@ class MatchingServiceTest(unittest.TestCase):
 
         self.assertEqual(
             reranker.calls,
-            [("Depth:\nBuilding Services > HVAC > Fresh Air Intake\n\nKeywords:\nFresh Air Intake", 500, 100)],
+            [
+                (
+                    "Depth:\nBuilding Services > HVAC > Fresh Air Intake\n\n"
+                    "Keywords:\nFresh Air Intake\n\n"
+                    "Expanded terms:\nHeating Ventilating and Air Conditioning",
+                    500,
+                    100,
+                )
+            ],
         )
         self.assertIn("Matched_Doc_100", csv_output.columns)
         self.assertNotIn("Matched_Doc_101", csv_output.columns)
@@ -143,11 +176,11 @@ class MatchingServiceTest(unittest.TestCase):
 
 class _RetrievalRepository:
     def __init__(self) -> None:
-        self.depth_queries: list[str] = []
-        self.semantic_terms: list[str] = []
+        self.fulltext_queries: list[str] = []
+        self.semantic_queries: list[str] = []
 
     def search_keyword(self, query: str) -> list[dict]:
-        self.depth_queries.append(query)
+        self.fulltext_queries.append(query)
         return [
             {
                 "doc_id": "KW",
@@ -176,7 +209,7 @@ class _RetrievalRepository:
         ]
 
     def search_semantic(self, embedding: list[float], term: str) -> list[dict]:
-        self.semantic_terms.append(term)
+        self.semantic_queries.append(term)
         return [
             {
                 "doc_id": "SEM",

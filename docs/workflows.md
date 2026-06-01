@@ -48,7 +48,11 @@ Defaults:
 
 - input extraction CSV files: `output/current_test_env/itb_extract/output_itb_section*_focused.csv`
 - output matching CSV/JSON files: `output/current_test_env/matching/<retrieval-mode>`
-- depth retrieval mode: `keyword`, `semantic`, or `hybrid`
+- retrieval mode: `keyword`, `semantic`, or `hybrid`
+- keyword mode merges aggregated depth and keyword full-text searches
+- semantic mode embeds one comma-separated depth-and-keyword query per ITB chunk
+- hybrid mode merges keyword and semantic rankings with reciprocal rank fusion
+- all modes preserve detected abbreviations and append canonical expansions from `src/common/normalization_rules/abbreviations.json`
 - retrieved MDL candidates passed to the cross-encoder: `500`
 - final cross-encoder matches written per ITB chunk: `100`
 

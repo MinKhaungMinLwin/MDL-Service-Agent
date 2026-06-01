@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from matching_service.models import Candidate, MatchingConfig, RetrievalResult, candidate_key
-from matching_service.query import unique_preserve_order
 from matching_service.repository import MDLSearchRepository
 
 
@@ -17,17 +16,26 @@ class DepthRetriever:
     def retrieve(
         self,
         depth_filter_query: str,
-        depth_embeddings: list[tuple[str, list[float]]],
+        keyword_filter_query: str,
+        semantic_query: str,
+        semantic_embedding: list[float],
     ) -> RetrievalResult:
-        """Retrieve and merge depth candidates with the configured search mode."""
+        """Retrieve and merge ITB candidates with the configured search mode."""
         keyword_candidates = []
         semantic_candidates = []
 
         if self.config.retrieval_mode in {"keyword", "hybrid"}:
-            keyword_candidates = self.repository.search_keyword(depth_filter_query)
+            keyword_candidates = _merge_keyword_candidates(
+                [
+                    self.repository.search_keyword(query)
+                    for query in (depth_filter_query, keyword_filter_query)
+                    if query
+                ],
+                self.config.rrf_k,
+            )
 
         if self.config.retrieval_mode in {"semantic", "hybrid"}:
-            semantic_candidates = self._search_semantic(depth_embeddings)
+            semantic_candidates = self.repository.search_semantic(semantic_embedding, semantic_query)
 
         if self.config.retrieval_mode == "keyword":
             candidates = _sort_single_retrieval(keyword_candidates)
@@ -42,42 +50,31 @@ class DepthRetriever:
             semantic_candidates,
         )
 
-    def _search_semantic(
-        self,
-        depth_embeddings: list[tuple[str, list[float]]],
-    ) -> list[Candidate]:
-        term_candidates = []
-        for term, embedding in depth_embeddings:
-            term_candidates.extend(self.repository.search_semantic(embedding, term))
-        return _merge_semantic_candidates(term_candidates)
 
-
-def _merge_semantic_candidates(term_candidates: list[Candidate]) -> list[Candidate]:
-    """Deduplicate per-term vector results and keep each document's best score."""
+def _merge_keyword_candidates(candidate_lists: list[list[Candidate]], rrf_k: int) -> list[Candidate]:
+    """Merge depth and keyword full-text rankings with reciprocal rank fusion."""
     merged: dict[str, Candidate] = {}
-    for candidate in term_candidates:
-        key = candidate_key(candidate)
-        if key not in merged:
-            merged[key] = dict(candidate)
-            continue
-
-        existing = merged[key]
-        existing["matched_terms"] = unique_preserve_order(
-            existing.get("matched_terms", []) + candidate.get("matched_terms", [])
-        )
-        if candidate.get("semantic_score", 0.0) > existing.get("semantic_score", 0.0):
-            existing["semantic_score"] = candidate.get("semantic_score")
+    for candidates in candidate_lists:
+        for rank, candidate in enumerate(candidates, start=1):
+            key = candidate_key(candidate)
+            if key not in merged:
+                merged[key] = dict(candidate)
+                merged[key]["keyword_rrf_score"] = 0.0
+            existing = merged[key]
+            existing["keyword_rrf_score"] += _rrf_score(rank, rrf_k=rrf_k)
+            if candidate.get("bm25_score", 0.0) > existing.get("bm25_score", 0.0):
+                existing["bm25_score"] = candidate.get("bm25_score")
 
     ranked_candidates = sorted(
         merged.values(),
         key=lambda candidate: (
-            candidate.get("semantic_score") or 0.0,
-            len(candidate.get("matched_terms", [])),
+            candidate.get("keyword_rrf_score") or 0.0,
+            candidate.get("bm25_score") or 0.0,
         ),
         reverse=True,
     )
     for rank, candidate in enumerate(ranked_candidates, start=1):
-        candidate["semantic_rank"] = rank
+        candidate["bm25_rank"] = rank
         candidate["retrieval_rank"] = rank
     return ranked_candidates
 

@@ -53,9 +53,9 @@ class MDLSearchRepository:
             ]
             """)
 
-    def search_keyword(self, depth_filter_query: str) -> list[Candidate]:
+    def search_keyword(self, fulltext_query: str) -> list[Candidate]:
         """Search MDL documents through the Neo4j full-text index."""
-        if not depth_filter_query:
+        if not fulltext_query:
             return []
 
         query = """
@@ -81,7 +81,7 @@ class MDLSearchRepository:
         candidates = self._run(
             query,
             index_name=self.config.fulltext_index_name,
-            search_query=depth_filter_query,
+            search_query=fulltext_query,
             excluded_source_text=self.config.excluded_source_text,
             limit=self.config.retrieval_candidate_limit,
         )
@@ -90,7 +90,7 @@ class MDLSearchRepository:
             candidate["retrieval_rank"] = rank
         return candidates
 
-    def search_semantic(self, query_embedding: list[float], query_term: str) -> list[Candidate]:
+    def search_semantic(self, query_embedding: list[float], semantic_query: str) -> list[Candidate]:
         """Search MDL documents through the Neo4j vector index."""
         if not query_embedding:
             return []
@@ -122,7 +122,7 @@ class MDLSearchRepository:
         for rank, candidate in enumerate(candidates, start=1):
             candidate["semantic_rank"] = rank
             candidate["retrieval_rank"] = rank
-            candidate["matched_terms"] = [query_term]
+            candidate["matched_terms"] = [semantic_query]
         return candidates
 
     def _run(self, query: str, **parameters: Any) -> list[Candidate]:
