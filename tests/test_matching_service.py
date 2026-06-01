@@ -24,20 +24,23 @@ class MatchingServiceTest(unittest.TestCase):
         query, terms = build_depth_filter_query(_source_row())
 
         self.assertEqual(query, '"Building Services" OR HVAC OR "Fresh Air Intake"')
-        self.assertEqual(build_cross_encoder_query(terms), "Building Services > HVAC > Fresh Air Intake")
+        self.assertEqual(
+            build_cross_encoder_query(terms, ["Fresh Air Intake"]),
+            "Depth:\nBuilding Services > HVAC > Fresh Air Intake\n\nKeywords:\nFresh Air Intake",
+        )
 
-    def test_retrieval_modes_rank_within_depth_candidate_pool(self) -> None:
+    def test_retrieval_modes_search_with_depth_terms(self) -> None:
         repository = _RetrievalRepository()
-        for mode, expected_doc_id in (("keyword", "BOTH"), ("semantic", "SEM"), ("hybrid", "BOTH")):
+        for mode, expected_doc_id in (("keyword", "KW"), ("semantic", "SEM"), ("hybrid", "SEM")):
             with self.subTest(mode=mode):
                 result = DepthRetriever(repository, MatchingConfig(retrieval_mode=mode)).retrieve(
                     "HVAC",
-                    ["Fresh Air Intake"],
-                    [("Fresh Air Intake", [0.0, 1.0])],
+                    [("HVAC", [0.0, 1.0])],
                 )
                 self.assertEqual(result.candidates[0]["doc_id"], expected_doc_id)
 
-        self.assertEqual(repository.depth_queries, ["HVAC", "HVAC", "HVAC"])
+        self.assertEqual(repository.depth_queries, ["HVAC", "HVAC"])
+        self.assertEqual(repository.semantic_terms, ["HVAC", "HVAC"])
         self.assertEqual(get_keyword_terms(_source_row()), ["Fresh Air Intake"])
 
     def test_cross_encoder_reranks_and_limits_candidates(self) -> None:
@@ -92,7 +95,7 @@ class MatchingServiceTest(unittest.TestCase):
             ],
         )
 
-    def test_service_reranks_top_200_and_outputs_top_100(self) -> None:
+    def test_service_reranks_top_500_and_outputs_top_100(self) -> None:
         reranker = _RecordingReranker()
         service = MatchingService(
             repository=_BulkRepository(),
@@ -110,11 +113,14 @@ class MatchingServiceTest(unittest.TestCase):
             csv_output = pd.read_csv(output)
             json_output = json.loads(output.with_suffix(".json").read_text(encoding="utf-8"))
 
-        self.assertEqual(reranker.calls, [("Fresh Air Intake", 200, 100)])
+        self.assertEqual(
+            reranker.calls,
+            [("Depth:\nBuilding Services > HVAC > Fresh Air Intake\n\nKeywords:\nFresh Air Intake", 500, 100)],
+        )
         self.assertIn("Matched_Doc_100", csv_output.columns)
         self.assertNotIn("Matched_Doc_101", csv_output.columns)
-        self.assertEqual(json_output[0]["retrieval_candidate_count"], 250)
-        self.assertEqual(json_output[0]["cross_encoder_candidate_count"], 200)
+        self.assertEqual(json_output[0]["retrieval_candidate_count"], 500)
+        self.assertEqual(json_output[0]["cross_encoder_candidate_count"], 500)
         self.assertEqual(len(json_output[0]["candidates"]), 100)
 
     def test_schedule_candidate_parser_accepts_cross_encoder_score(self) -> None:
@@ -138,6 +144,7 @@ class MatchingServiceTest(unittest.TestCase):
 class _RetrievalRepository:
     def __init__(self) -> None:
         self.depth_queries: list[str] = []
+        self.semantic_terms: list[str] = []
 
     def search_keyword(self, query: str) -> list[dict]:
         self.depth_queries.append(query)
@@ -169,7 +176,25 @@ class _RetrievalRepository:
         ]
 
     def search_semantic(self, embedding: list[float], term: str) -> list[dict]:
-        raise AssertionError("semantic ranking should run inside the depth candidate pool")
+        self.semantic_terms.append(term)
+        return [
+            {
+                "doc_id": "SEM",
+                "title": "Air filtration",
+                "semantic_rank": 1,
+                "retrieval_rank": 1,
+                "semantic_score": 0.99,
+                "matched_terms": [term],
+            },
+            {
+                "doc_id": "BOTH",
+                "title": "Fresh Air Intake",
+                "semantic_rank": 2,
+                "retrieval_rank": 2,
+                "semantic_score": 0.95,
+                "matched_terms": [term],
+            },
+        ]
 
 
 class _BulkRepository:
@@ -184,7 +209,7 @@ class _BulkRepository:
                 "retrieval_rank": index,
                 "bm25_score": float(301 - index),
             }
-            for index in range(1, 251)
+            for index in range(1, 551)
         ]
 
     def search_semantic(self, embedding: list[float], term: str) -> list[dict]:

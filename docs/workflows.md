@@ -48,6 +48,9 @@ Defaults:
 
 - input extraction CSV files: `output/current_test_env/itb_extract/output_itb_section*_focused.csv`
 - output matching CSV/JSON files: `output/current_test_env/matching/<retrieval-mode>`
+- depth retrieval mode: `keyword`, `semantic`, or `hybrid`
+- retrieved MDL candidates passed to the cross-encoder: `500`
+- final cross-encoder matches written per ITB chunk: `100`
 
 Examples:
 

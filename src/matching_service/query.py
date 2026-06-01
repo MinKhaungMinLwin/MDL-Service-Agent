@@ -64,12 +64,11 @@ def build_depth_filter_query(row: Mapping[str, Any]) -> tuple[str, list[str]]:
     return " OR ".join(clauses), terms
 
 
-def build_cross_encoder_query(depth_terms: list[str]) -> str:
-    """Build a readable depth hierarchy for cross-encoder scoring."""
-    return " > ".join(depth_terms)
-
-
-def build_keyword_ranking_query(keyword_terms: list[str], depth_terms: list[str]) -> str:
-    """Build the query used to rank the depth-filtered candidate pool."""
-    terms = keyword_terms or depth_terms[-2:]
-    return ", ".join(terms)
+def build_cross_encoder_query(depth_terms: list[str], keyword_terms: list[str] | None = None) -> str:
+    """Build the complete ITB context used for cross-encoder scoring."""
+    sections = []
+    if depth_terms:
+        sections.append(f"Depth:\n{' > '.join(depth_terms)}")
+    if keyword_terms:
+        sections.append(f"Keywords:\n{'; '.join(keyword_terms)}")
+    return "\n\n".join(sections)
