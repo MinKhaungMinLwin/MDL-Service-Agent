@@ -32,8 +32,8 @@ def match(argv: list[str] | None = None) -> None:
         choices=["keyword", "semantic", "hybrid"],
         default=os.getenv("ITB_RETRIEVAL_MODE", "keyword").strip().lower(),
     )
-    parser.add_argument("--retrieval-candidates", type=int, default=int(os.getenv("ITB_RETRIEVAL_CANDIDATES", "500")))
-    parser.add_argument("--output-limit", type=int, default=int(os.getenv("ITB_OUTPUT_LIMIT", "100")))
+    parser.add_argument("--retrieval-candidates", type=int, default=int(os.getenv("ITB_RETRIEVAL_CANDIDATES", "100")))
+    parser.add_argument("--output-limit", type=int, default=int(os.getenv("ITB_OUTPUT_LIMIT", "20")))
     parser.add_argument(
         "--cross-encoder-model",
         default=os.getenv("ITB_CROSS_ENCODER_MODEL", DEFAULT_CROSS_ENCODER_MODEL),

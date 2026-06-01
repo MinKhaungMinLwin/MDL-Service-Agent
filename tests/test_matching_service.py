@@ -120,7 +120,7 @@ class MatchingServiceTest(unittest.TestCase):
             ],
         )
 
-    def test_service_reranks_top_500_and_outputs_top_100(self) -> None:
+    def test_service_reranks_top_100_and_outputs_top_20(self) -> None:
         reranker = _RecordingReranker()
         service = MatchingService(
             repository=_BulkRepository(),
@@ -145,16 +145,16 @@ class MatchingServiceTest(unittest.TestCase):
                     "Depth:\nBuilding Services > HVAC > Fresh Air Intake\n\n"
                     "Keywords:\nFresh Air Intake\n\n"
                     "Expanded terms:\nHeating Ventilating and Air Conditioning",
-                    500,
                     100,
+                    20,
                 )
             ],
         )
-        self.assertIn("Matched_Doc_100", csv_output.columns)
-        self.assertNotIn("Matched_Doc_101", csv_output.columns)
-        self.assertEqual(json_output[0]["retrieval_candidate_count"], 500)
-        self.assertEqual(json_output[0]["cross_encoder_candidate_count"], 500)
-        self.assertEqual(len(json_output[0]["candidates"]), 100)
+        self.assertIn("Matched_Doc_20", csv_output.columns)
+        self.assertNotIn("Matched_Doc_21", csv_output.columns)
+        self.assertEqual(json_output[0]["retrieval_candidate_count"], 100)
+        self.assertEqual(json_output[0]["cross_encoder_candidate_count"], 100)
+        self.assertEqual(len(json_output[0]["candidates"]), 20)
 
     def test_schedule_candidate_parser_accepts_cross_encoder_score(self) -> None:
         candidate = _parse_matched_doc(

@@ -13,8 +13,8 @@ class MatchingConfig:
     """Runtime configuration for depth-based MDL matching."""
 
     retrieval_mode: str = "keyword"
-    retrieval_candidate_limit: int = 500
-    output_limit: int = 100
+    retrieval_candidate_limit: int = 100
+    output_limit: int = 20
     fulltext_index_name: str = "test_mdl_document_fulltext_idx"
     vector_index_name: str = "test_mdl_document_vector_idx"
     node_label: str = "TestMDLDocument"

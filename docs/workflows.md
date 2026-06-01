@@ -53,8 +53,8 @@ Defaults:
 - semantic mode embeds one comma-separated depth-and-keyword query per ITB chunk
 - hybrid mode merges keyword and semantic rankings with reciprocal rank fusion
 - all modes preserve detected abbreviations and append canonical expansions from `src/common/normalization_rules/abbreviations.json`
-- retrieved MDL candidates passed to the cross-encoder: `500`
-- final cross-encoder matches written per ITB chunk: `100`
+- retrieved MDL candidates passed to the cross-encoder: `100`
+- final cross-encoder matches written per ITB chunk: `20`
 
 Examples:
 
