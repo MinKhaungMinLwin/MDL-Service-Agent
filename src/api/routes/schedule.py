@@ -164,12 +164,27 @@ def schedule_candidates(
     ],
     score_threshold: Annotated[
         float,
-        Query(description="Minimum final score to include a matched document."),
-    ] = 0.85,
+        Query(
+            description=(
+                "Minimum score to include a matched document. "
+                "New hybrid/semantic format uses Semantic score (0–1); recommended 0.75. "
+                "Old format uses 최종점수 (can exceed 1); recommended 0.85."
+            ),
+        ),
+    ] = 0.75,
     top_n: Annotated[
         int,
         Query(gt=0, le=100, description="Number of Matched_Doc_N columns to consider per row."),
     ] = 5,
+    classify_with_llm: Annotated[
+        bool,
+        Query(
+            description=(
+                "Re-classify Equipment/Building/System/Deliverable using the MDL LLM classifier. "
+                "Improves rule matching quality in /schedule/generate. Requires Azure OpenAI credentials."
+            ),
+        ),
+    ] = False,
     limit: ScheduleLimit = 0,
 ) -> dict[str, object]:
     """Extract MDL candidates from ITB matching CSV and write a candidate CSV."""
@@ -182,6 +197,7 @@ def schedule_candidates(
         score_threshold=score_threshold,
         top_n=top_n,
         limit=limit,
+        classify_with_llm=classify_with_llm,
     )
     return {
         "kind": "mdl_candidates",

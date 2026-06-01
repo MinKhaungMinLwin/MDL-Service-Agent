@@ -15,7 +15,7 @@ from typing import Any
 
 from loguru import logger
 
-DEFAULT_SCORE_THRESHOLD = 0.85
+DEFAULT_SCORE_THRESHOLD = 0.75
 DEFAULT_TOP_N = 5          # how many Matched_Doc_N per row to consider
 DEFAULT_OUTPUT_DIR = Path("output/schedule_service")
 
@@ -166,6 +166,7 @@ def extract_candidates(
     score_threshold: float = DEFAULT_SCORE_THRESHOLD,
     top_n: int = DEFAULT_TOP_N,
     limit: int = 0,
+    classify_with_llm: bool = False,
 ) -> Path:
     """Extract and deduplicate MDL candidates from an ITB matching CSV.
 
@@ -210,6 +211,10 @@ def extract_candidates(
         "Extracted {} unique MDL candidates (threshold={}, top_n={})",
         len(candidate_list), score_threshold, top_n,
     )
+
+    if classify_with_llm and candidate_list:
+        logger.info("LLM-classifying {} candidates to improve Equipment/Building/System/Deliverable fields", len(candidate_list))
+        candidate_list = _classify_candidates(candidate_list)
 
     output_dir.mkdir(parents=True, exist_ok=True)
     stem = f"mdl_candidates_{input_csv.stem}"
@@ -269,6 +274,8 @@ def _parse_matched_doc(raw: str) -> dict[str, Any]:
     return {
         "project": "",        # stripped above
         "equipment": equipment,
+        "building": "",
+        "system": "",
         "title": title,
         "deliverable": deliverable,
         "score": score,
@@ -276,15 +283,29 @@ def _parse_matched_doc(raw: str) -> dict[str, Any]:
 
 
 def _extract_score(raw: str) -> float:
-    """Extract the best available matching score from a formatted candidate."""
-    for pattern in (
-        r"CrossEncoder:\s*([-+]?\d*\.?\d+)",
-        r"Vector:\s*([-+]?\d*\.?\d+)",
-        r"최종점수:\s*([-+]?\d*\.?\d+)",
-    ):
-        match = re.search(pattern, raw)
-        if match:
-            return float(match.group(1))
+    """Extract the best available matching score from a formatted candidate.
+
+    Score format evolution:
+    - New format (hybrid/semantic mode): Semantic score (0–1 cosine similarity) is
+      the reliable 0–1 range metric. CrossEncoder in this format is an ms-marco raw
+      logit (can be negative) and is NOT comparable to the 0–1 threshold.
+    - Old format (Korean pipeline): 최종점수 is a combined score, often > 1.
+    Priority: Semantic → 최종점수/Vector (old) → CrossEncoder only if positive.
+    """
+    # Prefer Semantic (0–1 range, comparable to score_threshold)
+    m = re.search(r"Semantic:\s*([-+]?\d*\.?\d+)", raw)
+    if m:
+        return float(m.group(1))
+    # Old-format combined scores
+    for pattern in (r"최종점수:\s*([-+]?\d*\.?\d+)", r"Vector:\s*([-+]?\d*\.?\d+)"):
+        m = re.search(pattern, raw)
+        if m:
+            return float(m.group(1))
+    # CrossEncoder as last resort — only use if positive (ms-marco logit scale)
+    m = re.search(r"CrossEncoder:\s*([-+]?\d*\.?\d+)", raw)
+    if m:
+        val = float(m.group(1))
+        return val if val > 0 else 0.0
     return 0.0
 
 
@@ -346,13 +367,45 @@ def _write_csv(path: Path, candidates: list[dict[str, Any]]) -> None:
                 "Document No": "",
                 "Title": c["title"],
                 "Equipment": c["equipment"],
-                "Building": "",
-                "System": "",
+                "Building": c.get("building", ""),
+                "System": c.get("system", ""),
                 "Deliverable": c["deliverable"],
                 "Note": "",
                 "match_score": f"{c['score']:.4f}",
                 "itb_sources": " | ".join(c["itb_sources"][:5]),
             })
+
+
+def _classify_candidates(candidates: list[dict[str, Any]], batch_size: int = 20) -> list[dict[str, Any]]:
+    """Re-classify Equipment/Building/System/Deliverable using the MDL LLM classifier."""
+    import time
+    from common.config import required_env
+    from common.openai_client import build_azure_openai_client
+    from mdl_service.classification import DEFAULT_CLASSIFICATION_PROMPT_PATH, MDLClassifier, load_system_prompt
+
+    client = build_azure_openai_client("AZURE_OPENAI_API_VERSION", "2024-08-01-preview")
+    model = required_env("AZURE_OPENAI_CHAT_DEPLOYMENT")
+    system_prompt = load_system_prompt(DEFAULT_CLASSIFICATION_PROMPT_PATH)
+    classifier = MDLClassifier(client, model, system_prompt)
+
+    for start in range(0, len(candidates), batch_size):
+        batch = candidates[start : start + batch_size]
+        titles = [c["title"] for c in batch]
+        logger.info("LLM classifying batch {}/{} ({} titles)", start // batch_size + 1, -(-len(candidates) // batch_size), len(titles))
+        results = classifier.classify_titles(titles)
+        for candidate, result in zip(batch, results, strict=True):
+            if result.equipment:
+                candidate["equipment"] = result.equipment
+            if result.building:
+                candidate["building"] = result.building
+            if result.system:
+                candidate["system"] = result.system
+            if result.deliverable:
+                candidate["deliverable"] = result.deliverable
+        if start + batch_size < len(candidates):
+            time.sleep(1.0)
+
+    return candidates
 
 
 def _read_csv(path: Path) -> list[dict[str, str]]:
