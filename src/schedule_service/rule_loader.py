@@ -41,10 +41,13 @@ class ValidationRule:
     _doc_kw_tokens: frozenset = field(default=frozenset(), init=False, repr=False, compare=False)
 
     def __post_init__(self) -> None:
+        # Combine doc_keyword + item_name so queries without equipment context
+        # can't score above threshold against equipment-specific rules.
+        combined = f"{self.doc_keyword} {self.item_name}"
         object.__setattr__(
             self,
             "_doc_kw_tokens",
-            frozenset(tok for tok in _TOKEN_RE.findall(self.doc_keyword.lower()) if len(tok) >= _MIN_TOKEN_LEN),
+            frozenset(tok for tok in _TOKEN_RE.findall(combined.lower()) if len(tok) >= _MIN_TOKEN_LEN),
         )
 
     def describe(self) -> str:
