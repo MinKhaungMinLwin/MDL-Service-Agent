@@ -30,6 +30,20 @@ TEMPLATE_NTP = date(2007, 3, 1)
 # Activity keywords that indicate finish_date should be used as anchor
 _FINISH_DATE_KEYWORDS = {"transportation", "delivery", "fob", "manufacturing", "fo b"}
 
+# Maps rule activity_keywords → BM25 phase-boost terms to steer activity selection
+# to the correct project phase (early design, delivery, commissioning, etc.)
+_ACTIVITY_KW_BOOST: dict[str, str] = {
+    "p.o":           "P.O Procurement",
+    "po":            "P.O Procurement",
+    "pof":           "P.O Procurement finish",
+    "delivery":      "transportation delivery",
+    "fob":           "transportation delivery FOB",
+    "transportation":"transportation delivery",
+    "manufacturing": "manufacturing P.O",
+    "fo b":          "transportation delivery",
+    "commissioning": "commissioning test",
+}
+
 # Map MDL Deliverable values to terms used in validation_rule.csv keywords
 _DELIVERABLE_NORM: dict[str, str] = {
     "P&I DIAGRAM": "P&ID",
@@ -145,7 +159,14 @@ def _format_schedule_row(
     vt_parsed: dict = rule.vt_parsed if rule else {}
 
     # Match CCPP guide schedule activity via BM25
+    # Append phase-boost terms from the matched rule's activity_keywords so BM25
+    # steers toward the correct project phase (e.g. P.O → procurement activities,
+    # delivery → transportation activities, commissioning → test activities).
     activity_query = " ".join(p for p in [equipment, system, norm_del, title] if p)
+    if rule:
+        boost = _phase_boost(rule.activity_keywords)
+        if boost:
+            activity_query = f"{activity_query} {boost}"
     bm25_scores = bm25.score(activity_query)
     top_idx = max(range(len(bm25_scores)), key=lambda idx: bm25_scores[idx])
     activity = activities[top_idx]
@@ -156,7 +177,7 @@ def _format_schedule_row(
     if rule and sub_type == "SKIP":
         date_range_status = "skip"
     elif rule:
-        anchor = _resolve_anchor_date(activity, activity.start_date, activity.finish_date, rule, shift_days)
+        anchor = _resolve_anchor_date(activity.start_date, activity.finish_date, rule, shift_days)
         dr = compute_date_range(vt_parsed, anchor, sub_type, rule.priority)
         date_range_status = "generated" if anchor is not None else "missing_date"
 
@@ -200,7 +221,6 @@ def _load_rule_table(path: Path) -> RuleTable | None:
 
 
 def _resolve_anchor_date(
-    activity: ScheduleActivity,
     start_date_str: str,
     finish_date_str: str,
     rule: ValidationRule,
@@ -228,6 +248,13 @@ def _compute_shift(ntp_date: str) -> int:
     except ValueError:
         logger.warning("Invalid ntp_date '{}' — using template dates", ntp_date)
         return 0
+
+
+def _phase_boost(activity_keywords: list[str]) -> str:
+    """Return BM25 boost terms derived from rule activity_keywords."""
+    terms = [_ACTIVITY_KW_BOOST[kw.lower().strip()] for kw in activity_keywords
+             if kw.lower().strip() in _ACTIVITY_KW_BOOST]
+    return " ".join(terms)
 
 
 def _normalize_deliverable(deliverable: str) -> str:
