@@ -152,6 +152,7 @@ class MatchingServiceTest(unittest.TestCase):
         )
         self.assertIn("Matched_Doc_20", csv_output.columns)
         self.assertNotIn("Matched_Doc_21", csv_output.columns)
+        self.assertIn("[Sample] 1 - Doc 1", csv_output.loc[0, "Matched_Doc_1"])
         self.assertEqual(json_output[0]["retrieval_candidate_count"], 100)
         self.assertEqual(json_output[0]["cross_encoder_candidate_count"], 100)
         self.assertEqual(len(json_output[0]["candidates"]), 20)
@@ -172,6 +173,14 @@ class MatchingServiceTest(unittest.TestCase):
         self.assertEqual(candidate["deliverable"], "P&I DIAGRAM")
         self.assertEqual(legacy_candidate["score"], 0.91)
         self.assertEqual(legacy_candidate["title"], "P&I DIAGRAM FOR COOLING AIR COOLER")
+
+        candidate_with_document_no = _parse_matched_doc(
+            "[Fadhili] GRT-YK09-P0MA-200051 - GTG - P&I DIAGRAM FOR COOLING AIR COOLER "
+            "(CrossEncoder: 1.2500 / BM25: 0.9000 / RRF: 0.0320)"
+        )
+        self.assertEqual(candidate_with_document_no["document_no"], "GRT-YK09-P0MA-200051")
+        self.assertEqual(candidate_with_document_no["equipment"], "Gas Turbine Generator")
+        self.assertEqual(candidate_with_document_no["title"], "P&I DIAGRAM FOR COOLING AIR COOLER")
 
 
 class _RetrievalRepository:

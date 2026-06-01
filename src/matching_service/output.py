@@ -63,7 +63,9 @@ def format_candidate(candidate: Candidate) -> str:
         parts.append(f"Semantic: {candidate['semantic_score']:.4f}")
     if candidate.get("rrf_score") is not None:
         parts.append(f"RRF: {candidate['rrf_score']:.4f}")
-    return f"[{project}] {candidate['title']} ({' / '.join(parts) if parts else 'No score'})"
+    document_no = str(candidate.get("document_no") or "").strip()
+    title = f"{document_no} - {candidate['title']}" if document_no else candidate["title"]
+    return f"[{project}] {title} ({' / '.join(parts) if parts else 'No score'})"
 
 
 def build_json_record(

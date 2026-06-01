@@ -234,6 +234,12 @@ def _parse_matched_doc(raw: str) -> dict[str, Any]:
     # Strip [Project] prefix
     text = re.sub(r'^\[.+?\]\s*', '', text)
 
+    document_no = ""
+    m_doc = re.match(r'^([A-Za-z0-9][A-Za-z0-9_.\/-]*\d[A-Za-z0-9_.\/-]*)\s+-\s+(.+)$', text)
+    if m_doc:
+        document_no = m_doc.group(1).strip()
+        text = m_doc.group(2).strip()
+
     # Optional [Equipment bracket]
     equip_bracket = ""
     m_eq = re.match(r'^\[(.+?)\]\s*', text)
@@ -273,6 +279,7 @@ def _parse_matched_doc(raw: str) -> dict[str, Any]:
 
     return {
         "project": "",        # stripped above
+        "document_no": document_no,
         "equipment": equipment,
         "building": "",
         "system": "",
@@ -364,7 +371,7 @@ def _write_csv(path: Path, candidates: list[dict[str, Any]]) -> None:
         for c in candidates:
             writer.writerow({
                 "Source File": "itb_candidates",
-                "Document No": "",
+                "Document No": c.get("document_no", ""),
                 "Title": c["title"],
                 "Equipment": c["equipment"],
                 "Building": c.get("building", ""),
