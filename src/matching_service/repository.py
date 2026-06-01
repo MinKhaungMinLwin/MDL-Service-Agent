@@ -72,6 +72,8 @@ class MDLSearchRepository:
                node.study_survey AS study_survey,
                node.others AS others,
                node.deliverable AS deliverable,
+               node.text_content AS text_content,
+               node.embedding AS embedding,
                score AS bm25_score
         ORDER BY score DESC
         LIMIT $limit

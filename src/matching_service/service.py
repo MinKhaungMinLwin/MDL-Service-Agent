@@ -12,9 +12,10 @@ from tqdm import tqdm
 from matching_service.models import MatchingConfig
 from matching_service.output import build_json_record, format_candidate, write_match_outputs
 from matching_service.query import (
-    build_cross_encoder_query,
     build_depth_filter_query,
+    build_keyword_ranking_query,
     get_depth_context,
+    get_keyword_terms,
     unique_preserve_order,
 )
 from matching_service.repository import MDLSearchRepository
@@ -51,19 +52,20 @@ class MatchingService:
             return
 
         logger.info("Running Neo4j candidate retrieval (mode: {})...", self.config.retrieval_mode)
-        vector_embeddings = self._embed_depth_terms(target_df)
+        keyword_embeddings = self._embed_keyword_terms(target_df)
         output_rows = []
         json_records = []
 
         for _, source_row in tqdm(target_df.iterrows(), total=len(target_df)):
             depth_filter_query, depth_terms = build_depth_filter_query(source_row)
+            keyword_terms = get_keyword_terms(source_row)
             query_term_embeddings = [
-                (term, vector_embeddings[term])
-                for term in depth_terms
-                if term in vector_embeddings
+                (term, keyword_embeddings[term])
+                for term in keyword_terms
+                if term in keyword_embeddings
             ]
-            retrieval = self.retriever.retrieve(depth_filter_query, query_term_embeddings)
-            cross_encoder_query = build_cross_encoder_query(depth_terms)
+            retrieval = self.retriever.retrieve(depth_filter_query, keyword_terms, query_term_embeddings)
+            cross_encoder_query = build_keyword_ranking_query(keyword_terms, depth_terms)
             cross_encoder_candidates = retrieval.candidates[: self.config.retrieval_candidate_limit]
             top_matches = self.cross_encoder_reranker.rerank(
                 cross_encoder_query,
@@ -76,6 +78,7 @@ class MatchingService:
                     source_row,
                     depth_filter_query,
                     depth_terms,
+                    keyword_terms,
                     retrieval,
                     cross_encoder_query,
                     cross_encoder_candidates,
@@ -87,6 +90,7 @@ class MatchingService:
                     source_row,
                     depth_filter_query,
                     depth_terms,
+                    keyword_terms,
                     self.config.retrieval_mode,
                     retrieval.candidates,
                     len(retrieval.keyword_candidates),
@@ -99,17 +103,16 @@ class MatchingService:
 
         write_match_outputs(output_path, output_rows, json_records, self.config.output_limit)
 
-    def _embed_depth_terms(self, target_df: pd.DataFrame) -> dict[str, list[float]]:
+    def _embed_keyword_terms(self, target_df: pd.DataFrame) -> dict[str, list[float]]:
         if self.embedding_service is None:
             return {}
 
         vector_terms = []
         for _, source_row in target_df.iterrows():
-            _, depth_terms = build_depth_filter_query(source_row)
-            vector_terms.extend(depth_terms)
+            vector_terms.extend(get_keyword_terms(source_row))
 
         unique_terms = unique_preserve_order(vector_terms)
-        logger.info("Embedding {} unique vector terms...", len(unique_terms))
+        logger.info("Embedding {} unique ITB keyword terms...", len(unique_terms))
         embeddings = self.embedding_service.embed_texts(unique_terms)
         return dict(zip(unique_terms, embeddings, strict=True))
 
@@ -118,6 +121,7 @@ class MatchingService:
         source_row: pd.Series,
         depth_filter_query: str,
         depth_terms: list[str],
+        keyword_terms: list[str],
         retrieval: Any,
         cross_encoder_query: str,
         cross_encoder_candidates: list[dict[str, Any]],
@@ -127,7 +131,7 @@ class MatchingService:
         row["Depth_Context"] = get_depth_context(source_row)
         row["Depth_Filter_Query"] = depth_filter_query
         row["Depth_Filter_Terms"] = ", ".join(depth_terms)
-        row["Vector_Terms"] = ", ".join(depth_terms)
+        row["Vector_Terms"] = ", ".join(keyword_terms)
         row["Retrieval_Mode"] = self.config.retrieval_mode
         row["Retrieval_Candidate_Count"] = len(retrieval.candidates)
         row["Keyword_Candidate_Count"] = len(retrieval.keyword_candidates)

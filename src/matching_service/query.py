@@ -39,6 +39,19 @@ def get_depth_context(row: Mapping[str, Any]) -> str:
     return " ".join(depth_terms[-2:])
 
 
+def get_keyword_terms(row: Mapping[str, Any]) -> list[str]:
+    """Return ITB keyword phrases for second-stage candidate ranking."""
+    value = str(row.get("Keywords", "")).strip()
+    if not value or value.lower() == "nan":
+        return []
+    terms = [
+        term.strip()
+        for term in re.split(r"[,;\n]+", value)
+        if term.strip() and term.strip().lower() not in {"nan", "none"}
+    ]
+    return unique_preserve_order(terms)
+
+
 def build_depth_filter_query(row: Mapping[str, Any]) -> tuple[str, list[str]]:
     """Build a Lucene full-text query from ITB depth phrases."""
     terms = get_depth_filter_terms(row)
@@ -54,3 +67,9 @@ def build_depth_filter_query(row: Mapping[str, Any]) -> tuple[str, list[str]]:
 def build_cross_encoder_query(depth_terms: list[str]) -> str:
     """Build a readable depth hierarchy for cross-encoder scoring."""
     return " > ".join(depth_terms)
+
+
+def build_keyword_ranking_query(keyword_terms: list[str], depth_terms: list[str]) -> str:
+    """Build the query used to rank the depth-filtered candidate pool."""
+    terms = keyword_terms or depth_terms[-2:]
+    return ", ".join(terms)

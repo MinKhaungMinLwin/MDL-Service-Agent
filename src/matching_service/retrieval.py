@@ -1,6 +1,9 @@
-"""Depth-based keyword, semantic, and hybrid retrieval."""
+"""Two-stage depth filtering and keyword-based candidate ranking."""
 
 from __future__ import annotations
+
+import math
+import re
 
 from matching_service.models import Candidate, MatchingConfig, RetrievalResult, candidate_key
 from matching_service.query import unique_preserve_order
@@ -8,7 +11,7 @@ from matching_service.repository import MDLSearchRepository
 
 
 class DepthRetriever:
-    """Retrieve MDL candidates using one configured depth-only search mode."""
+    """Filter MDL candidates by ITB depth, then rank that pool by ITB keywords."""
 
     def __init__(self, repository: MDLSearchRepository, config: MatchingConfig) -> None:
         self.repository = repository
@@ -17,34 +20,91 @@ class DepthRetriever:
     def retrieve(
         self,
         depth_filter_query: str,
-        query_term_embeddings: list[tuple[str, list[float]]],
+        keyword_terms: list[str],
+        keyword_embeddings: list[tuple[str, list[float]]],
     ) -> RetrievalResult:
-        """Run keyword, semantic, or hybrid retrieval."""
-        keyword_candidates = []
+        """Run depth keyword filtering, then keyword, semantic, or hybrid ranking."""
+        depth_candidates = self.repository.search_keyword(depth_filter_query)
+        keyword_candidates = self._rank_keyword_in_pool(depth_candidates, keyword_terms)
         semantic_candidates = []
 
-        if self.config.retrieval_mode in {"keyword", "hybrid"}:
-            keyword_candidates = self.repository.search_keyword(depth_filter_query)
         if self.config.retrieval_mode in {"semantic", "hybrid"}:
-            semantic_candidates = self._search_semantic_by_terms(query_term_embeddings)
+            semantic_candidates = self._rank_semantic_in_pool(depth_candidates, keyword_embeddings)
 
         if self.config.retrieval_mode == "keyword":
             candidates = _sort_single_retrieval(keyword_candidates)
         elif self.config.retrieval_mode == "semantic":
-            candidates = _sort_single_retrieval(semantic_candidates)
+            candidates = _sort_single_retrieval(semantic_candidates or depth_candidates)
         else:
             candidates = _merge_hybrid_candidates(keyword_candidates, semantic_candidates, self.config.rrf_k)
 
         return RetrievalResult(candidates, keyword_candidates, semantic_candidates)
 
-    def _search_semantic_by_terms(
+    def _rank_keyword_in_pool(
         self,
-        query_term_embeddings: list[tuple[str, list[float]]],
+        candidates: list[Candidate],
+        keyword_terms: list[str],
     ) -> list[Candidate]:
-        term_candidates = []
-        for query_term, query_embedding in query_term_embeddings:
-            term_candidates.extend(self.repository.search_semantic(query_embedding, query_term))
-        return _merge_semantic_candidates(term_candidates)
+        if not keyword_terms:
+            return [dict(candidate) for candidate in candidates]
+
+        ranked_candidates = []
+        for candidate in candidates:
+            ranked_candidate = dict(candidate)
+            score, matched_terms = _keyword_score(candidate, keyword_terms)
+            ranked_candidate["keyword_score"] = score
+            ranked_candidate["matched_terms"] = matched_terms
+            ranked_candidates.append(ranked_candidate)
+
+        ranked_candidates.sort(
+            key=lambda candidate: (
+                candidate.get("keyword_score") or 0.0,
+                candidate.get("bm25_score") or 0.0,
+            ),
+            reverse=True,
+        )
+        for rank, candidate in enumerate(ranked_candidates, start=1):
+            candidate["bm25_rank"] = rank
+            candidate["retrieval_rank"] = rank
+        return ranked_candidates
+
+    def _rank_semantic_in_pool(
+        self,
+        candidates: list[Candidate],
+        keyword_embeddings: list[tuple[str, list[float]]],
+    ) -> list[Candidate]:
+        if not keyword_embeddings:
+            return []
+
+        ranked_candidates = []
+        normalized_queries = [(term, _normalize_vector(embedding)) for term, embedding in keyword_embeddings]
+        for candidate in candidates:
+            embedding = candidate.get("embedding")
+            if not embedding:
+                continue
+            normalized_candidate = _normalize_vector(embedding)
+            scores = [
+                (term, _dot(query_embedding, normalized_candidate))
+                for term, query_embedding in normalized_queries
+            ]
+            best_score = max((score for _, score in scores), default=0.0)
+            matched_terms = [term for term, score in scores if score == best_score]
+            ranked_candidate = dict(candidate)
+            ranked_candidate["semantic_score"] = best_score
+            ranked_candidate["matched_terms"] = matched_terms
+            ranked_candidates.append(ranked_candidate)
+
+        ranked_candidates.sort(
+            key=lambda candidate: (
+                candidate.get("semantic_score") or 0.0,
+                candidate.get("bm25_score") or 0.0,
+            ),
+            reverse=True,
+        )
+        for rank, candidate in enumerate(ranked_candidates, start=1):
+            candidate["semantic_rank"] = rank
+            candidate["retrieval_rank"] = rank
+        return ranked_candidates
 
 
 def _merge_semantic_candidates(term_candidates: list[Candidate]) -> list[Candidate]:
@@ -128,3 +188,55 @@ def _sort_single_retrieval(candidates: list[Candidate]) -> list[Candidate]:
 
 def _rrf_score(*ranks: int | None, rrf_k: int) -> float:
     return sum(1.0 / (rrf_k + rank) for rank in ranks if rank is not None)
+
+
+def _keyword_score(candidate: Candidate, keyword_terms: list[str]) -> tuple[float, list[str]]:
+    candidate_text = _candidate_text(candidate)
+    candidate_tokens = set(candidate_text.split())
+    matched_terms = []
+    score = 0.0
+    for term in keyword_terms:
+        normalized_term = _normalize_text(term)
+        if not normalized_term:
+            continue
+        if normalized_term in candidate_text:
+            matched_terms.append(term)
+            score += 2.0 if " " in normalized_term else 1.0
+            continue
+        token_hits = sum(1 for token in normalized_term.split() if token in candidate_tokens)
+        if token_hits:
+            matched_terms.append(term)
+            score += token_hits / max(len(normalized_term.split()), 1)
+    return score, unique_preserve_order(matched_terms)
+
+
+def _candidate_text(candidate: Candidate) -> str:
+    values = [
+        str(candidate.get(field) or "")
+        for field in (
+            "title",
+            "equipment",
+            "system",
+            "building",
+            "study_survey",
+            "others",
+            "deliverable",
+            "text_content",
+        )
+    ]
+    return _normalize_text(" ".join(values))
+
+
+def _normalize_text(value: str) -> str:
+    return re.sub(r"[^a-z0-9]+", " ", value.lower()).strip()
+
+
+def _normalize_vector(vector: list[float]) -> list[float]:
+    norm = math.sqrt(sum(value * value for value in vector))
+    if not norm:
+        return vector
+    return [value / norm for value in vector]
+
+
+def _dot(left: list[float], right: list[float]) -> float:
+    return sum(left_value * right_value for left_value, right_value in zip(left, right, strict=False))
