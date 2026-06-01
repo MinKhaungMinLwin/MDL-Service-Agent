@@ -46,7 +46,15 @@ uv run itb-match
 
 Defaults:
 
-- input extraction CSV files: `output/current_test_env/output_itb_section*_focused.csv`
-- output matching CSV/JSON files: `output/current_test_env`
+- input extraction CSV files: `output/current_test_env/itb_extract/output_itb_section*_focused.csv`
+- output matching CSV/JSON files: `output/current_test_env/matching/<retrieval-mode>`
+
+Examples:
+
+```powershell
+uv run itb-match --retrieval-mode keyword
+uv run itb-match --retrieval-mode semantic
+uv run itb-match --retrieval-mode hybrid
+```
 
 Use `--help` on any command to see path and runtime overrides.

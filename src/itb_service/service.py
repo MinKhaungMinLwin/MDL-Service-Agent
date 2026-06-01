@@ -211,7 +211,13 @@ class ITBExtractionService:
         if not self.config.enable_verification:
             return {}
         payloads = [
-            build_verification_payload(document_name, item.chunk, item.hierarchy, extraction_by_id[chunk_id])
+            build_verification_payload(
+                document_name,
+                item.chunk,
+                item.hierarchy,
+                item.known_abbreviations,
+                extraction_by_id[chunk_id],
+            )
             for item in batch
             if (
                 (chunk_id := as_text(item.chunk.get("chunk_id"))) not in error_by_id

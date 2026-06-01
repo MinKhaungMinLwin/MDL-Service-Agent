@@ -14,6 +14,7 @@ from itb_service.loader import find_known_abbreviations, load_target_chunks, nor
 from itb_service.models import OUTPUT_HEADER, ITBExtractionConfig, ITBTarget
 from itb_service.output import build_csv_row
 from itb_service.service import ITBExtractionService
+from itb_service.verification import build_verification_payload
 
 
 class ITBServiceTest(unittest.TestCase):
@@ -70,6 +71,17 @@ class ITBServiceTest(unittest.TestCase):
 
     def test_empty_single_chunk_response_is_not_treated_as_valid(self) -> None:
         self.assertEqual(parse_batch_results({}, [{"chunk_id": "chunk-1"}]), {})
+
+    def test_verification_payload_includes_known_abbreviations(self) -> None:
+        payload = build_verification_payload(
+            "R&N_ITB",
+            _chunk("chunk-1", [95], "GSUT outage modes"),
+            "6.6 Plant Performance",
+            {"GSUT": "Generator Step-Up Transformer"},
+            {"depth_1": "Plant Performance"},
+        )
+
+        self.assertEqual(payload["source_input"]["known_abbreviations"], {"GSUT": "Generator Step-Up Transformer"})
 
     def test_service_writes_verified_csv_json_and_token_outputs(self) -> None:
         client = _ChatClient(

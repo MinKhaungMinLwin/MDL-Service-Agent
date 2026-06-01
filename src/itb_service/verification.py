@@ -33,6 +33,7 @@ def build_verification_payload(
     document_name: str,
     chunk: dict[str, Any],
     hierarchy: str,
+    known_abbreviations: dict[str, str],
     extraction: dict[str, Any],
 ) -> dict[str, Any]:
     """Build one verifier payload from source data and extractor output."""
@@ -47,6 +48,7 @@ def build_verification_payload(
             "chunk_type": chunk.get("chunk_type", ""),
             "label": chunk.get("label", ""),
             "hierarchy_context": hierarchy,
+            "known_abbreviations": known_abbreviations,
             "chunk_text": chunk.get("text", ""),
         },
         "extractor_output": extraction,

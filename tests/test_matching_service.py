@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from matching_service.cli import _files_to_process
 from matching_service.models import MatchingConfig
 from matching_service.query import build_cross_encoder_query, build_depth_filter_query, get_keyword_terms
 from matching_service.ranking import CrossEncoderReranker, build_candidate_text
@@ -68,6 +69,28 @@ class MatchingServiceTest(unittest.TestCase):
 
         self.assertIn("DROP INDEX test_mdl_document_fulltext_idx", conn.calls[1][0])
         self.assertIn("CREATE FULLTEXT INDEX test_mdl_document_fulltext_idx", conn.calls[2][0])
+
+    def test_default_matching_paths_read_itb_extract_and_write_mode_output(self) -> None:
+        files = _files_to_process(
+            inputs=None,
+            outputs=None,
+            input_dir=Path("output/current_test_env/itb_extract"),
+            output_dir=Path("output/current_test_env/matching/hybrid"),
+        )
+
+        self.assertEqual(
+            files,
+            [
+                (
+                    Path("output/current_test_env/itb_extract/output_itb_section6_focused.csv"),
+                    Path("output/current_test_env/matching/hybrid/output_match_all_projects_section6.csv"),
+                ),
+                (
+                    Path("output/current_test_env/itb_extract/output_itb_section7_focused.csv"),
+                    Path("output/current_test_env/matching/hybrid/output_match_all_projects_section7.csv"),
+                ),
+            ],
+        )
 
     def test_service_reranks_top_200_and_outputs_top_100(self) -> None:
         reranker = _RecordingReranker()
