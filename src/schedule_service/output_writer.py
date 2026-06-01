@@ -1,4 +1,4 @@
-"""Write schedule mapping outputs."""
+"""Write schedule service tabular outputs."""
 
 from __future__ import annotations
 
@@ -12,18 +12,35 @@ from openpyxl.utils import get_column_letter
 
 
 def write_mapping_outputs(output_dir: Path, output_stem: str, rows: list[dict[str, Any]]) -> tuple[Path, Path]:
+    """Write schedule mapping JSON and XLSX outputs."""
+    return write_table_outputs(output_dir, output_stem, rows, "Schedule Mapping")
+
+
+def write_schedule_outputs(output_dir: Path, output_stem: str, rows: list[dict[str, Any]]) -> tuple[Path, Path]:
+    """Write generated schedule JSON and XLSX outputs."""
+    return write_table_outputs(output_dir, output_stem, rows, "Generated Schedule")
+
+
+def write_table_outputs(
+    output_dir: Path,
+    output_stem: str,
+    rows: list[dict[str, Any]],
+    sheet_title: str,
+) -> tuple[Path, Path]:
+    """Write tabular rows to paired JSON and XLSX files."""
     output_dir.mkdir(parents=True, exist_ok=True)
     json_path = output_dir / f"{output_stem}.json"
     xlsx_path = output_dir / f"{output_stem}.xlsx"
     json_path.write_text(json.dumps(rows, ensure_ascii=False, indent=2), encoding="utf-8")
-    _write_xlsx(xlsx_path, rows)
+    _write_xlsx(xlsx_path, rows, sheet_title)
     return xlsx_path, json_path
 
 
-def _write_xlsx(path: Path, rows: list[dict[str, Any]]) -> None:
+def _write_xlsx(path: Path, rows: list[dict[str, Any]], sheet_title: str) -> None:
+    """Write rows to one formatted XLSX sheet."""
     workbook = Workbook()
     worksheet = workbook.active
-    worksheet.title = "Schedule Mapping"
+    worksheet.title = sheet_title
     headers = list(rows[0].keys()) if rows else []
     worksheet.append(headers)
     for row in rows:

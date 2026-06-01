@@ -1,41 +1,6 @@
-"""Load cleaned CCPP guide schedule data."""
+"""Backward-compatible wrapper for schedule loading."""
 
 from __future__ import annotations
 
-import json
-import re
-from pathlib import Path
+from schedule_service.schedule_loader import *  # noqa: F403
 
-from schedule_service.models import ScheduleActivity
-
-
-DEFAULT_SCHEDULE_PATH = Path("04_data/schedule_sources/processed/ccpp_guide_schedule_260527_clean.json")
-
-
-def load_schedule_activities(schedule_path: Path) -> list[ScheduleActivity]:
-    payload = json.loads(schedule_path.read_text(encoding="utf-8"))
-    activities: list[ScheduleActivity] = []
-    for row in payload["rows"]:
-        if row.get("row_type") != "activity":
-            continue
-
-        activity_name_clean = row.get("activity_name_clean", "").strip()
-        wbs_path = row.get("wbs_path", "").strip()
-        activity_id = row.get("activity_id", "").strip()
-        target_text = _normalize_space(f"{activity_name_clean} {wbs_path} {activity_id}")
-        activities.append(
-            ScheduleActivity(
-                activity_id=activity_id,
-                activity_name=row.get("activity_name", "").strip(),
-                activity_name_clean=activity_name_clean,
-                wbs_path=wbs_path,
-                start_date=row.get("start_date", "").strip(),
-                finish_date=row.get("finish_date", "").strip(),
-                target_text=target_text,
-            )
-        )
-    return activities
-
-
-def _normalize_space(text: str) -> str:
-    return re.sub(r"\s+", " ", text).strip()

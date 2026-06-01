@@ -1,0 +1,137 @@
+"""Load MDL source titles and classified CSV records."""
+
+from __future__ import annotations
+
+import csv
+from pathlib import Path
+from typing import Any
+
+import openpyxl
+
+from mdl_service.models import DocumentTitle
+
+TITLE_HEADERS = {"TITLE", "DOCUMENT DESCRIPTION", "DOCUMENT TITLE"}
+DOCUMENT_NO_HEADERS = {"DOCUMENT NUMBER", "DOCUMENT NO", "DOCUMENT NO.", "DOC NO"}
+EMBEDDING_FIELDS = (
+    ("Title", "title"),
+    ("Equipment", "equipment"),
+    ("Building", "building"),
+    ("System", "system"),
+    ("Study/Survey", "study_survey"),
+    ("Others", "others"),
+    ("Deliverable", "deliverable"),
+)
+
+
+def list_excel_files(data_dir: str | Path, requested_file: str | None = None) -> list[Path]:
+    """Return requested or discoverable MDL Excel files."""
+    data_path = Path(data_dir)
+    if requested_file:
+        return [data_path / requested_file]
+    return sorted(
+        path
+        for path in data_path.iterdir()
+        if path.suffix.lower() in {".xlsx", ".xlsm"}
+        and not path.name.startswith(("~$", "abbreviation"))
+    )
+
+
+def extract_titles_from_excel(filepath: str | Path) -> list[DocumentTitle]:
+    """Extract MDL document titles from every worksheet with a recognized title header."""
+    path = Path(filepath)
+    workbook = openpyxl.load_workbook(path, read_only=True, data_only=True)
+    results = []
+    try:
+        for sheet_name in workbook.sheetnames:
+            worksheet = workbook[sheet_name]
+            rows = list(worksheet.iter_rows(values_only=True))
+            title_col, document_no_col, header_row = _find_columns(rows[:10])
+            if title_col is None or header_row is None:
+                continue
+            for row in rows[header_row + 1 :]:
+                title = _cell_value(row, title_col)
+                if not title or title.upper() in TITLE_HEADERS:
+                    continue
+                results.append(
+                    DocumentTitle(
+                        source_file=path.name,
+                        sheet=sheet_name,
+                        document_no=_cell_value(row, document_no_col),
+                        title=title,
+                    )
+                )
+    finally:
+        workbook.close()
+    return results
+
+
+def load_ingest_records(csv_path: str | Path) -> list[dict[str, Any]]:
+    """Load one classified MDL CSV into normalized Neo4j records."""
+    path = Path(csv_path)
+    rows = _read_csv_rows(path)
+    records = []
+    for index, row in enumerate(rows):
+        title = _clean(row.get("Title"))
+        if not title:
+            continue
+        document_no = _clean(row.get("Document No")) or f"DOC_{index}"
+        record = {
+            "doc_id": f"{path.stem}_{document_no}_{index}",
+            "source_file": _clean(row.get("Source File")),
+            "document_no": document_no,
+            "title": title,
+            "equipment": _clean(row.get("Equipment")),
+            "building": _clean(row.get("Building")),
+            "system": _clean(row.get("System")),
+            "study_survey": _clean(row.get("Study/Survey")),
+            "others": _clean(row.get("Others")),
+            "deliverable": _clean(row.get("Deliverable")),
+        }
+        record["text_content"] = build_embedding_text(record)
+        records.append(record)
+    return records
+
+
+def build_embedding_text(record: dict[str, Any]) -> str:
+    """Build the compact MDL representation stored and embedded in Neo4j."""
+    return " | ".join(
+        f"{label}: {value}"
+        for label, field in EMBEDDING_FIELDS
+        if (value := _clean(record.get(field)))
+    )
+
+
+def _find_columns(rows: list[tuple[Any, ...]]) -> tuple[int | None, int | None, int | None]:
+    for row_index, row in enumerate(rows):
+        title_col = None
+        document_no_col = None
+        for column_index, cell in enumerate(row):
+            value = _clean(cell).upper()
+            if value in TITLE_HEADERS:
+                title_col = column_index
+            if value in DOCUMENT_NO_HEADERS:
+                document_no_col = column_index
+        if title_col is not None:
+            return title_col, document_no_col, row_index
+    return None, None, None
+
+
+def _cell_value(row: tuple[Any, ...], index: int | None) -> str:
+    return "" if index is None or index >= len(row) else _clean(row[index])
+
+
+def _read_csv_rows(path: Path) -> list[dict[str, str]]:
+    for encoding in ("utf-8-sig", "cp949"):
+        try:
+            with open(path, newline="", encoding=encoding) as file:
+                return list(csv.DictReader(file))
+        except UnicodeDecodeError:
+            continue
+    raise UnicodeDecodeError("utf-8-sig", b"", 0, 1, f"Unable to decode {path}")
+
+
+def _clean(value: Any) -> str:
+    if value is None:
+        return ""
+    text = str(value).strip()
+    return "" if text.lower() == "nan" else text

@@ -1,0 +1,86 @@
+# ITB Keyword Extraction Prompt v2
+
+You are a Combined Cycle Power Plant EPC expert extracting ITB metadata for MDL retrieval.
+
+Use only the provided `hierarchy_context`, chunk metadata, `known_abbreviations`, and `chunk_text`.
+Do not invent equipment, systems, buildings, deliverables, standards, quantities, or values.
+If evidence is weak, leave fields blank and set `needs_review` to true.
+
+Input contains a `chunks` array. Return JSON only with exactly one top-level key, `results`.
+Each result must include the original `chunk_id` and the extraction fields.
+
+```json
+{
+  "results": [
+    {
+      "chunk_id": "",
+      "depth_1": "",
+      "depth_2": "",
+      "depth_3": "",
+      "depth_4": "",
+      "depth_5": "",
+      "keywords": [],
+      "search_query": "",
+      "entities": {
+        "equipment": [],
+        "systems": [],
+        "buildings": [],
+        "deliverables": [],
+        "standards": []
+      },
+      "confidence": "high|medium|low",
+      "needs_review": false,
+      "reason": ""
+    }
+  ]
+}
+```
+
+Depth rules:
+- Start from `hierarchy_context`.
+- Normalize all depth values: remove section numbers, leading numbering, underscores, and raw breadcrumb artifacts. For example, use `Scope of Civil Works` instead of `7.1_Scope_of_Civil_Works`, and `HVAC Systems and Design Conditions` instead of `7.5.5_HVAC_Systems_and_Design_Conditions`.
+- Fill `depth_1` to `depth_3` with meaningful ITB section hierarchy or a clear technical subject from the chunk.
+- Do not blindly copy a broad parent label when a child section or chunk text identifies a clearer technical domain. For example, if `hierarchy_context` is `Scope of Civil Works > HVAC Systems and Design Conditions`, classify the chunk under `HVAC` / `HVAC Systems and Design Conditions`, not under the broad `Scope of Civil Works` domain.
+- If a child section is a clear technical domain such as HVAC, Mechanical Cooling, Ductwork, Fresh Air Requirements, Domestic Hot and Cold Water Services, Fire Protection, Electrical Building Services, Mechanical Building Services, or Plant Control, use that technical domain for the most relevant upper depth levels.
+- If `chunk_text` clearly describes a specific technical subject, fill `depth_3` with that subject even when `hierarchy_context` has only one or two levels.
+- Use `depth_4` only for a specific equipment, building, package, or item-level target.
+- Use `depth_5` only for a meaningful technical sub-scope.
+- Do not put deliverable names such as drawing, calculation, report, list, or procedure in any depth field.
+- Do not put requirements, design criteria, containment features, standby capacity, refrigerant rules, ventilation criteria, drainage rules, testing requirements, or standards compliance in `depth_4` or `depth_5`; put those terms in `keywords` and `search_query`.
+- Leave uncertain or generic depth fields blank.
+- Blank `depth_4` and `depth_5` are valid when no specific equipment, building, package, item-level target, or meaningful sub-scope is explicit.
+- Avoid redundant depth levels. Do not use both `Civil Works` and `Scope of Civil Works` as separate depths unless they represent different hierarchy levels in a useful way.
+- Use `depth_3` for the main technical subject when the chunk is a focused requirement, such as materials, insulation, testing, fire/smoke dampers, fresh air intake, air filtration, domestic water supply, spill containment, drainage, foundation design, concrete durability, or structural steel connections.
+- Keep `depth_4` as a named target only. Generic locations or parts such as `roofs`, `safety rails`, `connections`, `containment`, `criteria`, `requirements`, or combined topic phrases should usually stay in `depth_3` or `keywords`, not `depth_4`.
+- Never place administrative or procedural labels such as `Quality Control Submittals`, `Design Information Submission`, `Design Criteria`, `Approval`, `Submission`, or `Procedure` in `depth_4` or `depth_5`. These belong in `depth_2`/`depth_3`, `keywords`, or `search_query`.
+- Do not infer a discipline/domain such as Mechanical, Electrical, HVAC, Civil, or I&C from nearby sections unless the current chunk text or current section title explicitly supports it.
+- For generic submission, design information, approval, procedure, quality control, or administrative requirement chunks, keep the broader source domain and use the generic subject as `depth_2`/`depth_3`; do not force the chunk into Mechanical/Electrical/HVAC unless the text explicitly names that discipline.
+- Prefer stable normalized domain labels such as `Civil Works`, `Building Services`, `Mechanical Building Services`, `Electrical Building Services`, `HVAC`, or `Plant Control and Operational System`; avoid using section-title wording like `Scope of Civil Works` as a repeated depth when `Civil Works` is sufficient.
+
+Keyword rules:
+- Extract 2-12 useful technical phrases for MDL matching.
+- Prefer equipment, systems, buildings, study/survey terms, standards, operating conditions, quantities, and parameters.
+- Include explicit numeric anchors when they are important for retrieval, such as pressures, temperatures, percentages, capacities, clearances, design margins, flow/ventilation rates, testing frequencies, and standard numbers.
+- Exclude administrative filler such as shall, provide, include, contractor, owner, requirement, data, information, general, detail, other, and note.
+- De-emphasize deliverable/admin terms such as drawing, calculation, report, schedule, approval, submission, and procedure unless the deliverable itself is the explicit technical target.
+- For broad list chunks, choose the strongest 8-12 retrieval anchors instead of copying every listed phrase. Keep terms concise and noun-focused.
+- Do not introduce named tests, systems, or formal deliverables unless they are explicitly stated in the current chunk or clearly present in the current section title. For example, do not add `plate load test` when the chunk only states `EV1`, `EV2`, and test frequency.
+- Preserve exact source scope for methodology/process terms. Use `dewatering methodology` or `settlement monitoring` when the chunk says methodology/monitoring; do not promote them to named systems unless the source says `system`.
+- Preserve important acronyms, vendor markers, proper nouns, units, and symbols.
+- Use `known_abbreviations` to understand acronyms, but keep common acronyms when they are useful for search.
+
+Search query rules:
+- Build one concise comma-separated retrieval query.
+- Combine the most meaningful depth terms with the strongest keywords.
+- Prefer technical anchors over administrative section labels.
+- Do not include broad parent labels in the search query when they conflict with the chunk's technical subject. For HVAC, mechanical cooling, ductwork, fresh air, or domestic water service chunks, avoid adding `Scope of Civil Works` unless the civil scope is the actual technical subject.
+- Keep the search query focused on retrieval anchors, not procedural language. Prefer `Ductwork, SMACNA, fire dampers, NFPA 90A` over `submit drawings for approval`.
+- Remove redundancy between depth and keywords while preserving the strongest anchors.
+- Keep the search query concise. Avoid repeating the same parent scope in multiple forms, and avoid long sentence-like phrases.
+- Make the query directly usable for vector or hybrid search against MDL rows.
+
+Set `confidence` to:
+- `high` when the technical scope is explicit.
+- `medium` when the scope is mostly clear but broad.
+- `low` when the chunk is ambiguous, mostly table/list noise, or lacks technical anchors.
+

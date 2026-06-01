@@ -1,0 +1,63 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "doosan-mdl"
+version = "0.1.0"
+description = "Doosan MDL parsing and matching workspace"
+requires-python = ">=3.11"
+dependencies = [
+    "docling>=2.0.0",
+    "fastapi>=0.115.0",
+    "loguru>=0.7.3",
+    "neo4j>=5.28.0",
+    "openai>=2.38.0",
+    "openpyxl>=3.1.5",
+    "pandas>=2.2.0",
+    "pypdf>=6.0.0",
+    "pydantic>=2.11.3",
+    "python-multipart>=0.0.20",
+    "sentence-transformers>=5.0.0",
+    "tqdm>=4.66.0",
+    "uvicorn[standard]>=0.34.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.11.0",
+]
+
+[project.scripts]
+mdl-classify = "mdl_service.cli:classify"
+mdl-ingest = "mdl_service.cli:ingest"
+itb-extract = "itb_service.cli:extract"
+itb-match = "matching_service.cli:match"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+mdl_service = ["prompts/*.md"]
+itb_service = ["prompts/*.md"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = []
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
+
+[dependency-groups]
+dev = [
+    "ruff>=0.15.14",
+]

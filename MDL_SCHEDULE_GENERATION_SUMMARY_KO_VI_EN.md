@@ -49,7 +49,7 @@ ITB 분석
   - Work Code 및 Work Description 사전
 - `lts/data/historical_fixed_data/train/*`
   - 기존 프로젝트 L3/MDL 샘플
-- `04_data/sample_documents/.../Fadhili/Fadhili DDCL(MDL).xlsx`
+- `data/sample_documents/.../Fadhili/Fadhili DDCL(MDL).xlsx`
   - Fadhili 기준 MDL 템플릿 후보
 
 다만 1차 POC 자료는 과거 프로젝트 실적 기반이므로, 이번 프로젝트의 공식 기준으로 바로 사용하기보다는 **매핑 룰 초안과 참고 데이터**로 보는 것이 적절합니다.
@@ -123,7 +123,7 @@ Trong POC giai đoạn 1 có một số tài liệu có thể dùng để tham k
   - Dictionary cho work code và work description
 - `lts/data/historical_fixed_data/train/*`
   - Dữ liệu mẫu L3/MDL của các dự án cũ
-- `04_data/sample_documents/.../Fadhili/Fadhili DDCL(MDL).xlsx`
+- `data/sample_documents/.../Fadhili/Fadhili DDCL(MDL).xlsx`
   - Ứng viên template MDL theo format Fadhili
 
 Tuy nhiên, dữ liệu POC giai đoạn 1 chủ yếu dựa trên lịch thực tế của các dự án cũ. Vì vậy, không nên dùng trực tiếp làm tiêu chuẩn chính thức cho dự án hiện tại, mà nên dùng như **dữ liệu tham khảo và bản nháp rule mapping**.
@@ -197,7 +197,7 @@ Some files from the phase 1 POC can be reused as references.
   - Work code and work description dictionary
 - `lts/data/historical_fixed_data/train/*`
   - Historical L3/MDL sample data
-- `04_data/sample_documents/.../Fadhili/Fadhili DDCL(MDL).xlsx`
+- `data/sample_documents/.../Fadhili/Fadhili DDCL(MDL).xlsx`
   - Candidate MDL output template based on the Fadhili format
 
 However, phase 1 POC data is based on historical project actual schedules. It should not be used directly as the official scheduling standard for the current project. It is more appropriate as **reference data and an initial mapping-rule draft**.
