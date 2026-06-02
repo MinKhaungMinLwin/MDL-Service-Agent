@@ -15,8 +15,20 @@ from typing import Any
 
 from loguru import logger
 
-from common.json_io import read_json, read_json_list, write_json
+from common.json_io import read_json, write_json
 from common.llm_json import parse_json_output
+from common.text_normalizer import expand_abbreviation_terms
+from matching_service.models import MatchingConfig
+from matching_service.query import (
+    build_cross_encoder_query,
+    build_depth_filter_query,
+    build_fulltext_query,
+    build_semantic_query,
+    get_keyword_terms,
+    unique_preserve_order,
+)
+from matching_service.repository import MDLSearchRepository
+from matching_service.retrieval import DepthRetriever
 
 PROMPTS_DIR = Path(__file__).resolve().parent / "prompts"
 DEFAULT_JUDGE_PROMPT_PATH = PROMPTS_DIR / "matching_relevance_judge.md"
@@ -55,6 +67,7 @@ MDL_CANDIDATE_FIELDS = (
     "deliverable",
     "text_content",
 )
+POOL_CANDIDATE_FIELDS = MDL_CANDIDATE_FIELDS
 
 
 @dataclass(frozen=True)
@@ -65,10 +78,13 @@ class EvaluationConfig:
     sections: tuple[str, ...] = ("6", "7")
     modes: tuple[str, ...] = ("keyword", "semantic", "hybrid")
     pool_top_k: int = 20
+    reference_retrieval_candidate_limit: int = 300
+    reference_pool_top_k: int = 100
     batch_size: int = 5
     judge_candidates_per_call: int = 25
     llm_retries: int = 2
     max_concurrency: int = 1
+    max_itb_chunks: int = 0
     verify: bool = False
     resume: bool = False
     batch_delay_seconds: float = 0.5
@@ -84,6 +100,12 @@ class EvaluationConfig:
             raise ValueError("modes must contain only keyword, semantic, or hybrid")
         if self.pool_top_k <= 0:
             raise ValueError("pool_top_k must be positive")
+        if self.reference_retrieval_candidate_limit <= 0:
+            raise ValueError("reference_retrieval_candidate_limit must be positive")
+        if self.reference_pool_top_k <= 0:
+            raise ValueError("reference_pool_top_k must be positive")
+        if self.reference_pool_top_k > self.reference_retrieval_candidate_limit:
+            raise ValueError("reference_pool_top_k cannot exceed reference_retrieval_candidate_limit")
         if self.batch_size <= 0:
             raise ValueError("batch_size must be positive")
         if self.judge_candidates_per_call <= 0:
@@ -92,6 +114,8 @@ class EvaluationConfig:
             raise ValueError("llm_retries cannot be negative")
         if self.max_concurrency <= 0:
             raise ValueError("max_concurrency must be positive")
+        if self.max_itb_chunks < 0:
+            raise ValueError("max_itb_chunks cannot be negative")
         if self.batch_delay_seconds < 0:
             raise ValueError("batch_delay_seconds cannot be negative")
 
@@ -128,6 +152,8 @@ class GroundTruthService:
         client: Any,
         judge_prompt: str,
         verify_prompt: str = "",
+        embedding_service: Any | None = None,
+        cross_encoder_reranker: Any | None = None,
         sleep: Callable[[float], None] = time.sleep,
     ) -> None:
         if config.verify and not verify_prompt:
@@ -136,19 +162,23 @@ class GroundTruthService:
         self.client = client
         self.judge_prompt = judge_prompt
         self.verify_prompt = verify_prompt
+        self.embedding_service = embedding_service
+        self.cross_encoder_reranker = cross_encoder_reranker
         self.sleep = sleep
 
-    def build_pool(self, extract_dir: Path, matching_dir: Path, pool_path: Path) -> list[dict[str, Any]]:
-        """Build and persist a candidate pool from existing matching artifacts."""
-        itb_rows = load_itb_rows(extract_dir, self.config.sections)
+    def build_pool(self, extract_dir: Path, matching_dir: Path, pool_path: Path | None = None) -> list[dict[str, Any]]:
+        """Build a candidate pool from existing matching artifacts."""
+        itb_rows = limit_itb_rows(load_itb_rows(extract_dir, self.config.sections), self.config.max_itb_chunks)
         matching_records = load_matching_records(matching_dir, self.config.sections, self.config.modes)
         pools = build_candidate_pool(itb_rows, matching_records, self.config.pool_top_k)
-        write_json(pool_path, pools)
+        if pool_path is not None:
+            write_json(pool_path, pools)
         logger.info(
-            "Saved {} ITB candidate pools with {} MDL candidates: {}",
+            "{} {} ITB candidate pools with {} MDL candidates{}",
+            "Saved" if pool_path is not None else "Built",
             len(pools),
             _candidate_count(pools),
-            pool_path,
+            f": {pool_path}" if pool_path is not None else "",
         )
         return pools
 
@@ -156,56 +186,67 @@ class GroundTruthService:
         self,
         extract_dir: Path,
         conn: Any,
-        pool_path: Path,
+        pool_path: Path | None,
         source_file: str,
         node_label: str,
-        candidate_limit: int = 0,
     ) -> list[dict[str, Any]]:
-        """Build and persist a candidate pool from one reference MDL source in Neo4j."""
-        itb_rows = load_itb_rows(extract_dir, self.config.sections)
-        candidates = load_reference_mdl_candidates(conn, source_file, node_label, candidate_limit)
-        pools = build_reference_candidate_pool(itb_rows, candidates)
-        write_json(pool_path, pools)
+        """Build a candidate pool from one reference MDL source in Neo4j."""
+        itb_rows = limit_itb_rows(load_itb_rows(extract_dir, self.config.sections), self.config.max_itb_chunks)
+        pools = build_reference_search_candidate_pool(
+            itb_rows,
+            conn,
+            self.config,
+            source_file,
+            node_label,
+            self.embedding_service,
+            self.cross_encoder_reranker,
+        )
+        if pool_path is not None:
+            write_json(pool_path, pools)
         logger.info(
-            "Saved {} ITB reference pools with {} MDL candidates from {}: {}",
+            "{} {} ITB reference pools with {} MDL candidates from {}{}",
+            "Saved" if pool_path is not None else "Built",
             len(pools),
             _candidate_count(pools),
             source_file,
-            pool_path,
+            f": {pool_path}" if pool_path is not None else "",
         )
         return pools
 
     def judge_to_files(
         self,
         pools: list[dict[str, Any]],
-        judgments_path: Path,
-        verifications_path: Path,
-        ground_truth_path: Path,
-        high_precision_path: Path | None = None,
+        resume_state_path: Path | None,
+        ground_truth_path: Path | None,
+        positive_path: Path | None = None,
+        negative_path: Path | None = None,
     ) -> None:
         """Generate judgments, optionally verify all rows, and write ground truth."""
         pairs = iter_judge_pairs(pools)
         pair_ids = {pair["judgment_id"] for pair in pairs}
-        judgments = [row for row in read_json_list(judgments_path) if row.get("judgment_id") in pair_ids]
-        verifications = [row for row in read_json_list(verifications_path) if row.get("judgment_id") in pair_ids]
-        if not self.config.resume:
+        if self.config.resume:
+            if resume_state_path is None:
+                raise ValueError("resume_state_path is required when resume is enabled")
+            judgments, verifications = read_resume_state(resume_state_path, pair_ids)
+        else:
             judgments = []
             verifications = []
-        judgments = self._judge_pools(pools, pairs, judgments, judgments_path, ground_truth_path)
+        judgments = self._judge_pools(pools, pairs, judgments, verifications, resume_state_path)
         if self.config.verify:
-            verifications = self._verify_judgments(pairs, judgments, verifications, verifications_path)
-        write_ground_truth(ground_truth_path, judgments, verifications)
-        if high_precision_path is not None:
-            write_high_precision_ground_truth(high_precision_path, judgments, verifications)
-        logger.info("Saved silver ground truth: {}", ground_truth_path)
+            verifications = self._verify_judgments(pairs, judgments, verifications, resume_state_path)
+        if ground_truth_path is not None:
+            write_ground_truth(ground_truth_path, judgments, verifications)
+            logger.info("Saved silver ground truth: {}", ground_truth_path)
+        if positive_path is not None and negative_path is not None:
+            write_high_precision_ground_truth(positive_path, negative_path, judgments, verifications)
 
     def _judge_pools(
         self,
         pools: list[dict[str, Any]],
         pairs: list[dict[str, Any]],
         judgments: list[dict[str, Any]],
-        judgments_path: Path,
-        ground_truth_path: Path,
+        verifications: list[dict[str, Any]],
+        resume_state_path: Path | None,
     ) -> list[dict[str, Any]]:
         completed_ids = {row.get("judgment_id") for row in judgments}
         pairs_by_pool = _group_pairs_by_pool(pairs)
@@ -250,8 +291,8 @@ class GroundTruthService:
         for _order, resolved in self._run_judge_tasks(tasks):
             judgments.extend(resolved)
             judgments.sort(key=lambda row: pair_order.get(row.get("judgment_id"), len(pair_order)))
-            write_json(judgments_path, judgments)
-            write_ground_truth(ground_truth_path, judgments, [])
+            if resume_state_path is not None:
+                write_resume_state(resume_state_path, judgments, verifications)
             self.sleep(self.config.batch_delay_seconds)
         logger.info("Completed {} relevance judgments", len(judgments))
         return judgments
@@ -307,7 +348,7 @@ class GroundTruthService:
         pairs: list[dict[str, Any]],
         judgments: list[dict[str, Any]],
         verifications: list[dict[str, Any]],
-        verifications_path: Path,
+        resume_state_path: Path | None,
     ) -> list[dict[str, Any]]:
         pair_by_id = {pair["judgment_id"]: pair for pair in pairs}
         completed_ids = {row.get("judgment_id") for row in verifications}
@@ -336,7 +377,8 @@ class GroundTruthService:
         for _order, resolved in self._run_verify_tasks(tasks):
             verifications.extend(resolved)
             verifications.sort(key=lambda row: judgment_order.get(row.get("judgment_id"), len(judgment_order)))
-            write_json(verifications_path, verifications)
+            if resume_state_path is not None:
+                write_resume_state(resume_state_path, judgments, verifications)
             self.sleep(self.config.batch_delay_seconds)
         logger.info("Completed {} relevance verifications", len(verifications))
         return verifications
@@ -391,6 +433,16 @@ def load_itb_rows(extract_dir: Path, sections: tuple[str, ...]) -> dict[str, dic
     return rows_by_key
 
 
+def limit_itb_rows(itb_rows: dict[str, dict[str, Any]], max_itb_chunks: int) -> dict[str, dict[str, Any]]:
+    """Keep the first N ITB rows in section/chunk order when a test limit is set."""
+    if max_itb_chunks <= 0:
+        return itb_rows
+    return {
+        key: itb_rows[key]
+        for key in sorted(itb_rows, key=_section_chunk_sort_key)[:max_itb_chunks]
+    }
+
+
 def load_matching_records(
     matching_dir: Path,
     sections: tuple[str, ...],
@@ -412,7 +464,7 @@ def build_candidate_pool(
 ) -> list[dict[str, Any]]:
     """Merge and deduplicate top MDL candidates from each retrieval mode."""
     pools_by_key: dict[str, dict[str, Any]] = {}
-    for (section, mode), records in records_by_source.items():
+    for (section, _mode), records in records_by_source.items():
         for record in records:
             chunk_id = str(record.get("chunk_id") or "").strip()
             key = f"{section}:{chunk_id}"
@@ -421,17 +473,11 @@ def build_candidate_pool(
                 continue
             pool = pools_by_key.setdefault(key, _build_pool_record(section, record, itb_row))
             candidates_by_id = pool.pop("_candidates_by_id")
-            for rank, candidate in enumerate(record.get("candidates", [])[:top_k], start=1):
+            for candidate in record.get("candidates", [])[:top_k]:
                 candidate_key = _candidate_key(candidate)
                 if not candidate_key:
                     continue
-                pooled_candidate = candidates_by_id.setdefault(
-                    candidate_key,
-                    {**candidate, "source_modes": [], "source_ranks": {}},
-                )
-                if mode not in pooled_candidate["source_modes"]:
-                    pooled_candidate["source_modes"].append(mode)
-                pooled_candidate["source_ranks"][mode] = rank
+                candidates_by_id.setdefault(candidate_key, _build_pool_candidate(candidate))
             pool["_candidates_by_id"] = candidates_by_id
 
     pools = []
@@ -496,9 +542,97 @@ def build_reference_candidate_pool(
         section, chunk_id = key.split(":", maxsplit=1)
         pool = _build_pool_record(section, {"chunk_id": chunk_id}, itb_rows[key])
         pool.pop("_candidates_by_id")
-        pool["candidates"] = list(candidates)
+        pool["candidates"] = [_build_pool_candidate(candidate) for candidate in candidates]
         pools.append(pool)
     return pools
+
+
+def build_reference_search_candidate_pool(
+    itb_rows: dict[str, dict[str, Any]],
+    conn: Any,
+    config: EvaluationConfig,
+    source_file: str,
+    node_label: str,
+    embedding_service: Any | None = None,
+    cross_encoder_reranker: Any | None = None,
+) -> list[dict[str, Any]]:
+    """Build ITB pools by searching only within one reference MDL source."""
+    if cross_encoder_reranker is None:
+        raise ValueError("cross_encoder_reranker is required for reference search")
+    semantic_embeddings = _embed_reference_semantic_queries(itb_rows, config.modes, embedding_service)
+    pools = []
+    for key in sorted(itb_rows, key=_section_chunk_sort_key):
+        section, chunk_id = key.split(":", maxsplit=1)
+        itb_row = itb_rows[key]
+        pool = _build_pool_record(section, {"chunk_id": chunk_id}, itb_row)
+        candidates_by_key: dict[str, dict[str, Any]] = {}
+        depth_filter_query, depth_terms = build_depth_filter_query(itb_row)
+        keyword_terms = get_keyword_terms(itb_row)
+        keyword_filter_query = build_fulltext_query(expand_abbreviation_terms(keyword_terms))
+        semantic_query = build_semantic_query(depth_terms, keyword_terms)
+        semantic_embedding = semantic_embeddings.get(semantic_query, [])
+        cross_encoder_query = build_cross_encoder_query(depth_terms, keyword_terms)
+
+        for mode in config.modes:
+            mode_config = MatchingConfig(
+                retrieval_mode=mode,
+                retrieval_candidate_limit=config.reference_retrieval_candidate_limit,
+                output_limit=config.reference_pool_top_k,
+                node_label=node_label,
+                excluded_source_text="",
+                included_source_text=source_file,
+            )
+            retrieval = DepthRetriever(MDLSearchRepository(conn, mode_config), mode_config).retrieve(
+                depth_filter_query,
+                keyword_filter_query,
+                semantic_query,
+                semantic_embedding,
+            )
+            reranked_candidates = cross_encoder_reranker.rerank(
+                cross_encoder_query,
+                retrieval.candidates[: config.reference_retrieval_candidate_limit],
+                top_k=config.reference_pool_top_k,
+            )
+            for candidate in reranked_candidates:
+                key = _candidate_key(candidate)
+                if not key:
+                    continue
+                candidates_by_key.setdefault(key, _build_pool_candidate(candidate))
+
+        pool.pop("_candidates_by_id")
+        pool["candidates"] = list(candidates_by_key.values())
+        pools.append(pool)
+
+    if not _candidate_count(pools):
+        raise ValueError(f"No reference MDL search candidates found in Neo4j for source_file={source_file}")
+    logger.info(
+        "Built reference search pools with top {} per mode from {}",
+        config.reference_pool_top_k,
+        source_file,
+    )
+    return pools
+
+
+def _embed_reference_semantic_queries(
+    itb_rows: dict[str, dict[str, Any]],
+    modes: tuple[str, ...],
+    embedding_service: Any | None,
+) -> dict[str, list[float]]:
+    if not any(mode in {"semantic", "hybrid"} for mode in modes):
+        return {}
+    if embedding_service is None:
+        raise ValueError("embedding_service is required for semantic or hybrid reference search")
+
+    semantic_queries = []
+    for itb_row in itb_rows.values():
+        _, depth_terms = build_depth_filter_query(itb_row)
+        semantic_queries.append(build_semantic_query(depth_terms, get_keyword_terms(itb_row)))
+    unique_queries = unique_preserve_order(query for query in semantic_queries if query)
+    if not unique_queries:
+        return {}
+    logger.info("Embedding {} unique reference search queries...", len(unique_queries))
+    embeddings = embedding_service.embed_texts(unique_queries)
+    return dict(zip(unique_queries, embeddings, strict=True))
 
 
 def iter_judge_pairs(pools: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -554,21 +688,57 @@ def write_ground_truth(
         writer.writerows(rows)
 
 
-def write_high_precision_ground_truth(
-    output_path: Path,
+def read_resume_state(resume_state_path: Path, pair_ids: set[str]) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    if not resume_state_path.exists():
+        return [], []
+    state = read_json(resume_state_path)
+    judgments = [
+        row
+        for row in state.get("judgments", [])
+        if row.get("judgment_id") in pair_ids
+    ]
+    verifications = [
+        row
+        for row in state.get("verifications", [])
+        if row.get("judgment_id") in pair_ids
+    ]
+    return judgments, verifications
+
+
+def write_resume_state(
+    resume_state_path: Path,
     judgments: list[dict[str, Any]],
     verifications: list[dict[str, Any]],
 ) -> None:
-    """Write only clear positive and negative labels agreed by judge and verifier."""
+    write_json(
+        resume_state_path,
+        {
+            "summary": {
+                "judgment_count": len(judgments),
+                "verification_count": len(verifications),
+            },
+            "judgments": judgments,
+            "verifications": verifications,
+        },
+    )
+
+
+def write_high_precision_ground_truth(
+    positive_path: Path,
+    negative_path: Path,
+    judgments: list[dict[str, Any]],
+    verifications: list[dict[str, Any]],
+) -> None:
+    """Write clear positive and negative labels agreed by judge and verifier."""
     verification_by_id = {row.get("judgment_id"): row for row in verifications}
-    rows = []
+    rows_by_status = {"positive": [], "negative": []}
     for judgment in judgments:
         verification = verification_by_id.get(judgment.get("judgment_id"), {})
         label_status = _high_precision_label_status(judgment, verification)
         if label_status:
             row = _build_ground_truth_row(judgment, verification)
             final_relevance = int(verification["relevance"])
-            rows.append(
+            rows_by_status[label_status].append(
                 {
                     **row,
                     "final_relevance": final_relevance,
@@ -576,12 +746,23 @@ def write_high_precision_ground_truth(
                     "label_status": label_status,
                 }
             )
+    _write_high_precision_rows(positive_path, rows_by_status["positive"])
+    _write_high_precision_rows(negative_path, rows_by_status["negative"])
+    logger.info(
+        "Saved {} positive and {} negative high-precision ground truth labels: {}, {}",
+        len(rows_by_status["positive"]),
+        len(rows_by_status["negative"]),
+        positive_path,
+        negative_path,
+    )
+
+
+def _write_high_precision_rows(output_path: Path, rows: list[dict[str, Any]]) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with open(output_path, "w", newline="", encoding="utf-8-sig") as file:
         writer = csv.DictWriter(file, fieldnames=HIGH_PRECISION_HEADER)
         writer.writeheader()
         writer.writerows(rows)
-    logger.info("Saved {} high-precision ground truth labels: {}", len(rows), output_path)
 
 
 def _run_llm_batch(
@@ -627,14 +808,34 @@ def _build_pool_record(section: str, record: dict[str, Any], itb_row: dict[str, 
         "section": section,
         "chunk_id": record["chunk_id"],
         "itb": {
-            "document": record.get("document", ""),
-            "page": record.get("page", ""),
-            "depths": record.get("depths", {}),
-            "keywords": record.get("keywords", ""),
+            "document": itb_row.get("Document", record.get("document", "")),
+            "chunk_id": record["chunk_id"],
+            "page": itb_row.get("Page", record.get("page", "")),
+            "section": itb_row.get("Section", section),
+            "hierarchy_context": itb_row.get("Hierarchy Context", ""),
+            "depths": _build_itb_depths(itb_row, record.get("depths", {})),
+            "keywords": itb_row.get("Keywords", record.get("keywords", "")),
             "chunk_text": itb_row.get("Chunk Text", ""),
         },
         "_candidates_by_id": {},
     }
+
+
+def _build_pool_candidate(candidate: dict[str, Any]) -> dict[str, Any]:
+    return {
+        field: candidate[field]
+        for field in POOL_CANDIDATE_FIELDS
+        if field in candidate
+    }
+
+
+def _build_itb_depths(itb_row: dict[str, Any], fallback_depths: dict[str, Any]) -> dict[str, Any]:
+    depths = {
+        field: itb_row.get(field, "")
+        for field in ("1st Depth", "2nd Depth", "3rd Depth", "4th Depth", "5th Depth")
+        if str(itb_row.get(field, "")).strip()
+    }
+    return depths or fallback_depths
 
 
 def _dedupe_candidates(candidates: list[dict[str, Any]]) -> list[dict[str, Any]]:

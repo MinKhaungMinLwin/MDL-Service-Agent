@@ -15,7 +15,9 @@ from evaluation_service.ground_truth.service import (
     _resolve_verifications,
     build_candidate_pool,
     build_reference_candidate_pool,
+    build_reference_search_candidate_pool,
     iter_judge_pairs,
+    limit_itb_rows,
     load_reference_mdl_candidates,
     write_high_precision_ground_truth,
 )
@@ -31,6 +33,29 @@ class EvaluationServiceTest(unittest.TestCase):
 
             self.assertEqual(_discover_sections(base), ("2", "10", "A"))
 
+    def test_reference_pool_top_k_cannot_exceed_retrieval_candidates(self) -> None:
+        with self.assertRaisesRegex(ValueError, "reference_pool_top_k cannot exceed"):
+            EvaluationConfig(
+                model="deployment",
+                reference_retrieval_candidate_limit=10,
+                reference_pool_top_k=20,
+            )
+
+    def test_max_itb_chunks_cannot_be_negative(self) -> None:
+        with self.assertRaisesRegex(ValueError, "max_itb_chunks cannot be negative"):
+            EvaluationConfig(model="deployment", max_itb_chunks=-1)
+
+    def test_limit_itb_rows_keeps_first_rows_in_section_chunk_order(self) -> None:
+        rows = {
+            "7:chunk-2": {"Chunk Text": "second"},
+            "6:chunk-1": {"Chunk Text": "first"},
+            "7:chunk-1": {"Chunk Text": "third"},
+        }
+
+        limited = limit_itb_rows(rows, 2)
+
+        self.assertEqual(list(limited), ["6:chunk-1", "7:chunk-1"])
+
     def test_pool_merges_modes_deduplicates_docs_and_blinds_judge_pairs(self) -> None:
         pools = build_candidate_pool(
             itb_rows={"6:chunk-1": {"Chunk Text": "Steam turbine foundation requirement"}},
@@ -45,9 +70,12 @@ class EvaluationServiceTest(unittest.TestCase):
         self.assertEqual(len(pools), 1)
         self.assertEqual({candidate["doc_id"] for candidate in pools[0]["candidates"]}, {"A", "B", "C"})
         candidate_b = next(candidate for candidate in pools[0]["candidates"] if candidate["doc_id"] == "B")
-        self.assertEqual(candidate_b["source_modes"], ["keyword", "semantic"])
-        self.assertEqual(candidate_b["source_ranks"], {"keyword": 2, "semantic": 1})
+        self.assertNotIn("embedding", candidate_b)
+        self.assertNotIn("cross_encoder_score", candidate_b)
+        self.assertNotIn("source_modes", candidate_b)
+        self.assertNotIn("source_ranks", candidate_b)
         self.assertEqual({pair["mdl"]["doc_id"] for pair in pairs}, {"A", "B", "C"})
+        self.assertNotIn("embedding", pairs[0]["mdl"])
         self.assertNotIn("cross_encoder_score", pairs[0]["mdl"])
         self.assertNotIn("source_modes", pairs[0]["mdl"])
 
@@ -94,9 +122,85 @@ class EvaluationServiceTest(unittest.TestCase):
         self.assertEqual({pair["mdl"]["source_file"] for pair in pairs}, {"R&N_MDL.xlsx"})
         self.assertEqual({pair["mdl"]["document_no"] for pair in pairs}, {"001", "002"})
 
+    def test_reference_pool_uses_minimal_source_grounded_itb_fields(self) -> None:
+        pools = build_reference_candidate_pool(
+            {
+                "7:chunk-1": {
+                    "Document": "R&N_ITB",
+                    "Chunk ID": "chunk-1",
+                    "Page": "120",
+                    "Section": "7",
+                    "Section Path": "Section > Generated path",
+                    "Hierarchy Context": "7. Mechanical requirements",
+                    "1st Depth": "Mechanical",
+                    "2nd Depth": "Cooling Water",
+                    "Keywords": "cooling water, pump",
+                    "Search Query": "cooling water pump generated query",
+                    "Chunk Text": "Cooling water pump requirement",
+                }
+            },
+            [_candidate("A", 1.0, source_file="R&N_MDL.xlsx", document_no="001", title="Pump")],
+        )
+
+        itb = pools[0]["itb"]
+        self.assertEqual(
+            itb,
+            {
+                "document": "R&N_ITB",
+                "chunk_id": "chunk-1",
+                "page": "120",
+                "section": "7",
+                "hierarchy_context": "7. Mechanical requirements",
+                "depths": {"1st Depth": "Mechanical", "2nd Depth": "Cooling Water"},
+                "keywords": "cooling water, pump",
+                "chunk_text": "Cooling water pump requirement",
+            },
+        )
+        self.assertNotIn("section_path", itb)
+        self.assertNotIn("search_query", itb)
+
     def test_reference_pool_fails_when_neo4j_source_has_no_candidates(self) -> None:
         with self.assertRaisesRegex(ValueError, "No MDL candidates found"):
             load_reference_mdl_candidates(_Neo4jConn([]), "R&N_MDL.xlsx")
+
+    def test_reference_search_pool_uses_matching_search_inside_reference_source(self) -> None:
+        conn = _Neo4jConn(
+            [
+                _candidate("A", 1.0, source_file="R&N_MDL.xlsx", document_no="001", title="Pump"),
+                _candidate("B", 0.9, source_file="R&N_MDL.xlsx", document_no="002", title="Valve"),
+            ]
+        )
+        pools = build_reference_search_candidate_pool(
+            {
+                "7:chunk-1": {
+                    "Document": "R&N_ITB",
+                    "Page": "120",
+                    "Section": "7",
+                    "Hierarchy Context": "7. Mechanical requirements",
+                    "1st Depth": "Mechanical",
+                    "2nd Depth": "Cooling Water",
+                    "Keywords": "cooling water, pump",
+                    "Chunk Text": "Cooling water pump requirement",
+                }
+            },
+            conn,
+            EvaluationConfig(
+                model="pool-only",
+                modes=("keyword",),
+                reference_retrieval_candidate_limit=2,
+                reference_pool_top_k=1,
+            ),
+            "R&N_MDL.xlsx",
+            "TestMDLDocument",
+            cross_encoder_reranker=_RecordingReferenceReranker(),
+        )
+
+        self.assertEqual(len(pools), 1)
+        self.assertEqual([candidate["doc_id"] for candidate in pools[0]["candidates"]], ["B"])
+        self.assertNotIn("source_modes", pools[0]["candidates"][0])
+        self.assertNotIn("cross_encoder_score", pools[0]["candidates"][0])
+        self.assertEqual(conn.last_parameters["included_source_text"], "R&N_MDL.xlsx")
+        self.assertEqual(conn.last_parameters["excluded_source_text"], "")
 
     def test_service_judges_all_rows_and_verifies_all_rows(self) -> None:
         pools = build_candidate_pool(
@@ -143,16 +247,15 @@ class EvaluationServiceTest(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as directory:
             base = Path(directory)
-            judgments_path = base / "judgments.json"
-            judgments_path.write_text(json.dumps([{"judgment_id": "old"}]), encoding="utf-8")
+            resume_state_path = base / "resume_state.json"
             service.judge_to_files(
                 pools,
-                judgments_path,
-                base / "verifications.json",
+                resume_state_path,
                 base / "ground_truth.csv",
             )
-            judgments = json.loads(judgments_path.read_text(encoding="utf-8"))
-            verifications = json.loads((base / "verifications.json").read_text(encoding="utf-8"))
+            resume_state = json.loads(resume_state_path.read_text(encoding="utf-8"))
+            judgments = resume_state["judgments"]
+            verifications = resume_state["verifications"]
 
         self.assertEqual(len(judgments), 2)
         self.assertEqual([call["messages"][0]["content"] for call in client.calls], ["judge prompt", "verify prompt"])
@@ -167,6 +270,54 @@ class EvaluationServiceTest(unittest.TestCase):
             {row["judgment_id"] for row in verifications},
             {pair_by_doc["A"]["judgment_id"], pair_by_doc["B"]["judgment_id"]},
         )
+
+    def test_service_can_write_only_final_positive_and_negative_outputs(self) -> None:
+        pools = build_candidate_pool(
+            itb_rows={"7:chunk-1": {"Chunk Text": "Cooling water requirement"}},
+            records_by_source={("7", "hybrid"): [_matching_record("chunk-1", [_candidate("A", 1.0)])]},
+            top_k=1,
+        )
+        pair = iter_judge_pairs(pools)[0]
+        client = _ChatClient(
+            [
+                {"results": [_judgment(pair, relevance=3, confidence=0.95)]},
+                {
+                    "results": [
+                        {
+                            "judgment_id": pair["judgment_id"],
+                            "relevance": 3,
+                            "confidence": 0.95,
+                            "agrees": True,
+                        }
+                    ]
+                },
+            ]
+        )
+        service = GroundTruthService(
+            EvaluationConfig(model="deployment", modes=("hybrid",), verify=True, batch_delay_seconds=0),
+            client,
+            "judge prompt",
+            "verify prompt",
+            sleep=lambda _: None,
+        )
+
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            positive_path = base / "ground_truth_positive.csv"
+            negative_path = base / "ground_truth_negative.csv"
+            service.judge_to_files(
+                pools,
+                resume_state_path=None,
+                ground_truth_path=None,
+                positive_path=positive_path,
+                negative_path=negative_path,
+            )
+
+            self.assertTrue(positive_path.exists())
+            self.assertTrue(negative_path.exists())
+            self.assertFalse((base / "judgments.json").exists())
+            self.assertFalse((base / "resume_state.json").exists())
+            self.assertFalse((base / "ground_truth.csv").exists())
 
     def test_service_can_resume_existing_judgments(self) -> None:
         pools = build_candidate_pool(
@@ -192,15 +343,17 @@ class EvaluationServiceTest(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as directory:
             base = Path(directory)
-            judgments_path = base / "judgments.json"
-            judgments_path.write_text(json.dumps([existing_judgment]), encoding="utf-8")
+            resume_state_path = base / "resume_state.json"
+            resume_state_path.write_text(
+                json.dumps({"judgments": [existing_judgment], "verifications": []}),
+                encoding="utf-8",
+            )
             service.judge_to_files(
                 pools,
-                judgments_path,
-                base / "verifications.json",
+                resume_state_path,
                 base / "ground_truth.csv",
             )
-            judgments = json.loads(judgments_path.read_text(encoding="utf-8"))
+            judgments = json.loads(resume_state_path.read_text(encoding="utf-8"))["judgments"]
 
         self.assertEqual(len(judgments), 2)
         self.assertEqual(len(client.calls), 1)
@@ -250,13 +403,13 @@ class EvaluationServiceTest(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as directory:
             base = Path(directory)
+            resume_state_path = base / "resume_state.json"
             service.judge_to_files(
                 pools,
-                base / "judgments.json",
-                base / "verifications.json",
+                resume_state_path,
                 base / "ground_truth.csv",
             )
-            judgments = json.loads((base / "judgments.json").read_text(encoding="utf-8"))
+            judgments = json.loads(resume_state_path.read_text(encoding="utf-8"))["judgments"]
 
         self.assertEqual(len(judgments), 26)
         self.assertEqual(len(client.calls), 2)
@@ -292,13 +445,13 @@ class EvaluationServiceTest(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as directory:
             base = Path(directory)
+            resume_state_path = base / "resume_state.json"
             service.judge_to_files(
                 pools,
-                base / "judgments.json",
-                base / "verifications.json",
+                resume_state_path,
                 base / "ground_truth.csv",
             )
-            judgments = json.loads((base / "judgments.json").read_text(encoding="utf-8"))
+            judgments = json.loads(resume_state_path.read_text(encoding="utf-8"))["judgments"]
 
         self.assertEqual(len(judgments), 2)
         self.assertEqual(len(client.calls), 2)
@@ -329,14 +482,15 @@ class EvaluationServiceTest(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as directory:
             base = Path(directory)
+            resume_state_path = base / "resume_state.json"
             service.judge_to_files(
                 pools,
-                base / "judgments.json",
-                base / "verifications.json",
+                resume_state_path,
                 base / "ground_truth.csv",
             )
-            judgments = json.loads((base / "judgments.json").read_text(encoding="utf-8"))
-            verifications = json.loads((base / "verifications.json").read_text(encoding="utf-8"))
+            resume_state = json.loads(resume_state_path.read_text(encoding="utf-8"))
+            judgments = resume_state["judgments"]
+            verifications = resume_state["verifications"]
 
         self.assertEqual([row["judgment_id"] for row in judgments], [pair["judgment_id"] for pair in pairs])
         self.assertEqual([row["judgment_id"] for row in verifications], [pair["judgment_id"] for pair in pairs])
@@ -384,14 +538,18 @@ class EvaluationServiceTest(unittest.TestCase):
         ]
 
         with tempfile.TemporaryDirectory() as directory:
-            path = Path(directory) / "ground_truth_high_precision.csv"
-            write_high_precision_ground_truth(path, judgments, verifications)
-            rows = path.read_text(encoding="utf-8-sig").splitlines()
+            base = Path(directory)
+            positive_path = base / "ground_truth_positive.csv"
+            negative_path = base / "ground_truth_negative.csv"
+            write_high_precision_ground_truth(positive_path, negative_path, judgments, verifications)
+            positive_rows = positive_path.read_text(encoding="utf-8-sig").splitlines()
+            negative_rows = negative_path.read_text(encoding="utf-8-sig").splitlines()
 
-        self.assertEqual(len(rows), 4)
-        self.assertIn(",3,0.9,positive", rows[1])
-        self.assertIn(",0,0.2,negative", rows[2])
-        self.assertIn(",2,0.9,negative", rows[3])
+        self.assertEqual(len(positive_rows), 2)
+        self.assertEqual(len(negative_rows), 3)
+        self.assertIn(",3,0.9,positive", positive_rows[1])
+        self.assertIn(",0,0.2,negative", negative_rows[1])
+        self.assertIn(",2,0.9,negative", negative_rows[2])
 
     def test_resolved_judgments_clamp_llm_scores_to_schema(self) -> None:
         pair = {
@@ -424,14 +582,15 @@ class EvaluationServiceTest(unittest.TestCase):
 class _Neo4jConn:
     def __init__(self, records: list[dict]) -> None:
         self.records = records
+        self.last_parameters = {}
 
     def session(self):
-        return _Neo4jSession(self.records)
+        return _Neo4jSession(self)
 
 
 class _Neo4jSession:
-    def __init__(self, records: list[dict]) -> None:
-        self.records = records
+    def __init__(self, conn: _Neo4jConn) -> None:
+        self.conn = conn
 
     def __enter__(self):
         return self
@@ -440,7 +599,11 @@ class _Neo4jSession:
         return None
 
     def run(self, query, **parameters):
-        return self.records
+        self.conn.last_parameters = parameters
+        limit = parameters.get("limit")
+        if isinstance(limit, int) and limit > 0:
+            return self.conn.records[:limit]
+        return self.conn.records
 
 
 class _ChatClient:
@@ -512,6 +675,14 @@ class _EchoCompletions:
         return type("Response", (), {"choices": [choice]})()
 
 
+class _RecordingReferenceReranker:
+    def rerank(self, query_text: str, candidates: list[dict], top_k: int) -> list[dict]:
+        reranked = []
+        for index, candidate in enumerate(reversed(candidates), start=1):
+            reranked.append({**candidate, "cross_encoder_score": float(3 - index), "final_rank": index})
+        return reranked[:top_k]
+
+
 def _matching_record(chunk_id: str, candidates: list[dict]) -> dict:
     return {
         "document": "R&N_ITB",
@@ -537,6 +708,7 @@ def _candidate(
         "title": title or f"Document {doc_id}",
         "equipment": "Steam Turbine",
         "deliverable": "Design Criteria",
+        "embedding": [1.0, 0.0],
         "cross_encoder_score": score,
     }
 

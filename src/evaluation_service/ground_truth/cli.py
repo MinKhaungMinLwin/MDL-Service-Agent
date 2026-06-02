@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 
 from common.config import required_env
+from common.embedding_client import AzureEmbeddingService
 from common.neo4j_client import Neo4jConnection
 from common.openai_client import build_azure_openai_client
 from common.prompts import load_prompt
@@ -16,6 +17,8 @@ from evaluation_service.ground_truth.service import (
     EvaluationConfig,
     GroundTruthService,
 )
+from matching_service.cli import DEFAULT_CROSS_ENCODER_MODEL
+from matching_service.ranking import CrossEncoderReranker
 
 DEFAULT_BASE_DIR = Path("output") / "current_test_env"
 DEFAULT_EXTRACT_DIR = DEFAULT_BASE_DIR / "itb_extract"
@@ -66,10 +69,16 @@ def build_ground_truth(argv: list[str] | None = None) -> None:
     parser.add_argument("--reference-source-file", default=DEFAULT_REFERENCE_SOURCE_FILE)
     parser.add_argument("--mdl-node-label", default=DEFAULT_MDL_NODE_LABEL)
     parser.add_argument(
-        "--reference-candidate-limit",
+        "--reference-retrieval-candidates",
         type=int,
-        default=int(os.getenv("ITB_EVAL_REFERENCE_CANDIDATE_LIMIT", "0")),
-        help="Optional limit for reference MDL candidates. Use 0 to load all.",
+        default=int(os.getenv("ITB_EVAL_REFERENCE_RETRIEVAL_CANDIDATES", "300")),
+        help="Candidates to retrieve per ITB chunk and mode before cross-encoder reranking.",
+    )
+    parser.add_argument(
+        "--reference-pool-top-k",
+        type=int,
+        default=int(os.getenv("ITB_EVAL_REFERENCE_POOL_TOP_K", "100")),
+        help="Maximum candidates to keep per ITB chunk for each reference search mode.",
     )
     parser.add_argument("--pool-top-k", type=int, default=int(os.getenv("ITB_EVAL_POOL_TOP_K", "20")))
     parser.add_argument("--batch-size", type=int, default=int(os.getenv("ITB_EVAL_BATCH_SIZE", "5")))
@@ -80,6 +89,21 @@ def build_ground_truth(argv: list[str] | None = None) -> None:
     )
     parser.add_argument("--llm-retries", type=int, default=int(os.getenv("ITB_EVAL_LLM_RETRIES", "2")))
     parser.add_argument("--max-concurrency", type=int, default=int(os.getenv("ITB_EVAL_MAX_CONCURRENCY", "1")))
+    parser.add_argument(
+        "--max-itb-chunks",
+        type=int,
+        default=int(os.getenv("ITB_EVAL_MAX_ITB_CHUNKS", "0")),
+        help="Limit the number of ITB chunks for quick test runs. Use 0 to process all chunks.",
+    )
+    parser.add_argument(
+        "--cross-encoder-model",
+        default=os.getenv("ITB_CROSS_ENCODER_MODEL", DEFAULT_CROSS_ENCODER_MODEL),
+    )
+    parser.add_argument(
+        "--cross-encoder-batch-size",
+        type=int,
+        default=int(os.getenv("ITB_CROSS_ENCODER_BATCH_SIZE", "32")),
+    )
     parser.add_argument("--verify", action="store_true")
     parser.add_argument("--resume", action="store_true")
     parser.add_argument("--pool-only", action="store_true")
@@ -92,21 +116,30 @@ def build_ground_truth(argv: list[str] | None = None) -> None:
         parser.error(f"No ITB extract files found in {args.extract_dir}")
 
     stem = DEFAULT_OUTPUT_STEM
-    pool_path = args.output_dir / f"{stem}_candidate_pool.json"
+    pool_path = args.output_dir / f"{stem}_candidate_pool.json" if args.pool_only else None
     config_options = {
         "sections": sections,
         "modes": tuple(args.modes),
         "pool_top_k": args.pool_top_k,
+        "reference_retrieval_candidate_limit": args.reference_retrieval_candidates,
+        "reference_pool_top_k": args.reference_pool_top_k,
         "batch_size": args.batch_size,
         "judge_candidates_per_call": args.judge_candidates_per_call,
         "llm_retries": args.llm_retries,
         "max_concurrency": args.max_concurrency,
+        "max_itb_chunks": args.max_itb_chunks,
         "verify": args.verify,
         "resume": args.resume,
     }
     if args.pool_only:
         config = EvaluationConfig(model="pool-only", **config_options)
-        service = GroundTruthService(config, client=None, judge_prompt="")
+        service = GroundTruthService(
+            config,
+            client=None,
+            judge_prompt="",
+            embedding_service=_build_embedding_service(config.modes, args.candidate_source),
+            cross_encoder_reranker=_build_cross_encoder_reranker(args, args.candidate_source),
+        )
         if args.candidate_source == "reference-mdl":
             with Neo4jConnection() as conn:
                 service.build_reference_pool(
@@ -115,7 +148,6 @@ def build_ground_truth(argv: list[str] | None = None) -> None:
                     pool_path,
                     args.reference_source_file,
                     args.mdl_node_label,
-                    args.reference_candidate_limit,
                 )
         else:
             service.build_pool(args.extract_dir, args.matching_dir, pool_path)
@@ -130,6 +162,8 @@ def build_ground_truth(argv: list[str] | None = None) -> None:
         ),
         judge_prompt=load_prompt(args.judge_prompt_file),
         verify_prompt=load_prompt(args.verify_prompt_file) if args.verify else "",
+        embedding_service=_build_embedding_service(config.modes, args.candidate_source),
+        cross_encoder_reranker=_build_cross_encoder_reranker(args, args.candidate_source),
     )
     if args.candidate_source == "reference-mdl":
         with Neo4jConnection() as conn:
@@ -139,17 +173,28 @@ def build_ground_truth(argv: list[str] | None = None) -> None:
                 pool_path,
                 args.reference_source_file,
                 args.mdl_node_label,
-                args.reference_candidate_limit,
             )
     else:
         pools = service.build_pool(args.extract_dir, args.matching_dir, pool_path)
     service.judge_to_files(
         pools=pools,
-        judgments_path=args.output_dir / f"{stem}_llm_judgments.json",
-        verifications_path=args.output_dir / f"{stem}_llm_verifications.json",
-        ground_truth_path=args.output_dir / f"{stem}_ground_truth.csv",
-        high_precision_path=args.output_dir / f"{stem}_ground_truth_high_precision.csv" if args.verify else None,
+        resume_state_path=args.output_dir / f"{stem}_ground_truth_resume_state.json" if args.resume else None,
+        ground_truth_path=None if args.verify else args.output_dir / f"{stem}_ground_truth.csv",
+        positive_path=args.output_dir / f"{stem}_ground_truth_positive.csv" if args.verify else None,
+        negative_path=args.output_dir / f"{stem}_ground_truth_negative.csv" if args.verify else None,
     )
+
+
+def _build_embedding_service(modes: tuple[str, ...], candidate_source: str) -> AzureEmbeddingService | None:
+    if candidate_source == "reference-mdl" and any(mode in {"semantic", "hybrid"} for mode in modes):
+        return AzureEmbeddingService()
+    return None
+
+
+def _build_cross_encoder_reranker(args: argparse.Namespace, candidate_source: str) -> CrossEncoderReranker | None:
+    if candidate_source == "reference-mdl":
+        return CrossEncoderReranker(args.cross_encoder_model, batch_size=args.cross_encoder_batch_size)
+    return None
 
 
 if __name__ == "__main__":
