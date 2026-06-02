@@ -130,6 +130,17 @@ def schedule_generate(
             ),
         ),
     ] = False,
+    use_semantic_activities: Annotated[
+        bool,
+        Query(
+            description=(
+                "Use BM25 + semantic + RRF for CCPP guide schedule activity matching. "
+                "Embeds all activity queries once per request; activity embeddings are cached on disk. "
+                "Improves anchor-date accuracy vs BM25-only matching. "
+                "Requires Azure OpenAI embedding credentials."
+            ),
+        ),
+    ] = False,
     limit: ScheduleLimit = 0,
 ) -> dict[str, object]:
     """Generate FA/FC schedule date ranges from an MDL classified CSV."""
@@ -153,6 +164,7 @@ def schedule_generate(
         limit=limit,
         ntp_date=ntp_date,
         semantic_cache_dir=semantic_cache_dir,
+        use_semantic_activities=use_semantic_activities,
     )
     return _file_response("generated_schedule", input_path, xlsx_path, json_path)
 

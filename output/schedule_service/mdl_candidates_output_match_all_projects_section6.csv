@@ -1,124 +1,91 @@
 ﻿Source File,Document No,Title,Equipment,Building,System,Deliverable,Note,match_score,itb_sources
-itb_candidates,,Calculation of Air Cooled Condenser & Duct Support Foundation,Air Cooled Condenser,,,CALCULATION,,1.4345,"R&N_ITB:p80, 81(score=1.43)"
-itb_candidates,,Air Cooled Condenser Fan Technical Specification,Air Cooled Condenser,,,TECHNICAL SPECIFICATION,,1.4191,"R&N_ITB:p80, 81(score=1.42)"
-itb_candidates,,CEP & CONDENSER FOUNDATION (CCPP PLANT AREA) CALCULATION,Condensate Extraction Pump,,,CALCULATION,,1.4117,"R&N_ITB:p80, 81(score=1.41)"
-itb_candidates,,CALCULATION OF AIR COOLED CONDENSER FOUNDATION,Air Cooled Condenser,,,CALCULATION,,1.4112,"R&N_ITB:p80, 81(score=1.41)"
-itb_candidates,,Air Cooled Condenser FAN CONTROL STEPS,Air Cooled Condenser,,,,,1.4105,"R&N_ITB:p80, 81(score=1.41)"
-itb_candidates,,Reliability Test,Commissioning Procedure,,,TEST,,1.3606,"R&N_ITB:p88(score=1.36) | R&N_ITB:p88, 89(score=1.35) | R&N_ITB:p89(score=1.33)"
-itb_candidates,,Capacity Test,Commissioning Procedure,,,TEST,,1.3479,R&N_ITB:p88(score=1.35)
-itb_candidates,,GENERATOR O&M MANUAL (Block #2),,,,MANUAL,,1.3479,R&N_ITB:p88(score=1.35)
-itb_candidates,,O&M MANUAL FOR GENERATOR PROTECTION RELAY,,,,MANUAL,,1.3464,R&N_ITB:p88(score=1.35) | R&N_ITB:p89(score=1.33)
-itb_candidates,,DESIGN CRITERIA POWER CABLE,,,,DESIGN CRITERIA,,1.3460,R&N_ITB:p88(score=1.35)
-itb_candidates,,Power Plant Layout,,,,LAYOUT,,1.3410,R&N_ITB:p89(score=1.34)
-itb_candidates,,OPERATION & MAINTENANCE MANUAL,ACWP,,,OPERATION & MAINTENANCE MANUAL,,1.3384,R&N_ITB:p89(score=1.34)
-itb_candidates,,RELIABILITY TEST,,,,TEST,,1.3380,"R&N_ITB:p88, 89(score=1.34)"
-itb_candidates,,NET DEPENDABLE CAPACITY TEST,,,,TEST,,1.3270,"R&N_ITB:p88, 89(score=1.33)"
-itb_candidates,,Plant Control & Monitoring Concept Block Diagram,Condensate Extraction Pump,,,PLAN,,1.3230,"R&N_ITB:p88, 89(score=1.32)"
-itb_candidates,,STG Training Program (on site),Steam Turbine & Generator,,,,,1.2036,R&N_ITB:p89(score=1.20)
-itb_candidates,,DCS IO Database(For Block 2),DCS,,,DATABASE,,1.1830,"R&N_ITB:p88, 89(score=1.18)"
-itb_candidates,,GSUT / UAT / OVERALL PROTECTION FOR GTG UNIT,Gas Turbine Generator,,,ELECTRICAL CONTROL LOGIC DIAGRAM,,1.0790,R&N_ITB:p91(score=1.08) | R&N_ITB:p92(score=0.92)
-itb_candidates,,PERFORMANCE AND OPERATIONAL DATA,Heat Recovery Steam Generator,,,OPERATIONAL DATA,,0.9770,"R&N_ITB:p82(score=0.96) | R&N_ITB:p82(score=0.94) | R&N_ITB:p82, 83(score=0.98)"
-itb_candidates,,GTG Foundation Design Requirements,Gas Turbine Generator,,,DESIGN REQUIREMENTS,,0.9743,R&N_ITB:p81(score=0.97) | R&N_ITB:p84(score=0.95)
-itb_candidates,,CONTROL SYSTEM DESCRIPTION,Gas Turbine Generator,,,SYSTEM DESCRIPTION,,0.9695,R&N_ITB:p94(score=0.97) | R&N_ITB:p94(score=0.94)
-itb_candidates,,SCR PERFORMANCE SUMMARY INCLUDING AMMONIA CONSUMPTION FOR HRSG SCR,Heat Recovery Steam Generator,,,SUMMARY,,0.9687,"R&N_ITB:p82, 83(score=0.97)"
-itb_candidates,,SYSTEM DESCRIPTION FOR WASTE WATER TREATMENT PLANT,Water Treatment Plant,,,SYSTEM DESCRIPTION,,0.9658,"R&N_ITB:p86, 87(score=0.97)"
-itb_candidates,,CONTROL SYSTEM OVERVIEW,Gas Turbine Generator,,,OVERVIEW,,0.9643,R&N_ITB:p94(score=0.96) | R&N_ITB:p94(score=0.94) | R&N_ITB:p95(score=0.91) | R&N_ITB:p95(score=0.92)
-itb_candidates,,GENERATOR CAPABILITY CURVES AND DATA,Gas Turbine Generator,,,CURVES,,0.9623,"R&N_ITB:p95, 96(score=0.96)"
-itb_candidates,,SYSTEM CONFIGURATION FOR HRSG SCR,Heat Recovery Steam Generator,,,,,0.9617,R&N_ITB:p79(score=0.96)
-itb_candidates,,HRSG SYSTEM CONFIGURATION DIAGRAM,Heat Recovery Steam Generator,,,DIAGRAM,,0.9606,R&N_ITB:p79(score=0.96)
-itb_candidates,,ST Condenser Tube Cleaning System  P&I Diagram,Steam Turbine,,,P&I DIAGRAM,,0.9606,R&N_ITB:p81(score=0.96)
-itb_candidates,,HRSG Control Valves and Desuperheater,Heat Recovery Steam Generator,,,,,0.9592,"R&N_ITB:p82, 83(score=0.96)"
-itb_candidates,,HRSG SYSTEM CONFIGURATION FOR CEMS,Heat Recovery Steam Generator,,,,,0.9571,R&N_ITB:p79(score=0.96)
-itb_candidates,,HRSG,Heat Recovery Steam Generator,,,,,0.9568,"R&N_ITB:p82, 83(score=0.96)"
-itb_candidates,,HRSG Flow Elements,Heat Recovery Steam Generator,,,,,0.9563,"R&N_ITB:p82, 83(score=0.96)"
-itb_candidates,,GTG System Description Fuel Oil,Gas Turbine Generator,,,SYSTEM DESCRIPTION,,0.9548,R&N_ITB:p81(score=0.95)
-itb_candidates,,ST Condenser Vacuum Pump Terminal Box,Steam Turbine,,,,,0.9547,R&N_ITB:p81(score=0.95)
-itb_candidates,,GTG Auxiliary System Layout,Gas Turbine Generator,,,LAYOUT,,0.9541,R&N_ITB:p90(score=0.89) | R&N_ITB:p94(score=0.95) | R&N_ITB:p95(score=0.92)
-itb_candidates,,Air Cooled Condenser Instrument List,Air Cooled Condenser,,,INSTRUMENT LIST,,0.9538,R&N_ITB:p81(score=0.95)
-itb_candidates,,GTG System Description Gas Turbine Instrumentation,Gas Turbine Generator,,,SYSTEM DESCRIPTION,,0.9538,R&N_ITB:p94(score=0.95)
-itb_candidates,,Process idividual specification for Water treatment system,Water Treatment Plant,,,SPECIFICATION,,0.9532,"R&N_ITB:p86(score=0.92) | R&N_ITB:p86, 87(score=0.95)"
-itb_candidates,,INSTRUMENT LIST FOR WASTE WATER TREATMENT PLANT,Water Treatment Plant,,,INSTRUMENT LIST,,0.9524,"R&N_ITB:p86, 87(score=0.95)"
-itb_candidates,,WASTE WATER TREATMENT PLANT PLAN AND SECTION,Water Treatment Plant,,,PLAN AND SECTION,,0.9522,"R&N_ITB:p86(score=0.91) | R&N_ITB:p86, 87(score=0.95)"
-itb_candidates,,HRSG PERFORMANCE AND OPERATIONAL DATA,Heat Recovery Steam Generator,,,OPERATIONAL DATA,,0.9521,R&N_ITB:p79(score=0.93) | R&N_ITB:p79(score=0.92) | R&N_ITB:p82(score=0.95) | R&N_ITB:p82(score=0.95)
-itb_candidates,,HRSG ARRANGEMENT OF MAIN STACK & FIELD ERECTION,Heat Recovery Steam Generator,,,ARRANGEMENT,,0.9520,R&N_ITB:p79(score=0.95)
-itb_candidates,,BYPASS & PRDS OPERATING AND MAINTENANCE MANUAL,BYPASS & PRDS,,,MANUAL,,0.9515,R&N_ITB:p83(score=0.95)
-itb_candidates,,GTG System Description Instrument Air System,Gas Turbine Generator,,,SYSTEM DESCRIPTION,,0.9515,R&N_ITB:p94(score=0.95)
-itb_candidates,,General Arrangement HRSG Unit MCC,Heat Recovery Steam Generator,,,GENERAL ARRANGEMENT,,0.9511,R&N_ITB:p79(score=0.95)
-itb_candidates,,"DESIGN REQUIREMENTS FOR VT & SURGE, BAB36",Gas Turbine Generator,,,DESIGN REQUIREMENTS,,0.9508,R&N_ITB:p81(score=0.95) | R&N_ITB:p84(score=0.94)
-itb_candidates,,GTG System Description Fuel Gas,Gas Turbine Generator,,,SYSTEM DESCRIPTION,,0.9501,R&N_ITB:p81(score=0.95)
-itb_candidates,,TEHCNICAL DATA SHEET FOR WASTE WATER TREATMENT PLANT,Water Treatment Plant,,,DATA SHEET,,0.9498,"R&N_ITB:p86(score=0.92) | R&N_ITB:p86, 87(score=0.95)"
-itb_candidates,,ULSD STORAGE TANK FOUNDATION (CCPP PLANT AREA) DETAIL,,,,PLAN,,0.9474,R&N_ITB:p81(score=0.95)
-itb_candidates,,FUEL OIL FALSE START STORAGE TANK PIT PLAN & SECTION,Fuel Oil System,,,PLAN & SECTION,,0.9459,R&N_ITB:p81(score=0.95)
-itb_candidates,,OPERATION & MAINTENANCE Manual for Metering System (Gas),,,,OPERATION & MAINTENANCE MANUAL,,0.9456,R&N_ITB:p91(score=0.95)
-itb_candidates,,Air Cooled Condenser System Description,Air Cooled Condenser,,,SYSTEM DESCRIPTION,,0.9452,R&N_ITB:p81(score=0.95)
-itb_candidates,,GTG System Description Gas Fuel System,Gas Turbine Generator,,,SYSTEM DESCRIPTION,,0.9451,R&N_ITB:p81(score=0.95)
-itb_candidates,,ST Vent Steam Condenser Operating and Maintenance Manual,Steam Turbine,,,MANUAL,,0.9447,R&N_ITB:p81(score=0.94)
-itb_candidates,,CONTROL LOGIC DIAGRAM FUEL OIL/GAS SYSTEM BOP,Fuel Oil System,,,CONTROL LOGIC DIAGRAM,,0.9439,R&N_ITB:p93(score=0.94) | R&N_ITB:p94(score=0.94)
-itb_candidates,,ULSD STORAGE TANK FOUNDATION (CCPP PLANT AREA) PLAN AND SECTION,,,,PLAN AND SECTION,,0.9434,R&N_ITB:p81(score=0.94)
-itb_candidates,,SEQUENCES & CONTROLS,Heat Recovery Steam Generator,,,,,0.9428,R&N_ITB:p82(score=0.94)
-itb_candidates,,Technical Datasheet for Bypass & PRDS,,,,TECHNICAL DATASHEET,,0.9428,R&N_ITB:p83(score=0.94)
-itb_candidates,,BYPASS & PRDS PNEUMATIC DIAGRAM,BYPASS & PRDS,,,DIAGRAM,,0.9419,R&N_ITB:p83(score=0.94)
-itb_candidates,,ULSD STORAGE TANK FOUNDATION (CCPP PLANT AREA) REBAR DETAIL,,,,PLAN,,0.9418,R&N_ITB:p81(score=0.94)
-itb_candidates,,ULSD STORAGE TANK FOUNDATION (CCPP PLANT AREA) CALCULATION,,,,CALCULATION,,0.9413,R&N_ITB:p81(score=0.94)
-itb_candidates,,Main Building(GTG & HRSG Area),Heat Recovery Steam Generator,,,DATA,,0.9390,"R&N_ITB:p95, 96(score=0.94)"
-itb_candidates,,P&I DIAGRAM FOR GT ROTOR COOLING AIR COOLER SYSTEM,Gas Turbine Generator,,,P&I DIAGRAM,,0.9388,R&N_ITB:p94(score=0.94)
-itb_candidates,,GTG ELECTRICAL PROTECTION AND OPERATION SETTINGS,Gas Turbine Generator,,,SETTINGS,,0.9379,R&N_ITB:p94(score=0.94) | R&N_ITB:p95(score=0.92)
-itb_candidates,,OPERATION & MAINTENANCE Manual for Bypass Valve & PRDS,,,,OPERATION & MAINTENANCE MANUAL,,0.9363,R&N_ITB:p83(score=0.94)
-itb_candidates,,GTG System Description Air Intake System,Gas Turbine Generator,,,SYSTEM DESCRIPTION,,0.9361,R&N_ITB:p94(score=0.94)
-itb_candidates,,ST AVR mathematical model,Steam Turbine,,,MODEL,,0.9361,"R&N_ITB:p95, 96(score=0.94)"
-itb_candidates,,GTG System Description Cooling And Sealing Air System,Gas Turbine Generator,,,SYSTEM DESCRIPTION,,0.9359,R&N_ITB:p95(score=0.94)
-itb_candidates,,GTG System Description Lube Oil System,Gas Turbine Generator,,,SYSTEM DESCRIPTION,,0.9344,R&N_ITB:p93(score=0.93)
-itb_candidates,,FUNCTIONAL LOOP DIAGRAM FUEL OIL/GAS SYSTEM BOP,Fuel Oil System,,,FUNCTIONAL LOOP DIAGRAM,,0.9341,R&N_ITB:p93(score=0.93) | R&N_ITB:p94(score=0.93)
-itb_candidates,,"GENERATOR SEAL OIL SUPPLY UNIT OUTLINE (Block #3,4)",,,,OUTLINE,,0.9336,R&N_ITB:p95(score=0.93)
-itb_candidates,,GTG Turbine Foundation Design Requirements,Gas Turbine Generator,,,DESIGN REQUIREMENTS,,0.9332,R&N_ITB:p84(score=0.93)
-itb_candidates,,Technical Datasheet for Metering System (Gas),,,,TECHNICAL DATASHEET,,0.9328,R&N_ITB:p91(score=0.93)
-itb_candidates,,BYPASS & PRDS DATA SHEET,BYPASS & PRDS,,,DATA SHEET,,0.9324,R&N_ITB:p83(score=0.93)
-itb_candidates,,Technical Datasheet for Metering System (Utility),,,,TECHNICAL DATASHEET,,0.9295,R&N_ITB:p91(score=0.93)
-itb_candidates,,MV/LV SWGR,,,,,,0.9289,R&N_ITB:p92(score=0.93)
-itb_candidates,,ELECTRICAL CONTROL LOGIC DIAGRAM GSUT/UAT/OVERALL PROTECTION FOR GTG,Gas Turbine Generator,,,ELECTRICAL CONTROL LOGIC DIAGRAM,,0.9280,R&N_ITB:p91(score=0.93)
-itb_candidates,,GSUT/UAT/OVERALL,,,,STUDY,,0.9275,R&N_ITB:p91(score=0.93)
-itb_candidates,,ROTOR COOLING AIR SYSTEM REQUIREMENTS,Gas Turbine Generator,,,REQUIREMENTS,,0.9274,R&N_ITB:p84(score=0.93)
-itb_candidates,,Electrical system description,Steam Turbine & Generator,,,SYSTEM DESCRIPTION,,0.9270,R&N_ITB:p92(score=0.93)
-itb_candidates,,"LIST OF OIL SYSTEM EQUIPMENTS (BLOCK #3,4)",Steam Turbine,,,LIST,,0.9261,R&N_ITB:p93(score=0.93)
-itb_candidates,,GAS TURBINE FUEL CHANGE-OVER TEST,Gas Turbine Generator,,,TEST,,0.9254,R&N_ITB:p93(score=0.93)
-itb_candidates,,GSUT / UAT / OVERALL PROTECTION FOR GTG UNIT,Gas Turbine Generator,,,STUDY,,0.9249,R&N_ITB:p91(score=0.92)
-itb_candidates,,Technical Specification for Air Intake Silencer Filter for Emergency Engine,,,,TECHNICAL SPECIFICATION,,0.9245,R&N_ITB:p85(score=0.92)
-itb_candidates,,"GSUT, UAT",,,,STUDY,,0.9245,R&N_ITB:p91(score=0.92)
-itb_candidates,,Technical Specification for Metering System  ULSD and LNG Pipeline,,,,TECHNICAL SPECIFICATION,,0.9244,R&N_ITB:p91(score=0.92)
-itb_candidates,,DATA SHEET FOR Silencer,Silencer,,,DATA SHEET,,0.9237,R&N_ITB:p85(score=0.92) | R&N_ITB:p85(score=0.92)
-itb_candidates,,OPERATION & MAINTENANCE Manual for Gas Turbine Generator,Gas Turbine Generator,,,OPERATION & MAINTENANCE MANUAL,,0.9232,R&N_ITB:p84(score=0.92)
-itb_candidates,,HRSG Protection System Description,Heat Recovery Steam Generator,,,SYSTEM DESCRIPTION,,0.9229,R&N_ITB:p92(score=0.92)
-itb_candidates,,HRSG SYSTEM DESCRIPTION,Heat Recovery Steam Generator,,,SYSTEM DESCRIPTION,,0.9225,R&N_ITB:p79(score=0.92) | R&N_ITB:p79(score=0.92)
-itb_candidates,,HRSG Protection System Diagram,Heat Recovery Steam Generator,,,DIAGRAM,,0.9219,R&N_ITB:p92(score=0.92)
-itb_candidates,,Hazardous Area Classification,Plant Overall,,,HAZARDOUS AREA CLASSIFICATION,,0.9217,R&N_ITB:p83(score=0.92)
-itb_candidates,,HEAT RECOVERY STEAM GENERATOR FOUNDATION (CCPP PLANT AREA) CALCULATION,Heat Recovery Steam Generator,,,CALCULATION,,0.9216,R&N_ITB:p79(score=0.92)
-itb_candidates,,MV SWITCHGEAR,,,,ELECTRICAL CONTROL LOGIC DIAGRAM,,0.9210,R&N_ITB:p92(score=0.92)
-itb_candidates,,HAZARDOUS AREA CLASSIFICATION,,,,HAZARDOUS AREA CLASSIFICATION,,0.9206,R&N_ITB:p83(score=0.92) | R&N_ITB:p83(score=0.92)
-itb_candidates,,PERFORMANCE TEST PROCEDURE FOR AIR EMISSION,,,,TEST PROCEDURE,,0.9196,R&N_ITB:p83(score=0.92)
-itb_candidates,,GTG System Description Blow Off,Gas Turbine Generator,,,SYSTEM DESCRIPTION,,0.9195,R&N_ITB:p95(score=0.92)
-itb_candidates,,FUEL OIL SYSTEM,Fuel Oil System,,,CONTROL LOGIC DIAGRAM,,0.9192,R&N_ITB:p94(score=0.92)
-itb_candidates,,UFD Fuel Oil System,UFD,,,,,0.9171,R&N_ITB:p94(score=0.92)
-itb_candidates,,FUEL OIL SYSTEM,Fuel Oil System,,,CONTROL LOOP DIAGRAM,,0.9168,R&N_ITB:p94(score=0.92)
-itb_candidates,,HVAC SYSTEM GAS TURBINE BUILDING LOAD CALCULATION,HVAC,,,CALCULATION,,0.9165,R&N_ITB:p79(score=0.92)
-itb_candidates,,CALCULATION SHEET FOR WASTE WATER TREATMENT PLANT,Water Treatment Plant,,,CALCULATION SHEET,,0.9165,R&N_ITB:p86(score=0.92)
-itb_candidates,,POWER SUPPLY DISTRIBUTION DRAWING,Gas Turbine Generator,,,DRAWING,,0.9164,R&N_ITB:p95(score=0.92)
-itb_candidates,,FIELD INSTRUMENT MONITORING SYSTEM,DCS,,,,,0.9161,R&N_ITB:p93(score=0.92)
-itb_candidates,,MCC & 125VDC SINGLE LINE DIAGRAM,Gas Turbine Generator,,,SINGLE LINE DIAGRAM,,0.9153,R&N_ITB:p95(score=0.92)
-itb_candidates,,CALCULATION OF WASTE WATER TREATMENT PLANT,Water Treatment Plant,,,CALCULATION,,0.9150,R&N_ITB:p86(score=0.92)
-itb_candidates,,HAZARDOUS AREA CLASSIFICATION SPECIFICATION & DRAWING FOR DUCT BURNER SYSTEM,Heat Recovery Steam Generator,,,DRAWING,,0.9143,R&N_ITB:p83(score=0.91)
-itb_candidates,,DATA SHEET FOR SILENCER,,,,DATA SHEET,,0.9133,R&N_ITB:p85(score=0.91)
-itb_candidates,,SILENCER OPERATING AND MAINTENANCE MANUAL,SILENCER,,,MANUAL,,0.9112,R&N_ITB:p85(score=0.91)
-itb_candidates,,CALCULATION,"GTG #3,4,5 LEB",,,CALCULATION,,0.9091,"R&N_ITB:p81(score=0.91) | R&N_ITB:p84, 85(score=0.89)"
-itb_candidates,,CONTROL DESCRIPTION (PHILOSOPHY),Air Compressor,,,CONTROL DESCRIPTION,,0.9041,"R&N_ITB:p90, 91(score=0.90)"
-itb_candidates,,P&I DIAGRAM,Air Compressor,,,P&I DIAGRAM,,0.9026,"R&N_ITB:p90, 91(score=0.90)"
-itb_candidates,,PLANT INFORMATION HISTORIAN,DCS,,,PLAN,,0.9014,R&N_ITB:p93(score=0.90)
-itb_candidates,,GAS TURBINE GENERATOR FOUNDATION (CCPP PLANT AREA) CALCULATION,Gas Turbine Generator,,,CALCULATION,,0.9004,"R&N_ITB:p84, 85(score=0.90)"
-itb_candidates,,FUNCTIONAL DESIGN SPECIFICATION FOR PLANT INFORMATION SYSTEM,DCS,,,SPECIFICATION,,0.8992,R&N_ITB:p93(score=0.90)
-itb_candidates,,FUNCTIONAL DESIGN SPECIFICATION FOR SAFETY RELATED SYSTEM,DCS,,,SPECIFICATION,,0.8987,R&N_ITB:p93(score=0.90)
-itb_candidates,,"Condenser #3,4 Performance Curves","Condenser #3,4",,,PERFORMANCE CURVE,,0.8962,R&N_ITB:p97(score=0.90)
-itb_candidates,,DCS Power Distribution Concept Diagram,INC_Plant_Overall_Design,,,DIAGRAM,,0.8956,R&N_ITB:p93(score=0.90)
-itb_candidates,,GTG Noise Protection Concept,Gas Turbine Generator,,,,,0.8945,"R&N_ITB:p84, 85(score=0.89)"
-itb_candidates,,PLUMBING EQUIPMENT SCHEDULE,"GTG #1,2 LEB",,,SCHEDULE,,0.8944,"R&N_ITB:p96, 97(score=0.89)"
-itb_candidates,,GTG Foundation Loads Intensity,Gas Turbine Generator,,,,,0.8937,"R&N_ITB:p84, 85(score=0.89)"
-itb_candidates,,GAS TURBINE GENERATOR FOUNDATION (CCPP PLANT AREA) DETAIL,Gas Turbine Generator,,,PLAN,,0.8904,"R&N_ITB:p84, 85(score=0.89)"
-itb_candidates,,"ILLUMINATION LEVEL CALCULATION FOR HRSG#1,2 OF Main Building",Heat Recovery Steam Generator,,,CALCULATION,,0.8896,"R&N_ITB:p96, 97(score=0.89)"
+itb_candidates,,HRSG Performance and Operational Data,Heat Recovery Steam Generator,,,OPERATIONAL DATA,,0.8320,"R&N_ITB:p82(score=0.80) | R&N_ITB:p82, 83(score=0.82) | R&N_ITB:p82, 83(score=0.81) | R&N_ITB:p82, 83(score=0.83)"
+itb_candidates,,PERFORMANCE AND OPERATIONAL DATA,Heat Recovery Steam Generator,,,OPERATIONAL DATA,,0.8176,"R&N_ITB:p79(score=0.76) | R&N_ITB:p81(score=0.79) | R&N_ITB:p82(score=0.80) | R&N_ITB:p82, 83(score=0.82)"
+itb_candidates,,Condensate System,,,Condensate System,DESIGN CRITERIA,,0.8150,R&N_ITB:p81(score=0.81)
+itb_candidates,,DESIGN CRITERIA FOR FUEL GAS SUPPLY SYSTEM,Fuel Gas Package,,,DESIGN CRITERIA,,0.8133,R&N_ITB:p81(score=0.81) | R&N_ITB:p81(score=0.79) | R&N_ITB:p81(score=0.76)
+itb_candidates,,DESIGN CRITERIA FOR STEAM AND BYPASS SYSTEM,,,STEAM AND BYPASS SYSTEM,DESIGN CRITERIA,,0.8126,"R&N_ITB:p80, 81(score=0.81) | R&N_ITB:p83(score=0.81)"
+itb_candidates,,CONDENSATE SYSTEM DESIGN CRITERIA,CONDENSATE SYSTEM,,,DESIGN CRITERIA,,0.8112,"R&N_ITB:p80, 81(score=0.79) | R&N_ITB:p81(score=0.81)"
+itb_candidates,,DESIGN CRITERIA FOR CONDENSATE SYSTEM,,,CONDENSATE SYSTEM,DESIGN CRITERIA,,0.8111,"R&N_ITB:p80, 81(score=0.80) | R&N_ITB:p81(score=0.81)"
+itb_candidates,,Design Criteria Condensate System,,,Condensate System,Design Criteria,,0.8103,R&N_ITB:p81(score=0.81)
+itb_candidates,,GTG System Description Gas Turbine Instrumentation,Gas Turbine Generator,,,SYSTEM DESCRIPTION,,0.8074,R&N_ITB:p94(score=0.81) | R&N_ITB:p94(score=0.79) | R&N_ITB:p95(score=0.77) | R&N_ITB:p95(score=0.81)
+itb_candidates,,DESIGN CRITERIA FOR HVAC SYSTEM,,,HVAC SYSTEM,DESIGN CRITERIA,,0.8072,R&N_ITB:p83(score=0.81)
+itb_candidates,,CONTROL SYSTEM DESCRIPTION,Gas Turbine Generator,,,SYSTEM DESCRIPTION,,0.8070,R&N_ITB:p95(score=0.81)
+itb_candidates,,HVAC Design Criteria-,,,HVAC,Design Criteria,,0.8058,R&N_ITB:p83(score=0.81)
+itb_candidates,,HRSG Pressure Part Arrangement of HRSG,Heat Recovery Steam Generator,,,ARRANGEMENT,,0.8057,"R&N_ITB:p82, 83(score=0.81)"
+itb_candidates,,HVAC Design Criteria,,,HVAC,Design Criteria,,0.8045,R&N_ITB:p83(score=0.80) | R&N_ITB:p83(score=0.80) | R&N_ITB:p83(score=0.80)
+itb_candidates,,PERFORMANCE TEST PROCEDURE FOR NOISE EMISSION,,,,PROCEDURE,,0.8041,R&N_ITB:p85(score=0.80)
+itb_candidates,,CONTROL SYSTEM OVERVIEW,Gas Turbine Generator,,,OVERVIEW,,0.8039,R&N_ITB:p95(score=0.80)
+itb_candidates,,STG Design Criteria,Steam Turbine & Generator,,,DESIGN CRITERIA,,0.8025,"R&N_ITB:p79(score=0.80) | R&N_ITB:p80, 81(score=0.80) | R&N_ITB:p81(score=0.80) | R&N_ITB:p84, 85(score=0.76)"
+itb_candidates,,GTG Foundation Design Requirements,Gas Turbine Generator,,,DESIGN REQUIREMENTS,,0.8017,R&N_ITB:p79(score=0.77) | R&N_ITB:p79(score=0.77) | R&N_ITB:p79(score=0.80) | R&N_ITB:p79(score=0.80) | R&N_ITB:p79(score=0.78)
+itb_candidates,,Design Criteria Auxiliary Steam System,,,Auxiliary Steam System,Design Criteria,,0.8014,R&N_ITB:p90(score=0.80)
+itb_candidates,,WATER & WASTE WATER TREATMENT PLANT O&M MANUAL,Water Treatment Plant,,,MANUAL,,0.7993,"R&N_ITB:p86, 87(score=0.80)"
+itb_candidates,,WATER & WASTE WATER TREATMENT PLANT TECHNICAL DATASHEET-Pre-treatment System,Water Treatment Plant,,,TECHNICAL DATASHEET,,0.7987,"R&N_ITB:p86, 87(score=0.80)"
+itb_candidates,,GTG Turbine Foundation Design Requirements,Gas Turbine Generator,,,DESIGN REQUIREMENTS,,0.7984,R&N_ITB:p79(score=0.77) | R&N_ITB:p79(score=0.80) | R&N_ITB:p79(score=0.77) | R&N_ITB:p81(score=0.78) | R&N_ITB:p81(score=0.80)
+itb_candidates,,"TECHNICAL SPECIFICATION – TARIFF METERING SYSTEM, SCADA, RPA, TELECOMMUNICATION SYSTEM, AFPRS",,,"TARIFF METERING SYSTEM, SCADA, RPA, TELECOMMUNICATION SYSTEM, AFPRS",TECHNICAL SPECIFICATION,,0.7982,R&N_ITB:p91(score=0.80)
+itb_candidates,,DESIGN CRITERIA Fuel gas supply system,Fuel Gas Package,,,DESIGN CRITERIA,,0.7971,R&N_ITB:p81(score=0.80) | R&N_ITB:p81(score=0.76)
+itb_candidates,,GTG Auxiliary System Layout,Gas Turbine Generator,,,LAYOUT,,0.7957,R&N_ITB:p90(score=0.80) | R&N_ITB:p91(score=0.78) | R&N_ITB:p91(score=0.77) | R&N_ITB:p95(score=0.79) | R&N_ITB:p95(score=0.79)
+itb_candidates,,DESIGN CRITERIA,HP & LP steam system,,,DESIGN CRITERIA,,0.7956,R&N_ITB:p83(score=0.80) | R&N_ITB:p83(score=0.79) | R&N_ITB:p83(score=0.79) | R&N_ITB:p83(score=0.80)
+itb_candidates,,MAIN AND REHEAT STEAM SYSTEM DESIGN CRITERIA,MAIN AND REHEAT STEAM SYSTEM,,,DESIGN CRITERIA,,0.7953,"R&N_ITB:p80, 81(score=0.80)"
+itb_candidates,,CONTROL LOGIC DIAGRAM FUEL OIL/GAS SYSTEM BOP,Fuel Oil System,,,CONTROL LOGIC DIAGRAM,,0.7944,R&N_ITB:p94(score=0.79)
+itb_candidates,,POWER METERING SYSTEM,,,POWER METERING SYSTEM,TECHNICAL SPECIFICATION,,0.7940,R&N_ITB:p91(score=0.79)
+itb_candidates,,"H2 & CO2 CONTROL SYSTEM H2 GAS DRYER OUTLINE (Block #3,4)",H2 & CO2 CONTROL SYSTEM,,,OUTLINE,,0.7915,R&N_ITB:p95(score=0.79)
+itb_candidates,,WATER & WASTE WATER TREATMENT PLANT GENERAL ARRANGEMENT DRAWING,Water Treatment Plant,,,GENERAL ARRANGEMENT DRAWING,,0.7911,"R&N_ITB:p86, 87(score=0.79)"
+itb_candidates,,GTG P&ID Fuel Oil System,Gas Turbine Generator,,,P&ID,,0.7902,R&N_ITB:p94(score=0.79)
+itb_candidates,,System Description Auxiliary Steam System,,,Auxiliary Steam System,System Description,,0.7900,R&N_ITB:p90(score=0.79)
+itb_candidates,,DESIGN CRITERIA FOR WASTE WATER TRANSFER SYSTEM,,,WASTE WATER TRANSFER SYSTEM,DESIGN CRITERIA,,0.7896,R&N_ITB:p85(score=0.77) | R&N_ITB:p87(score=0.79) | R&N_ITB:p87(score=0.76)
+itb_candidates,,GTG System Description Combustion Chamber Instrumentation,Gas Turbine Generator,,,SYSTEM DESCRIPTION,,0.7885,R&N_ITB:p94(score=0.78) | R&N_ITB:p95(score=0.79)
+itb_candidates,,FUEL OIL SYSTEM,Fuel Oil System,,,CONTROL LOOP DIAGRAM,,0.7883,R&N_ITB:p94(score=0.79)
+itb_candidates,,"DESIGN REQUIREMENTS FOR VT & SURGE, BAB36",Gas Turbine Generator,,,DESIGN REQUIREMENTS,,0.7876,R&N_ITB:p79(score=0.76) | R&N_ITB:p81(score=0.78) | R&N_ITB:p81(score=0.79) | R&N_ITB:p84(score=0.77)
+itb_candidates,,CONSUMER SCHEMES FOR I&C (BLOCK #2),Steam Turbine,,Instrumentation & Control,,,0.7872,R&N_ITB:p92(score=0.79)
+itb_candidates,,WATER & WASTE WATER TREATMENT PLANT SCHEMATIC DIAGRAM,Water Treatment Plant,,,SCHEMATIC DIAGRAM,,0.7860,"R&N_ITB:p86, 87(score=0.79)"
+itb_candidates,,FUEL OIL SYSTEM,Fuel Oil System,,,CONTROL LOGIC DIAGRAM,,0.7858,R&N_ITB:p94(score=0.79)
+itb_candidates,,WATER & WASTE WATER TREATMENT PLANT TECHNICAL DATASHEET-Demi.Water System,Water Treatment Plant,,,TECHNICAL DATASHEET,,0.7848,"R&N_ITB:p86, 87(score=0.78)"
+itb_candidates,,Condenser Performance Curves,Condenser,,,PERFORMANCE CURVE,,0.7842,"R&N_ITB:p95, 96(score=0.78) | R&N_ITB:p95, 96(score=0.78) | R&N_ITB:p95, 96(score=0.78)"
+itb_candidates,,CONTROL LOGIC DIAGRAM FOR GT ROTOR COOLING AIR SYSTEM,GT,,ROTOR COOLING AIR SYSTEM,CONTROL LOGIC DIAGRAM,,0.7839,R&N_ITB:p94(score=0.78)
+itb_candidates,,Auxiliary Steam Distribution System,,,Auxiliary Steam Distribution System,DESIGN CRITERIA,,0.7824,R&N_ITB:p90(score=0.78) | R&N_ITB:p90(score=0.78)
+itb_candidates,,Inlet Heat System,,,Inlet Heat System,SYSTEM DESCRIPTION,,0.7820,R&N_ITB:p94(score=0.78)
+itb_candidates,,Waste Water Transfer System,,,Waste Water Transfer System,DESIGN CRITERIA,,0.7815,R&N_ITB:p85(score=0.76) | R&N_ITB:p85(score=0.76) | R&N_ITB:p87(score=0.78) | R&N_ITB:p87(score=0.78) | R&N_ITB:p87(score=0.75)
+itb_candidates,,GTG Auxiliary Wiring Diagrams,Gas Turbine Generator,,,WIRING DIAGRAM,,0.7815,R&N_ITB:p95(score=0.78)
+itb_candidates,,Fuel Gas System,Fuel Gas Package,,,DESIGN CRITERIA,,0.7810,"R&N_ITB:p81(score=0.78) | R&N_ITB:p81(score=0.78) | R&N_ITB:p84, 85(score=0.76) | R&N_ITB:p84, 85(score=0.76)"
+itb_candidates,,DATA SHEETS FOR I&C EQUIPMENT,Gas Turbine Generator,,,DATA SHEET,,0.7795,R&N_ITB:p94(score=0.78) | R&N_ITB:p94(score=0.78)
+itb_candidates,,ELECTRICAL SYSTEM,DESIGN CRIETRIA,,ELECTRICAL SYSTEM,,,0.7794,R&N_ITB:p92(score=0.78)
+itb_candidates,,CONTROL LOOP DIAGRAM FOR GT ROTOR COOLING AIR SYSTEM,GT,,ROTOR COOLING AIR SYSTEM,CONTROL LOOP DIAGRAM,,0.7794,R&N_ITB:p94(score=0.78)
+itb_candidates,,DESIGN CRITERIA FOR DEMINERALIZED WATER STORAGE AND TRANSFER SYSTEM,,,DEMINERALIZED WATER STORAGE AND TRANSFER SYSTEM,DESIGN CRITERIA,,0.7789,R&N_ITB:p85(score=0.75) | R&N_ITB:p86(score=0.76) | R&N_ITB:p87(score=0.78)
+itb_candidates,,I&C,,,Instrumentation & Control,DESIGN CRITERIA,,0.7784,R&N_ITB:p83(score=0.76) | R&N_ITB:p83(score=0.76) | R&N_ITB:p83(score=0.76) | R&N_ITB:p83(score=0.76) | R&N_ITB:p92(score=0.78)
+itb_candidates,,GTG System Description Fuel Gas,Gas Turbine Generator,,,SYSTEM DESCRIPTION,,0.7784,R&N_ITB:p94(score=0.78)
+itb_candidates,,DESIGN CRITERIA FOR ELECTRICAL SYSTEM,,,ELECTRICAL SYSTEM,DESIGN CRITERIA,,0.7783,R&N_ITB:p92(score=0.78)
+itb_candidates,,GSUT / UAT / OVERALL PROTECTION FOR GTG UNIT,Gas Turbine Generator,,,ELECTRICAL CONTROL LOGIC DIAGRAM,,0.7779,R&N_ITB:p95(score=0.78)
+itb_candidates,,GTG P&ID Combustion Chamber Instrumentation System,Gas Turbine Generator,,,P&ID,,0.7778,R&N_ITB:p94(score=0.78)
+itb_candidates,,Condenser #2 Performance Curves,Condenser #2,,,PERFORMANCE CURVE,,0.7775,"R&N_ITB:p95, 96(score=0.78)"
+itb_candidates,,GTG I&C SCHEMATICS,Gas Turbine Generator,,,SCHEMATICS,,0.7769,R&N_ITB:p94(score=0.78)
+itb_candidates,,DESIGN CRITERIA ELECTRICAL SYSTEM,,,ELECTRICAL SYSTEM,DESIGN CRITERIA,,0.7753,R&N_ITB:p92(score=0.78) | R&N_ITB:p92(score=0.77)
+itb_candidates,,Gas Treatment Plant,Gas Treatment Plant,,,PLAN,,0.7738,R&N_ITB:p97(score=0.77)
+itb_candidates,,Control Logic Diagram for BOP,AUX Steam System_I&C_Logic,,,CONTROL LOGIC DIAGRAM,,0.7737,R&N_ITB:p92(score=0.77) | R&N_ITB:p93(score=0.76)
+itb_candidates,,ELECTRICAL SYSTEM,,,ELECTRICAL SYSTEM,DESIGN CRITERIA,,0.7727,R&N_ITB:p92(score=0.77)
+itb_candidates,,Auxiliary Steam System (Common),,,Auxiliary Steam System (Common),CONTROL LOOP DIAGRAM,,0.7723,R&N_ITB:p93(score=0.77)
+itb_candidates,,Design Criteria Fuel Oil System,Fuel Oil System,,,DESIGN CRITERIA,,0.7714,"R&N_ITB:p81(score=0.77) | R&N_ITB:p84, 85(score=0.75)"
+itb_candidates,,Air Intake System MBL,,,Air Intake System,MBL,,0.7714,R&N_ITB:p94(score=0.77)
+itb_candidates,,WASTE WATER TRANSFER SYSTEM DESIGN CRITERIA,WASTE WATER TRANSFER SYSTEM,,,DESIGN CRITERIA,,0.7712,R&N_ITB:p85(score=0.77)
+itb_candidates,,Gas Treatment Plant General Data,Gas Treatment Plant,,,Data,,0.7684,R&N_ITB:p97(score=0.77)
+itb_candidates,,Design Criteria Demineralized Water System,,,Demineralized Water System,Design Criteria,,0.7682,R&N_ITB:p86(score=0.77)
+itb_candidates,,ELECTRICAL CONTROL LOGIC DIAGRAM BACK UP TR PROTECTION,,,,DIAGRAM,,0.7666,R&N_ITB:p93(score=0.77)
+itb_candidates,,GSUT/UAT/OVERALL,Generator Step-Up Transformer/UNIT AUXILIARY TRANSFORMER/OVERALL,,,STUDY,,0.7659,R&N_ITB:p88(score=0.77)
+itb_candidates,,Air Intake System MBL,,,Air Intake System,MBL,,0.7652,R&N_ITB:p94(score=0.77)
+itb_candidates,,Instrument Air System,,,Instrument Air System,DESIGN CRITERIA,,0.7643,R&N_ITB:p83(score=0.76) | R&N_ITB:p83(score=0.76)
+itb_candidates,,ELECTRICAL CONTROL LOGIC DIAGRAM GSUT/UAT/LINE/OVERALL PROTECTION,,,,DIAGRAM,,0.7636,R&N_ITB:p93(score=0.76)
+itb_candidates,,Demiralized Water Distribution System,,,Demiralized Water Distribution System,DESIGN CRITERIA,,0.7633,R&N_ITB:p86(score=0.75) | R&N_ITB:p86(score=0.75) | R&N_ITB:p87(score=0.76)
+itb_candidates,,Design Criteria Oil facility system,,,Oil facility system,Design Criteria,,0.7629,R&N_ITB:p79(score=0.76)
+itb_candidates,,I&C General Design Criteria,INC_Plant_Overall_Design,,,DESIGN CRITERIA,,0.7629,R&N_ITB:p83(score=0.76)
+itb_candidates,,DESIGN CRITERIA FOR FUEL GAS SYSTEM,Fuel Gas Package,,,DESIGN CRITERIA,,0.7628,"R&N_ITB:p84, 85(score=0.76)"
+itb_candidates,,Plant Air System,,,Plant Air System,PLAN,,0.7625,R&N_ITB:p84(score=0.76)
+itb_candidates,,FGSS EQUIPMENT DATA SHEET FOR FUEL GAS PERFORMANCE HEATER,FGSS,,,DATA SHEET,,0.7618,R&N_ITB:p97(score=0.76)
+itb_candidates,,GSUT / OVERALL PROTECTION FOR STG UNIT,Steam Turbine & Generator,,,STUDY,,0.7611,R&N_ITB:p88(score=0.76)
+itb_candidates,,GTG Connection Diagram for Fuel Gas Skid (MBY09GF001),Gas Turbine Generator,,,DIAGRAM,,0.7609,R&N_ITB:p81(score=0.76)
+itb_candidates,,Performance Curves For Condenser Vacuum Pump,Condenser Vacuum Pump,,,PERFORMANCE CURVE,,0.7607,"R&N_ITB:p95, 96(score=0.76)"
+itb_candidates,,Calculation,,,,Calculation,,0.7604,R&N_ITB:p97(score=0.76)
+itb_candidates,,PERFORMANCE HEATER & FINAL CHANCE FILTER FOUNDATION (CCPP PLANT AREA) CALCULATION,Performance Heater,,,CALCULATION,,0.7590,"R&N_ITB:p96, 97(score=0.75) | R&N_ITB:p97(score=0.76)"
+itb_candidates,,Design Basis,,,,Design Basis,,0.7582,R&N_ITB:p90(score=0.76) | R&N_ITB:p90(score=0.76)
+itb_candidates,,Control Logic Diagram for BOP,HP & LP steam system_I&C_Logic,,,CONTROL LOGIC DIAGRAM,,0.7575,R&N_ITB:p93(score=0.76)
+itb_candidates,,GSUT / UAT / OVERALL PROTECTION FOR GTG UNIT,Gas Turbine Generator,,,STUDY,,0.7574,R&N_ITB:p88(score=0.76)
+itb_candidates,,PROTECTION DIAGRAM FOR I&C (BLOCK #2),Steam Turbine,,,DIAGRAM,,0.7544,R&N_ITB:p93(score=0.75)
+itb_candidates,,"GENERATOR, EXCITATION SYSTEM, AND POWER SYSTEM STABILIZER MODEL",Gas Turbine Generator,,,MODEL,,0.7529,R&N_ITB:p88(score=0.75)
