@@ -17,6 +17,7 @@ from loguru import logger
 
 from schedule_service.date_range_engine import DateRange, compute_date_range
 from schedule_service.models import ScheduleActivity
+from schedule_service.normalizer import equipment_to_abbr
 from schedule_service.output_writer import write_schedule_outputs
 from schedule_service.rule_loader import DEFAULT_RULE_PATH, RuleTable, ValidationRule
 from schedule_service.schedule_loader import DEFAULT_SCHEDULE_PATH, load_schedule_activities
@@ -42,23 +43,6 @@ _ACTIVITY_KW_BOOST: dict[str, str] = {
     "manufacturing": "manufacturing P.O",
     "fo b":          "transportation delivery",
     "commissioning": "commissioning test",
-}
-
-# Maps canonical equipment names (from MDL classified CSV) to abbreviations
-# used in validation_rule.csv MDL Document Keywords (e.g. "HRSG - P&ID").
-# Without this, "Heat Recovery Steam Generator" never intersects with "HRSG" tokens.
-_EQUIPMENT_TO_ABBR: dict[str, str] = {
-    "Heat Recovery Steam Generator": "HRSG",
-    "Gas Turbine Generator": "GTG",
-    "Steam Turbine & Generator": "STG",
-    "Steam Turbine": "STG",
-    "Air Cooled Condenser": "ACC",
-    "Condensate Extraction Pump": "CEP",
-    "Boiler Feed Pump": "BFP",
-    "Fuel Gas Package": "FGP",
-    "Balance of Plant": "BOP",
-    "Cooling Water Package": "CCWP",
-    "Blackstart Emergency Diesel Generator": "BSEDG",
 }
 
 # Map MDL Deliverable values to terms used in validation_rule.csv keywords
@@ -166,7 +150,7 @@ def _format_schedule_row(
     # canonical full names, so we map before querying to get token overlap.
     norm_del = _normalize_deliverable(deliverable)
     scope = equipment or system or building
-    abbr_scope = _EQUIPMENT_TO_ABBR.get(scope, scope)
+    abbr_scope = equipment_to_abbr(scope)
     rule_query = f"{norm_del} for {abbr_scope}" if abbr_scope else norm_del
 
     # Match validation rule: try scoped query first, fall back to bare title

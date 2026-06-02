@@ -7,46 +7,13 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from schedule_service.normalizer import expand_query_tokens as _expand_query_tokens
 from schedule_service.vt_parser import parse_validation_time
 
 DEFAULT_RULE_PATH = Path("data/schedule_sources/rules/validation_rule_clean.csv")
 
 _TOKEN_RE = re.compile(r"[a-z0-9&]+")
 _MIN_TOKEN_LEN = 2
-
-# Reverse aliases: if ALL tokens of an equipment's full name are present in the
-# query, add the abbreviation used in validation_rule.csv keywords.
-# Only reverse (full name → abbrev) is applied — forward (abbrev → individual
-# full-name tokens) is intentionally omitted because generic words like "gas"
-# or "steam" create false overlaps with unrelated rules (e.g. N2 Gas System).
-_FULL_TO_ABBR: list[tuple[frozenset[str], str]] = [
-    (frozenset({"heat", "recovery", "steam", "generator"}), "hrsg"),
-    (frozenset({"gas", "turbine", "generator"}),            "gtg"),
-    (frozenset({"gas", "turbine"}),                         "gt"),
-    (frozenset({"steam", "turbine", "generator"}),          "stg"),
-    (frozenset({"air", "cooled", "condenser"}),             "acc"),
-    (frozenset({"condensate", "extraction", "pump"}),       "cep"),
-    (frozenset({"boiler", "feed", "pump"}),                 "bfp"),
-    (frozenset({"fuel", "gas", "package"}),                 "fgp"),
-    (frozenset({"balance", "plant"}),                       "bop"),
-]
-
-
-def _expand_query_tokens(tokens: set[str]) -> frozenset[str]:
-    """Add equipment abbreviations to the query when all full-name tokens are present.
-
-    Queries with abbreviations already contain the right token (e.g. "hrsg") and
-    match HRSG rules directly.  This function handles the reverse case: a query
-    title like "Heat Recovery Steam Generator General Arrangement" that contains no
-    abbreviation gets "hrsg" injected so it reaches the same HRSG-specific rules.
-    """
-    extra: set[str] = set()
-    for full_tokens, abbr in _FULL_TO_ABBR:
-        if full_tokens <= tokens:
-            extra.add(abbr)
-    if extra:
-        return frozenset(tokens | extra)
-    return frozenset(tokens)
 
 
 _SUB_TYPE_MAP: dict[str, str] = {
