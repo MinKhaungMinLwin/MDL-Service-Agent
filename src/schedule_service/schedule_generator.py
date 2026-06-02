@@ -17,6 +17,7 @@ from loguru import logger
 
 from schedule_service.date_range_engine import DateRange, compute_date_range
 from schedule_service.models import ScheduleActivity
+from schedule_service.normalizer import equipment_to_abbr
 from schedule_service.output_writer import write_schedule_outputs
 from schedule_service.rule_loader import DEFAULT_RULE_PATH, RuleTable, ValidationRule
 from schedule_service.schedule_loader import DEFAULT_SCHEDULE_PATH, load_schedule_activities
@@ -87,14 +88,18 @@ def generate_schedule_file(
     rule_path: Path = DEFAULT_RULE_PATH,
     limit: int = 0,
     ntp_date: str = "",
+    semantic_cache_dir: Path | None = None,
+    semantic_weight: float = 0.5,
 ) -> tuple[Path, Path]:
     """Generate FA/FC date ranges from an MDL classified CSV.
 
     Args:
-        ntp_date: Real project NTP date in ISO format (e.g. "2024-01-15").
-                  All guide schedule template dates are shifted by
-                  (ntp_date - 2007-03-01) to produce real-world dates.
-                  If omitted, template dates (2007–2009) are used as-is.
+        ntp_date:           Real project NTP date in ISO format (e.g. "2024-01-15").
+                            Shifts all guide schedule template dates accordingly.
+        semantic_cache_dir: If provided, builds/loads a semantic rule index and uses
+                            hybrid (token + embedding) scoring for rule matching.
+                            Embeddings are cached under this directory.
+        semantic_weight:    Weight of semantic score in hybrid scoring (0–1, default 0.5).
     """
     _log(f"Reading MDL classified CSV: {input_csv}")
     rows = _read_csv(input_csv)
@@ -116,10 +121,18 @@ def generate_schedule_file(
     _log(f"Building BM25 index for {len(schedule_activities)} schedule activities")
     bm25 = BM25Index([a.target_text for a in schedule_activities])
 
-    output_rows = [
-        _format_schedule_row(row, schedule_activities, bm25, rule_table, shift_days)
-        for row in rows
-    ]
+    if semantic_cache_dir and rule_table:
+        pre_matched = _match_rules_semantic(rows, rule_table, semantic_cache_dir, semantic_weight)
+        output_rows = [
+            _format_schedule_row(row, schedule_activities, bm25, rule_table, shift_days,
+                                 pre_matched_rule=pre_matched[i], use_pre_matched=True)
+            for i, row in enumerate(rows)
+        ]
+    else:
+        output_rows = [
+            _format_schedule_row(row, schedule_activities, bm25, rule_table, shift_days)
+            for row in rows
+        ]
 
     output_stem = _output_stem(input_csv)
     if ntp_date:
@@ -130,29 +143,96 @@ def generate_schedule_file(
     return write_schedule_outputs(output_dir, output_stem, output_rows)
 
 
+def _match_rules_semantic(
+    rows: list[dict[str, str]],
+    rule_table: RuleTable,
+    cache_dir: Path,
+    semantic_weight: float,
+) -> list[ValidationRule | None]:
+    """Batch-embed all rule queries and return hybrid-matched rules for each row."""
+    from common.embedding_client import AzureEmbeddingService
+    from schedule_service.rule_semantic import RuleSemanticIndex
+
+    semantic_index = RuleSemanticIndex.build(rule_table._rules, cache_dir)
+
+    # Compute (rule_query, title) for every row — same logic as _format_schedule_row
+    query_pairs: list[tuple[str, str]] = []
+    for row in rows:
+        deliverable = row.get("Deliverable", "").strip()
+        equipment = row.get("Equipment", "").strip()
+        system = row.get("System", "").strip()
+        building = row.get("Building", "").strip()
+        title = row.get("Title", "").strip()
+        norm_del = _normalize_deliverable(deliverable)
+        scope = equipment or system or building
+        abbr_scope = equipment_to_abbr(scope)
+        rule_query = f"{norm_del} for {abbr_scope}" if abbr_scope else norm_del
+        query_pairs.append((rule_query, title))
+
+    # Deduplicate queries to minimise embedding API calls
+    all_queries = [q for pair in query_pairs for q in pair]
+    unique_queries = list(dict.fromkeys(all_queries))
+    _log(f"Semantic rule matching: embedding {len(unique_queries)} unique queries for {len(rows)} rows")
+
+    service = AzureEmbeddingService()
+    embeddings = service.embed_texts(unique_queries)
+    query_emb: dict[str, list[float]] = dict(zip(unique_queries, embeddings, strict=True))
+
+    # Cache rule similarity vectors to avoid recomputing for duplicate queries
+    rule_sims_cache: dict[str, list[float]] = {}
+
+    def _get_sims(query: str) -> list[float]:
+        if query not in rule_sims_cache:
+            rule_sims_cache[query] = semantic_index.score(query_emb[query])
+        return rule_sims_cache[query]
+
+    results: list[ValidationRule | None] = []
+    for rule_query, title in query_pairs:
+        rule = rule_table.match_with_embedding(rule_query, _get_sims(rule_query),
+                                               semantic_weight=semantic_weight)
+        if rule is None:
+            rule = rule_table.match_with_embedding(title, _get_sims(title),
+                                                   semantic_weight=semantic_weight)
+        results.append(rule)
+
+    return results
+
+
 def _format_schedule_row(
     row: dict[str, str],
     activities: list[ScheduleActivity],
     bm25: BM25Index,
     rule_table: RuleTable | None,
     shift_days: int = 0,
+    *,
+    pre_matched_rule: ValidationRule | None = None,
+    use_pre_matched: bool = False,
 ) -> dict[str, Any]:
-    """Format one generated schedule row with FA/FC date ranges."""
+    """Format one generated schedule row with FA/FC date ranges.
+
+    When use_pre_matched=True, pre_matched_rule is used directly (may be None).
+    Otherwise token-based rule_table.match() is called (default behavior).
+    """
     title = row.get("Title", "").strip()
     deliverable = row.get("Deliverable", "").strip()
     equipment = row.get("Equipment", "").strip()
     system = row.get("System", "").strip()
     building = row.get("Building", "").strip()
 
-    # Build rule match string: normalize(Deliverable) + "for" + best available scope
+    # Build rule match string: normalize(Deliverable) + "for" + abbreviated scope.
     norm_del = _normalize_deliverable(deliverable)
     scope = equipment or system or building
-    rule_query = f"{norm_del} for {scope}" if scope else norm_del
+    abbr_scope = equipment_to_abbr(scope)
+    rule_query = f"{norm_del} for {abbr_scope}" if abbr_scope else norm_del
 
-    # Match validation rule: try scoped query first, fall back to bare title
-    rule: ValidationRule | None = None
-    if rule_table:
+    # Match validation rule
+    rule: ValidationRule | None
+    if use_pre_matched:
+        rule = pre_matched_rule
+    elif rule_table:
         rule = rule_table.match(rule_query) or rule_table.match(title)
+    else:
+        rule = None
 
     sub_type = rule.sub_type if rule else ""
     rule_name = rule.item_name if rule else ""

@@ -15,6 +15,13 @@ from typing import Any
 
 from loguru import logger
 
+from schedule_service.normalizer import (
+    extract_equipment_from_title as _extract_equipment_from_title_fn,
+)
+from schedule_service.normalizer import (
+    normalize_equipment as _normalize_equipment_fn,
+)
+
 DEFAULT_SCORE_THRESHOLD = 0.75
 DEFAULT_TOP_N = 5          # how many Matched_Doc_N per row to consider
 DEFAULT_OUTPUT_DIR = Path("output/schedule_service")
@@ -82,82 +89,6 @@ _DELIVERABLE_KEYWORDS: list[str] = [
     "DATA",
 ]
 
-# Normalize equipment abbreviations and full names to canonical form
-_EQUIPMENT_NORM: dict[str, str] = {
-    # Short codes
-    "GTG": "Gas Turbine Generator",
-    "GT": "Gas Turbine Generator",
-    "HRSG": "Heat Recovery Steam Generator",
-    "STG": "Steam Turbine & Generator",
-    "ST": "Steam Turbine",
-    "ACC": "Air Cooled Condenser",
-    "BOP": "Balance of Plant",
-    "DCS": "DCS",
-    "GIS": "GIS",
-    "CEP": "Condensate Extraction Pump",
-    "BFP": "Boiler Feed Pump",
-    "BOP PIPING": "BOP Piping",
-    "CCWP": "Cooling Water Package",
-    "FGP": "Fuel Gas Package",
-    "BSEDG": "Blackstart Emergency Diesel Generator",
-    # Full names from Matched_Doc_N underscore-prefixes
-    "AIR COOLED CONDENSER": "Air Cooled Condenser",
-    "AIR COOLED CONDENSER FOUNDATION": "Air Cooled Condenser",
-    "HEAT RECOVERY STEAM GENERATOR": "Heat Recovery Steam Generator",
-    "HEAT RECOVERY STEAM GENERATOR FOUNDATION": "Heat Recovery Steam Generator",
-    "GAS TURBINE GENERATOR": "Gas Turbine Generator",
-    "GAS TURBINE": "Gas Turbine Generator",
-    "STEAM TURBINE & GENERATOR": "Steam Turbine & Generator",
-    "STEAM TURBINE GENERATOR": "Steam Turbine & Generator",
-    "STEAM TURBINE": "Steam Turbine",
-    "CONDENSATE EXTRACTION PUMP": "Condensate Extraction Pump",
-    "CONDENSER VACUUM PUMP": "Condenser Vacuum Pump",
-    "CEP & CONDENSER FOUNDATION": "Steam Turbine",
-    "CONDENSER TUBE CLEANING SYSTEM": "Steam Turbine",
-    "BOILER FEED PUMP": "Boiler Feed Pump",
-    "FIN FAN COOLER": "Fin Fan Cooler",
-    "FIN FAN": "Fin Fan Cooler",
-    "AIR COMPRESSOR": "Air Compressor",
-    "FUEL GAS SUPPLY SYSTEM": "Fuel Gas Package",
-    "FUEL GAS STATION FOUNDATION": "Fuel Gas Package",
-    "WTP": "Water Treatment Plant",
-    "WATER TREATMENT PLANT": "Water Treatment Plant",
-    "WASTE WATER TREATMENT PLANT": "Water Treatment Plant",
-    "WASTE WATER TREATMENT": "Water Treatment Plant",
-    "WATER TREATMENT": "Water Treatment Plant",
-    "ULSD STORAGE TANK FOUNDATION": "Fuel Oil System",
-    "FUEL OIL FALSE START STORAGE TANK PIT": "Fuel Oil System",
-    "HVAC SYSTEM": "HVAC",
-}
-
-# Ordered list for scanning equipment keywords embedded in plain titles (longest first)
-_EQUIPMENT_SCAN: list[tuple[str, str]] = [
-    ("HEAT RECOVERY STEAM GENERATOR", "Heat Recovery Steam Generator"),
-    ("AIR COOLED CONDENSER", "Air Cooled Condenser"),
-    ("GAS TURBINE GENERATOR", "Gas Turbine Generator"),
-    ("STEAM TURBINE & GENERATOR", "Steam Turbine & Generator"),
-    ("STEAM TURBINE GENERATOR", "Steam Turbine & Generator"),
-    ("CONDENSATE EXTRACTION PUMP", "Condensate Extraction Pump"),
-    ("CONDENSER VACUUM PUMP", "Condenser Vacuum Pump"),
-    ("WATER TREATMENT PLANT", "Water Treatment Plant"),
-    ("WASTE WATER TREATMENT", "Water Treatment Plant"),
-    ("BOILER FEED PUMP", "Boiler Feed Pump"),
-    ("FIN FAN COOLER", "Fin Fan Cooler"),
-    ("AIR COMPRESSOR", "Air Compressor"),
-    ("STEAM TURBINE", "Steam Turbine"),
-    ("GAS TURBINE", "Gas Turbine Generator"),
-    ("FUEL OIL", "Fuel Oil System"),
-    ("FUEL GAS", "Fuel Gas Package"),
-    ("HRSG", "Heat Recovery Steam Generator"),
-    ("GTG", "Gas Turbine Generator"),
-    ("STG", "Steam Turbine & Generator"),
-    ("CEP", "Condensate Extraction Pump"),
-    ("BFP", "Boiler Feed Pump"),
-    ("GIS", "GIS"),
-    ("DCS", "DCS"),
-    ("ACC", "Air Cooled Condenser"),
-    ("BOP", "Balance of Plant"),
-]
 
 
 def extract_candidates(
@@ -358,18 +289,12 @@ def _extract_deliverable(title: str) -> str:
 
 def _normalize_equipment(raw: str) -> str:
     """Normalize equipment name to canonical form."""
-    cleaned = re.sub(r'\(.*?\)', '', raw).strip()  # strip "(CCPP PLANT AREA)", "(For Block 2)"
-    upper = cleaned.upper()
-    return _EQUIPMENT_NORM.get(upper, cleaned) or raw.strip()
+    return _normalize_equipment_fn(raw)
 
 
 def _extract_equipment_from_title(title: str) -> str:
     """Scan a plain title (no separator) for known equipment keywords."""
-    upper = title.upper()
-    for keyword, canonical in _EQUIPMENT_SCAN:
-        if keyword in upper:
-            return canonical
-    return ""
+    return _extract_equipment_from_title_fn(title)
 
 
 def _dedup_key(equipment: str, deliverable: str, title: str) -> str:
