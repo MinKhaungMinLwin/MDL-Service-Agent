@@ -44,7 +44,7 @@ class MatchingEvaluationTest(unittest.TestCase):
         self.assertEqual(cross_encoder, {"7:chunk-1": ["A", "B"]})
         self.assertEqual(retrieval, {"7:chunk-1": ["B", "A"]})
 
-    def test_cross_encoder_metrics_use_graded_relevance_and_skip_missing_strong_denominators(self) -> None:
+    def test_cross_encoder_metrics_use_graded_relevance_and_skip_missing_positive_denominators(self) -> None:
         summary, rows = evaluate_cross_encoder(
             qrels={
                 "7:chunk-1": {"A": 3, "B": 2, "C": 0},
@@ -57,15 +57,12 @@ class MatchingEvaluationTest(unittest.TestCase):
         )
 
         row_by_query = {row["query_id"]: row for row in rows}
-        self.assertAlmostEqual(row_by_query["7:chunk-1"]["ndcg_at_10"], 0.8339912323981488)
-        self.assertEqual(row_by_query["7:chunk-1"]["recall_strong_at_20"], 1.0)
-        self.assertEqual(row_by_query["7:chunk-1"]["precision_strong_at_5"], 0.2)
-        self.assertEqual(row_by_query["7:chunk-1"]["success_strong_at_5"], 1.0)
+        self.assertAlmostEqual(row_by_query["7:chunk-1"]["ndcg_at_20"], 0.8339912323981488)
+        self.assertEqual(row_by_query["7:chunk-1"]["recall_at_20"], 1.0)
         self.assertEqual(row_by_query["7:chunk-1"]["judged_at_20"], 0.75)
-        self.assertIsNone(row_by_query["7:chunk-2"]["recall_strong_at_20"])
-        self.assertIsNone(row_by_query["7:chunk-2"]["success_strong_at_5"])
-        self.assertEqual(summary["recall_strong_at_20_query_count"], 1)
-        self.assertEqual(summary["precision_strong_at_5_query_count"], 2)
+        self.assertIsNone(row_by_query["7:chunk-2"]["recall_at_20"])
+        self.assertEqual(summary["queries"], 2)
+        self.assertEqual(summary["positive_queries"], 1)
 
     def test_retrieval_metrics_measure_recall_before_cross_encoder(self) -> None:
         summary, rows = evaluate_retrieval(
@@ -80,9 +77,9 @@ class MatchingEvaluationTest(unittest.TestCase):
         )
 
         row_by_query = {row["query_id"]: row for row in rows}
-        self.assertEqual(row_by_query["7:chunk-1"]["recall_strong_at_100"], 1.0)
-        self.assertIsNone(row_by_query["7:chunk-2"]["recall_strong_at_100"])
-        self.assertEqual(summary["recall_strong_at_100"], 1.0)
+        self.assertEqual(row_by_query["7:chunk-1"]["recall_at_100"], 1.0)
+        self.assertIsNone(row_by_query["7:chunk-2"]["recall_at_100"])
+        self.assertEqual(summary["recall_at_100"], 1.0)
         self.assertEqual(summary["judged_at_100"], 0.75)
 
     def test_service_writes_cross_encoder_report_and_skips_unavailable_legacy_retrieval_stage(self) -> None:
@@ -112,6 +109,9 @@ class MatchingEvaluationTest(unittest.TestCase):
             report = json.loads((output_dir / "report.json").read_text(encoding="utf-8"))
 
         self.assertEqual([(row["mode"], row["stage"]) for row in summary_rows], [("hybrid", "cross_encoder")])
+        self.assertEqual(report["relevance_threshold"], 3)
+        self.assertEqual(report["output_limit"], 20)
+        self.assertEqual(report["retrieval_limit"], 100)
         self.assertEqual(report["skipped_stages"][0]["stage"], "retrieval")
 
 

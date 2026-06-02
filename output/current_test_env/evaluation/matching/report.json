@@ -1,0 +1,71 @@
+{
+  "ground_truth_path": "output\\current_test_env\\evaluation\\ground_truth\\itb_mdl_matching_ground_truth.csv",
+  "matching_dir": "output\\current_test_env\\matching",
+  "modes": [
+    "keyword",
+    "semantic",
+    "hybrid"
+  ],
+  "sections": [
+    "6",
+    "7"
+  ],
+  "queries": 63,
+  "relevance_threshold": 3,
+  "output_limit": 20,
+  "retrieval_limit": 100,
+  "summaries": [
+    {
+      "mode": "keyword",
+      "stage": "cross_encoder",
+      "queries": 63,
+      "positive_queries": 43,
+      "judged_at_20": 0.9841269841269841,
+      "ndcg_at_20": 0.23218010968263506,
+      "recall_at_20": 0.10534330011074197
+    },
+    {
+      "mode": "keyword",
+      "stage": "retrieval",
+      "queries": 63,
+      "positive_queries": 43,
+      "judged_at_100": 0.7505349223448542,
+      "recall_at_100": 0.13325027685492802
+    },
+    {
+      "mode": "semantic",
+      "stage": "cross_encoder",
+      "queries": 63,
+      "positive_queries": 43,
+      "judged_at_20": 0.9539682539682539,
+      "ndcg_at_20": 0.7389926598534629,
+      "recall_at_20": 0.9520521264401314
+    },
+    {
+      "mode": "semantic",
+      "stage": "retrieval",
+      "queries": 63,
+      "positive_queries": 43,
+      "judged_at_100": 0.2662935247731641,
+      "recall_at_100": 0.9715485418973792
+    },
+    {
+      "mode": "hybrid",
+      "stage": "cross_encoder",
+      "queries": 63,
+      "positive_queries": 43,
+      "judged_at_20": 0.996031746031746,
+      "ndcg_at_20": 0.4583277232130205,
+      "recall_at_20": 0.5474655631326378
+    },
+    {
+      "mode": "hybrid",
+      "stage": "retrieval",
+      "queries": 63,
+      "positive_queries": 43,
+      "judged_at_100": 0.3701584655761262,
+      "recall_at_100": 0.9545069068018884
+    }
+  ],
+  "skipped_stages": []
+}

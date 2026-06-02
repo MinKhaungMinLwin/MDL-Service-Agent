@@ -10,37 +10,31 @@ from loguru import logger
 
 from common.json_io import write_json
 from evaluation_service.matching_evaluation.loaders import load_matching_runs, load_qrels
-from evaluation_service.matching_evaluation.metrics import evaluate_cross_encoder, evaluate_retrieval
+from evaluation_service.matching_evaluation.metrics import (
+    RELEVANCE_THRESHOLD,
+    evaluate_cross_encoder,
+    evaluate_retrieval,
+)
 
 SUMMARY_HEADER = [
     "mode",
     "stage",
-    "query_count",
-    "ndcg_at_10",
-    "ndcg_at_10_query_count",
-    "recall_strong_at_20",
-    "recall_strong_at_20_query_count",
-    "precision_strong_at_5",
-    "precision_strong_at_5_query_count",
-    "success_strong_at_5",
-    "success_strong_at_5_query_count",
+    "queries",
+    "positive_queries",
+    "ndcg_at_20",
+    "recall_at_20",
     "judged_at_20",
-    "judged_at_20_query_count",
-    "recall_strong_at_100",
-    "recall_strong_at_100_query_count",
+    "recall_at_100",
     "judged_at_100",
-    "judged_at_100_query_count",
 ]
 QUERY_HEADER = [
     "mode",
     "stage",
     "query_id",
-    "ndcg_at_10",
-    "recall_strong_at_20",
-    "precision_strong_at_5",
-    "success_strong_at_5",
+    "ndcg_at_20",
+    "recall_at_20",
     "judged_at_20",
-    "recall_strong_at_100",
+    "recall_at_100",
     "judged_at_100",
 ]
 
@@ -94,7 +88,10 @@ class MatchingEvaluationService:
                 "matching_dir": str(matching_dir),
                 "modes": list(modes),
                 "sections": list(sections),
-                "qrel_query_count": len(qrels),
+                "queries": len(qrels),
+                "relevance_threshold": RELEVANCE_THRESHOLD,
+                "output_limit": 20,
+                "retrieval_limit": 100,
                 "summaries": summaries,
                 "skipped_stages": skipped_stages,
             },

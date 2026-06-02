@@ -101,5 +101,6 @@ Defaults:
 - input matching JSON files: `output/current_test_env/matching/<retrieval-mode>`
 - input ground truth: `output/current_test_env/evaluation/ground_truth/itb_mdl_matching_ground_truth.csv`
 - output reports: `output/current_test_env/evaluation/matching`
-- retrieval stage metrics: strong-relevance recall and judgment coverage at `100`
-- cross-encoder stage metrics: graded `nDCG@10`, strong-relevance recall at `20`, precision and success at `5`
+- retrieval stage metrics: `recall_at_100` and `judged_at_100`
+- cross-encoder stage metrics: `ndcg_at_20`, `recall_at_20`, and `judged_at_20`
+- recall uses `relevance_threshold=3`, recorded once in `report.json`
