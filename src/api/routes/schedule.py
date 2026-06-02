@@ -191,7 +191,7 @@ def schedule_candidates(
     input_path = _existing_path(input_csv)
     logger.info("Extracting MDL candidates from: {}", input_path)
 
-    csv_path = extract_candidates(
+    csv_path, timing = extract_candidates(
         input_csv=input_path,
         output_dir=SCHEDULE_OUTPUT_DIR,
         score_threshold=score_threshold,
@@ -204,6 +204,7 @@ def schedule_candidates(
         "input_path": str(input_path),
         "output_dir": str(csv_path.parent),
         "files": {"csv": str(csv_path)},
+        "timing": timing,
     }
 
 
