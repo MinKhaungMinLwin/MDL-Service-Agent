@@ -22,6 +22,8 @@ from schedule_service.output_writer import write_schedule_outputs
 from schedule_service.rule_loader import DEFAULT_RULE_PATH, RuleTable, ValidationRule
 from schedule_service.schedule_loader import DEFAULT_SCHEDULE_PATH, load_schedule_activities
 from schedule_service.search.keyword_search import BM25Index
+from schedule_service.search.reranker import rrf_candidates
+from schedule_service.search.semantic_search import SemanticIndex
 
 DEFAULT_OUTPUT_DIR = Path("output/schedule_service")
 
@@ -90,6 +92,7 @@ def generate_schedule_file(
     ntp_date: str = "",
     semantic_cache_dir: Path | None = None,
     semantic_weight: float = 0.5,
+    use_semantic_activities: bool = False,
 ) -> tuple[Path, Path]:
     """Generate FA/FC date ranges from an MDL classified CSV.
 
@@ -121,18 +124,33 @@ def generate_schedule_file(
     _log(f"Building BM25 index for {len(schedule_activities)} schedule activities")
     bm25 = BM25Index([a.target_text for a in schedule_activities])
 
+    # Pre-match rules (semantic or token-based — needed before activity matching for phase-boost)
+    pre_matched_rules: list[ValidationRule | None] | None = None
     if semantic_cache_dir and rule_table:
-        pre_matched = _match_rules_semantic(rows, rule_table, semantic_cache_dir, semantic_weight)
-        output_rows = [
-            _format_schedule_row(row, schedule_activities, bm25, rule_table, shift_days,
-                                 pre_matched_rule=pre_matched[i], use_pre_matched=True)
-            for i, row in enumerate(rows)
-        ]
-    else:
-        output_rows = [
-            _format_schedule_row(row, schedule_activities, bm25, rule_table, shift_days)
-            for row in rows
-        ]
+        pre_matched_rules = _match_rules_semantic(rows, rule_table, semantic_cache_dir, semantic_weight)
+    elif use_semantic_activities and rule_table:
+        pre_matched_rules = _token_match_rules(rows, rule_table)
+
+    # Pre-match activities via BM25 + semantic + RRF
+    pre_matched_activities: list[ScheduleActivity] | None = None
+    if use_semantic_activities:
+        _log("Building semantic activity index ...")
+        activity_cache_dir = output_dir / "activity_semantic_cache"
+        semantic_activity_index = SemanticIndex.build(schedule_activities, activity_cache_dir)
+        rules_for_activity = pre_matched_rules if pre_matched_rules is not None else [None] * len(rows)
+        pre_matched_activities = _match_activities_semantic(
+            rows, schedule_activities, bm25, semantic_activity_index, rules_for_activity
+        )
+
+    output_rows = [
+        _format_schedule_row(
+            row, schedule_activities, bm25, rule_table, shift_days,
+            pre_matched_rule=pre_matched_rules[i] if pre_matched_rules is not None else None,
+            use_pre_matched=pre_matched_rules is not None,
+            pre_matched_activity=pre_matched_activities[i] if pre_matched_activities is not None else None,
+        )
+        for i, row in enumerate(rows)
+    ]
 
     output_stem = _output_stem(input_csv)
     if ntp_date:
@@ -198,6 +216,86 @@ def _match_rules_semantic(
     return results
 
 
+def _build_activity_query(row: dict[str, str], rule: ValidationRule | None) -> str:
+    """Build a BM25/RRF query for activity matching, with optional rule phase-boost."""
+    equipment = row.get("Equipment", "").strip()
+    system = row.get("System", "").strip()
+    title = row.get("Title", "").strip()
+    norm_del = _normalize_deliverable(row.get("Deliverable", "").strip())
+    query = " ".join(p for p in [equipment, system, norm_del, title] if p)
+    if rule:
+        boost = _phase_boost(rule.activity_keywords)
+        if boost:
+            query = f"{query} {boost}"
+    return query
+
+
+def _token_match_rules(
+    rows: list[dict[str, str]], rule_table: RuleTable
+) -> list[ValidationRule | None]:
+    """Token-based rule match for every row (used to build activity queries when semantic rules disabled)."""
+    results: list[ValidationRule | None] = []
+    for row in rows:
+        deliverable = row.get("Deliverable", "").strip()
+        equipment = row.get("Equipment", "").strip()
+        system = row.get("System", "").strip()
+        building = row.get("Building", "").strip()
+        title = row.get("Title", "").strip()
+        norm_del = _normalize_deliverable(deliverable)
+        scope = equipment or system or building
+        abbr_scope = equipment_to_abbr(scope)
+        rule_query = f"{norm_del} for {abbr_scope}" if abbr_scope else norm_del
+        results.append(rule_table.match(rule_query) or rule_table.match(title))
+    return results
+
+
+def _match_activities_semantic(
+    rows: list[dict[str, str]],
+    activities: list[ScheduleActivity],
+    bm25: BM25Index,
+    semantic_index: SemanticIndex,
+    rules: list[ValidationRule | None],
+) -> list[ScheduleActivity]:
+    """Batch-embed activity queries and return RRF top-1 activity for each row.
+
+    Semantic scoring uses a single numpy matrix multiply over all unique queries,
+    avoiding per-row Python dot-product loops over 4039 × 1536 dimensions.
+    """
+    import numpy as np
+
+    from common.embedding_client import AzureEmbeddingService
+
+    activity_queries = [_build_activity_query(row, rule) for row, rule in zip(rows, rules, strict=True)]
+
+    unique_queries = list(dict.fromkeys(activity_queries))
+    _log(f"Semantic activity matching: embedding {len(unique_queries)} unique queries for {len(rows)} rows")
+
+    service = AzureEmbeddingService()
+    raw_embeddings = service.embed_texts(unique_queries)
+
+    # One matrix multiply: (n_unique_queries, dims) @ (dims, n_activities) → (n_unique_queries, n_activities)
+    query_matrix = np.array(raw_embeddings, dtype=np.float32)
+    all_semantic_scores = semantic_index.score_matrix(query_matrix)  # shape: (n_unique, n_activities)
+
+    query_to_idx = {q: i for i, q in enumerate(unique_queries)}
+
+    results: list[ScheduleActivity] = []
+    for query in activity_queries:
+        q_idx = query_to_idx[query]
+        bm25_scores = bm25.score(query)
+        semantic_scores = all_semantic_scores[q_idx].tolist()
+        candidates = rrf_candidates(
+            activities=activities,
+            bm25_scores=bm25_scores,
+            semantic_scores=semantic_scores,
+            retrieve_k=50,
+            top_k=1,
+            has_semantic=True,
+        )
+        results.append(candidates[0].activity)
+    return results
+
+
 def _format_schedule_row(
     row: dict[str, str],
     activities: list[ScheduleActivity],
@@ -207,6 +305,7 @@ def _format_schedule_row(
     *,
     pre_matched_rule: ValidationRule | None = None,
     use_pre_matched: bool = False,
+    pre_matched_activity: ScheduleActivity | None = None,
 ) -> dict[str, Any]:
     """Format one generated schedule row with FA/FC date ranges.
 
@@ -238,18 +337,13 @@ def _format_schedule_row(
     rule_name = rule.item_name if rule else ""
     vt_parsed: dict = rule.vt_parsed if rule else {}
 
-    # Match CCPP guide schedule activity via BM25
-    # Append phase-boost terms from the matched rule's activity_keywords so BM25
-    # steers toward the correct project phase (e.g. P.O → procurement activities,
-    # delivery → transportation activities, commissioning → test activities).
-    activity_query = " ".join(p for p in [equipment, system, norm_del, title] if p)
-    if rule:
-        boost = _phase_boost(rule.activity_keywords)
-        if boost:
-            activity_query = f"{activity_query} {boost}"
-    bm25_scores = bm25.score(activity_query)
-    top_idx = max(range(len(bm25_scores)), key=lambda idx: bm25_scores[idx])
-    activity = activities[top_idx]
+    # Match CCPP guide schedule activity
+    if pre_matched_activity is not None:
+        activity = pre_matched_activity
+    else:
+        bm25_scores = bm25.score(_build_activity_query(row, rule))
+        top_idx = max(range(len(bm25_scores)), key=lambda idx: bm25_scores[idx])
+        activity = activities[top_idx]
 
     # Compute FA/FC date ranges
     dr = DateRange()
