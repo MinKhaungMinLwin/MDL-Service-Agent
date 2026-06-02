@@ -14,7 +14,10 @@ from evaluation_service.ground_truth.service import (
     _resolve_judgments,
     _resolve_verifications,
     build_candidate_pool,
+    build_reference_candidate_pool,
     iter_judge_pairs,
+    load_reference_mdl_candidates,
+    write_high_precision_ground_truth,
 )
 
 
@@ -47,6 +50,53 @@ class EvaluationServiceTest(unittest.TestCase):
         self.assertEqual({pair["mdl"]["doc_id"] for pair in pairs}, {"A", "B", "C"})
         self.assertNotIn("cross_encoder_score", pairs[0]["mdl"])
         self.assertNotIn("source_modes", pairs[0]["mdl"])
+
+    def test_pool_deduplicates_candidates_by_visible_document_identity(self) -> None:
+        pools = build_candidate_pool(
+            itb_rows={"6:chunk-1": {"Chunk Text": "Steam turbine foundation requirement"}},
+            records_by_source={
+                (
+                    "6",
+                    "hybrid",
+                ): [
+                    _matching_record(
+                        "chunk-1",
+                        [
+                            _candidate("A-1", 1.0, source_file="Sample_MDL.xlsx", document_no="001", title="Layout"),
+                            _candidate("A-2", 0.9, source_file="Sample_MDL.xlsx", document_no="001", title="Layout"),
+                        ],
+                    )
+                ],
+            },
+            top_k=2,
+        )
+
+        self.assertEqual(len(pools[0]["candidates"]), 1)
+        self.assertEqual(pools[0]["candidates"][0]["doc_id"], "A-1")
+
+    def test_reference_pool_loads_and_deduplicates_reference_mdl_candidates(self) -> None:
+        conn = _Neo4jConn(
+            [
+                _candidate("A-1", 1.0, source_file="R&N_MDL.xlsx", document_no="001", title="Layout"),
+                _candidate("A-2", 0.9, source_file="R&N_MDL.xlsx", document_no="001", title="Layout"),
+                _candidate("B", 0.8, source_file="R&N_MDL.xlsx", document_no="002", title="Foundation"),
+            ]
+        )
+        candidates = load_reference_mdl_candidates(conn, "R&N_MDL.xlsx")
+        pools = build_reference_candidate_pool(
+            {"7:chunk-1": {"Chunk Text": "Cooling water requirement"}},
+            candidates,
+        )
+        pairs = iter_judge_pairs(pools)
+
+        self.assertEqual([candidate["doc_id"] for candidate in candidates], ["A-1", "B"])
+        self.assertEqual(len(pools), 1)
+        self.assertEqual({pair["mdl"]["source_file"] for pair in pairs}, {"R&N_MDL.xlsx"})
+        self.assertEqual({pair["mdl"]["document_no"] for pair in pairs}, {"001", "002"})
+
+    def test_reference_pool_fails_when_neo4j_source_has_no_candidates(self) -> None:
+        with self.assertRaisesRegex(ValueError, "No MDL candidates found"):
+            load_reference_mdl_candidates(_Neo4jConn([]), "R&N_MDL.xlsx")
 
     def test_service_judges_all_rows_and_verifies_all_rows(self) -> None:
         pools = build_candidate_pool(
@@ -172,8 +222,18 @@ class EvaluationServiceTest(unittest.TestCase):
         pair_by_id = {pair["judgment_id"]: pair for pair in pairs}
         client = _ChatClient(
             [
-                {"results": [_judgment(pair_by_id[pair["judgment_id"]], relevance=1, confidence=0.8) for pair in pairs[:25]]},
-                {"results": [_judgment(pair_by_id[pair["judgment_id"]], relevance=1, confidence=0.8) for pair in pairs[25:]]},
+                {
+                    "results": [
+                        _judgment(pair_by_id[pair["judgment_id"]], relevance=1, confidence=0.8)
+                        for pair in pairs[:25]
+                    ]
+                },
+                {
+                    "results": [
+                        _judgment(pair_by_id[pair["judgment_id"]], relevance=1, confidence=0.8)
+                        for pair in pairs[25:]
+                    ]
+                },
             ]
         )
         service = GroundTruthService(
@@ -281,6 +341,58 @@ class EvaluationServiceTest(unittest.TestCase):
         self.assertEqual([row["judgment_id"] for row in judgments], [pair["judgment_id"] for pair in pairs])
         self.assertEqual([row["judgment_id"] for row in verifications], [pair["judgment_id"] for pair in pairs])
 
+    def test_high_precision_ground_truth_keeps_only_clear_verified_labels(self) -> None:
+        judgments = [
+            {
+                "judgment_id": "positive",
+                "section": "7",
+                "chunk_id": "C",
+                "mdl_doc_id": "A",
+                "relevance": 3,
+                "confidence": 0.9,
+            },
+            {
+                "judgment_id": "negative",
+                "section": "7",
+                "chunk_id": "C",
+                "mdl_doc_id": "B",
+                "relevance": 0,
+                "confidence": 0.2,
+            },
+            {
+                "judgment_id": "weak",
+                "section": "7",
+                "chunk_id": "C",
+                "mdl_doc_id": "C",
+                "relevance": 2,
+                "confidence": 0.9,
+            },
+            {
+                "judgment_id": "disagreement",
+                "section": "7",
+                "chunk_id": "C",
+                "mdl_doc_id": "D",
+                "relevance": 2,
+                "confidence": 0.9,
+            },
+        ]
+        verifications = [
+            {"judgment_id": "positive", "relevance": 3, "confidence": 0.9, "agrees": True},
+            {"judgment_id": "negative", "relevance": 0, "confidence": 0.2, "agrees": True},
+            {"judgment_id": "weak", "relevance": 2, "confidence": 0.9, "agrees": True},
+            {"judgment_id": "disagreement", "relevance": 1, "confidence": 0.9, "agrees": True},
+        ]
+
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "ground_truth_high_precision.csv"
+            write_high_precision_ground_truth(path, judgments, verifications)
+            rows = path.read_text(encoding="utf-8-sig").splitlines()
+
+        self.assertEqual(len(rows), 4)
+        self.assertIn(",3,0.9,positive", rows[1])
+        self.assertIn(",0,0.2,negative", rows[2])
+        self.assertIn(",2,0.9,negative", rows[3])
+
     def test_resolved_judgments_clamp_llm_scores_to_schema(self) -> None:
         pair = {
             "judgment_id": "6:chunk-1:A",
@@ -307,6 +419,28 @@ class EvaluationServiceTest(unittest.TestCase):
         self.assertEqual(result["relevance"], 3)
         self.assertEqual(result["confidence"], 0.0)
         self.assertFalse(result["agrees"])
+
+
+class _Neo4jConn:
+    def __init__(self, records: list[dict]) -> None:
+        self.records = records
+
+    def session(self):
+        return _Neo4jSession(self.records)
+
+
+class _Neo4jSession:
+    def __init__(self, records: list[dict]) -> None:
+        self.records = records
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+        return None
+
+    def run(self, query, **parameters):
+        return self.records
 
 
 class _ChatClient:
@@ -389,10 +523,18 @@ def _matching_record(chunk_id: str, candidates: list[dict]) -> dict:
     }
 
 
-def _candidate(doc_id: str, score: float) -> dict:
+def _candidate(
+    doc_id: str,
+    score: float,
+    source_file: str = "",
+    document_no: str = "",
+    title: str | None = None,
+) -> dict:
     return {
         "doc_id": doc_id,
-        "title": f"Document {doc_id}",
+        "source_file": source_file,
+        "document_no": document_no,
+        "title": title or f"Document {doc_id}",
         "equipment": "Steam Turbine",
         "deliverable": "Design Criteria",
         "cross_encoder_score": score,

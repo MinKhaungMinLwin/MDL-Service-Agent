@@ -7,8 +7,8 @@ import hashlib
 import json
 import random
 import time
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from collections.abc import Callable, Iterator
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -36,6 +36,25 @@ GROUND_TRUTH_HEADER = [
     "verifier_confidence",
     "verifier_agrees",
 ]
+HIGH_PRECISION_HEADER = [
+    *GROUND_TRUTH_HEADER,
+    "final_relevance",
+    "final_confidence",
+    "label_status",
+]
+MDL_CANDIDATE_FIELDS = (
+    "doc_id",
+    "source_file",
+    "document_no",
+    "title",
+    "equipment",
+    "building",
+    "system",
+    "study_survey",
+    "others",
+    "deliverable",
+    "text_content",
+)
 
 
 @dataclass(frozen=True)
@@ -133,12 +152,36 @@ class GroundTruthService:
         )
         return pools
 
+    def build_reference_pool(
+        self,
+        extract_dir: Path,
+        conn: Any,
+        pool_path: Path,
+        source_file: str,
+        node_label: str,
+        candidate_limit: int = 0,
+    ) -> list[dict[str, Any]]:
+        """Build and persist a candidate pool from one reference MDL source in Neo4j."""
+        itb_rows = load_itb_rows(extract_dir, self.config.sections)
+        candidates = load_reference_mdl_candidates(conn, source_file, node_label, candidate_limit)
+        pools = build_reference_candidate_pool(itb_rows, candidates)
+        write_json(pool_path, pools)
+        logger.info(
+            "Saved {} ITB reference pools with {} MDL candidates from {}: {}",
+            len(pools),
+            _candidate_count(pools),
+            source_file,
+            pool_path,
+        )
+        return pools
+
     def judge_to_files(
         self,
         pools: list[dict[str, Any]],
         judgments_path: Path,
         verifications_path: Path,
         ground_truth_path: Path,
+        high_precision_path: Path | None = None,
     ) -> None:
         """Generate judgments, optionally verify all rows, and write ground truth."""
         pairs = iter_judge_pairs(pools)
@@ -152,6 +195,8 @@ class GroundTruthService:
         if self.config.verify:
             verifications = self._verify_judgments(pairs, judgments, verifications, verifications_path)
         write_ground_truth(ground_truth_path, judgments, verifications)
+        if high_precision_path is not None:
+            write_high_precision_ground_truth(high_precision_path, judgments, verifications)
         logger.info("Saved silver ground truth: {}", ground_truth_path)
 
     def _judge_pools(
@@ -176,7 +221,8 @@ class GroundTruthService:
                 pools_to_judge.append((pool, pool_pairs))
                 candidate_count += len(pool_pairs)
         logger.info(
-            "Ground truth judge will process {} candidates across {} ITB pools ({} already completed, max {} candidates per call, concurrency {})",
+            "Ground truth judge will process {} candidates across {} ITB pools "
+            "({} already completed, max {} candidates per call, concurrency {})",
             candidate_count,
             len(pools_to_judge),
             len(completed_ids),
@@ -376,11 +422,11 @@ def build_candidate_pool(
             pool = pools_by_key.setdefault(key, _build_pool_record(section, record, itb_row))
             candidates_by_id = pool.pop("_candidates_by_id")
             for rank, candidate in enumerate(record.get("candidates", [])[:top_k], start=1):
-                doc_id = str(candidate.get("doc_id") or "").strip()
-                if not doc_id:
+                candidate_key = _candidate_key(candidate)
+                if not candidate_key:
                     continue
                 pooled_candidate = candidates_by_id.setdefault(
-                    doc_id,
+                    candidate_key,
                     {**candidate, "source_modes": [], "source_ranks": {}},
                 )
                 if mode not in pooled_candidate["source_modes"]:
@@ -398,6 +444,63 @@ def build_candidate_pool(
     return pools
 
 
+def load_reference_mdl_candidates(
+    conn: Any,
+    source_file: str,
+    node_label: str = "TestMDLDocument",
+    limit: int = 0,
+) -> list[dict[str, Any]]:
+    """Load and deduplicate MDL candidates from one Neo4j source_file."""
+    if not source_file:
+        raise ValueError("source_file is required")
+    _validate_neo4j_identifier(node_label)
+    query = f"""
+    MATCH (n:{node_label})
+    WHERE coalesce(n.source_file, "") = $source_file
+    RETURN n.doc_id AS doc_id,
+           n.source_file AS source_file,
+           n.document_no AS document_no,
+           n.title AS title,
+           n.system AS system,
+           n.equipment AS equipment,
+           n.building AS building,
+           n.study_survey AS study_survey,
+           n.others AS others,
+           n.deliverable AS deliverable,
+           n.text_content AS text_content
+    ORDER BY n.document_no, n.title, n.doc_id
+    """
+    if limit > 0:
+        query += "\nLIMIT $limit"
+    with conn.session() as session:
+        records = [dict(record) for record in session.run(query, source_file=source_file, limit=limit)]
+    if not records:
+        raise ValueError(f"No MDL candidates found in Neo4j for source_file={source_file}")
+    candidates = _dedupe_candidates(records)
+    logger.info(
+        "Loaded {} Neo4j MDL candidates from {} ({} after dedupe)",
+        len(records),
+        source_file,
+        len(candidates),
+    )
+    return candidates
+
+
+def build_reference_candidate_pool(
+    itb_rows: dict[str, dict[str, Any]],
+    candidates: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Build ITB pools by pairing each ITB chunk with reference MDL candidates."""
+    pools = []
+    for key in sorted(itb_rows, key=_section_chunk_sort_key):
+        section, chunk_id = key.split(":", maxsplit=1)
+        pool = _build_pool_record(section, {"chunk_id": chunk_id}, itb_rows[key])
+        pool.pop("_candidates_by_id")
+        pool["candidates"] = list(candidates)
+        pools.append(pool)
+    return pools
+
+
 def iter_judge_pairs(pools: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Flatten candidate pools into blind ITB to MDL pairs for the LLM judge."""
     pairs = []
@@ -411,16 +514,7 @@ def iter_judge_pairs(pools: list[dict[str, Any]]) -> list[dict[str, Any]]:
                     "itb": pool["itb"],
                     "mdl": {
                         field: candidate.get(field, "")
-                        for field in (
-                            "doc_id",
-                            "title",
-                            "equipment",
-                            "building",
-                            "system",
-                            "study_survey",
-                            "others",
-                            "deliverable",
-                        )
+                        for field in MDL_CANDIDATE_FIELDS
                     },
                 }
             )
@@ -458,6 +552,36 @@ def write_ground_truth(
         writer = csv.DictWriter(file, fieldnames=GROUND_TRUTH_HEADER)
         writer.writeheader()
         writer.writerows(rows)
+
+
+def write_high_precision_ground_truth(
+    output_path: Path,
+    judgments: list[dict[str, Any]],
+    verifications: list[dict[str, Any]],
+) -> None:
+    """Write only clear positive and negative labels agreed by judge and verifier."""
+    verification_by_id = {row.get("judgment_id"): row for row in verifications}
+    rows = []
+    for judgment in judgments:
+        verification = verification_by_id.get(judgment.get("judgment_id"), {})
+        label_status = _high_precision_label_status(judgment, verification)
+        if label_status:
+            row = _build_ground_truth_row(judgment, verification)
+            final_relevance = int(verification["relevance"])
+            rows.append(
+                {
+                    **row,
+                    "final_relevance": final_relevance,
+                    "final_confidence": verification["confidence"],
+                    "label_status": label_status,
+                }
+            )
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(output_path, "w", newline="", encoding="utf-8-sig") as file:
+        writer = csv.DictWriter(file, fieldnames=HIGH_PRECISION_HEADER)
+        writer.writeheader()
+        writer.writerows(rows)
+    logger.info("Saved {} high-precision ground truth labels: {}", len(rows), output_path)
 
 
 def _run_llm_batch(
@@ -513,6 +637,34 @@ def _build_pool_record(section: str, record: dict[str, Any], itb_row: dict[str, 
     }
 
 
+def _dedupe_candidates(candidates: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    candidates_by_key = {}
+    for candidate in candidates:
+        key = _candidate_key(candidate)
+        if key and key not in candidates_by_key:
+            candidates_by_key[key] = candidate
+    return list(candidates_by_key.values())
+
+
+def _candidate_key(candidate: dict[str, Any]) -> str:
+    document_values = [str(candidate.get(field) or "").strip() for field in ("source_file", "document_no", "title")]
+    if all(document_values):
+        return f"document:{'|'.join(document_values)}"
+    doc_id = str(candidate.get("doc_id") or "").strip()
+    return f"doc_id:{doc_id}" if doc_id else ""
+
+
+def _section_chunk_sort_key(key: str) -> tuple[int, int | str, str]:
+    section, chunk_id = key.split(":", maxsplit=1)
+    section_key: int | str = int(section) if section.isdigit() else section
+    return (0 if section.isdigit() else 1, section_key, chunk_id)
+
+
+def _validate_neo4j_identifier(value: str) -> None:
+    if not value.replace("_", "").isalnum() or value[0].isdigit():
+        raise ValueError(f"Invalid Neo4j identifier: {value}")
+
+
 def _build_ground_truth_row(judgment: dict[str, Any], verification: dict[str, Any]) -> dict[str, Any]:
     return {
         "section": judgment.get("section", ""),
@@ -529,6 +681,16 @@ def _build_ground_truth_row(judgment: dict[str, Any], verification: dict[str, An
         "verifier_confidence": verification.get("confidence", ""),
         "verifier_agrees": verification.get("agrees", ""),
     }
+
+
+def _high_precision_label_status(judgment: dict[str, Any], verification: dict[str, Any]) -> str:
+    if not verification.get("agrees"):
+        return ""
+    judge_relevance = _clamp_int(judgment.get("relevance"), 0, 3)
+    verifier_relevance = _clamp_int(verification.get("relevance"), 0, 3)
+    if judge_relevance != verifier_relevance:
+        return ""
+    return "positive" if verifier_relevance == 3 else "negative"
 
 
 def _resolve_judgments(
