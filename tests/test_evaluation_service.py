@@ -224,13 +224,11 @@ class EvaluationServiceTest(unittest.TestCase):
                         {
                             "judgment_id": pair_by_doc["A"]["judgment_id"],
                             "relevance": 0,
-                            "confidence": 0.95,
                             "agrees": True,
                         },
                         {
                             "judgment_id": pair_by_doc["B"]["judgment_id"],
                             "relevance": 2,
-                            "confidence": 0.9,
                             "agrees": True,
                         }
                     ]
@@ -286,7 +284,6 @@ class EvaluationServiceTest(unittest.TestCase):
                         {
                             "judgment_id": pair["judgment_id"],
                             "relevance": 3,
-                            "confidence": 0.95,
                             "agrees": True,
                         }
                     ]
@@ -503,7 +500,6 @@ class EvaluationServiceTest(unittest.TestCase):
                 "chunk_id": "C",
                 "mdl_doc_id": "A",
                 "relevance": 3,
-                "confidence": 0.9,
             },
             {
                 "judgment_id": "negative",
@@ -511,7 +507,6 @@ class EvaluationServiceTest(unittest.TestCase):
                 "chunk_id": "C",
                 "mdl_doc_id": "B",
                 "relevance": 0,
-                "confidence": 0.2,
             },
             {
                 "judgment_id": "weak",
@@ -519,7 +514,6 @@ class EvaluationServiceTest(unittest.TestCase):
                 "chunk_id": "C",
                 "mdl_doc_id": "C",
                 "relevance": 2,
-                "confidence": 0.9,
             },
             {
                 "judgment_id": "disagreement",
@@ -527,14 +521,13 @@ class EvaluationServiceTest(unittest.TestCase):
                 "chunk_id": "C",
                 "mdl_doc_id": "D",
                 "relevance": 2,
-                "confidence": 0.9,
             },
         ]
         verifications = [
-            {"judgment_id": "positive", "relevance": 3, "confidence": 0.9, "agrees": True},
-            {"judgment_id": "negative", "relevance": 0, "confidence": 0.2, "agrees": True},
-            {"judgment_id": "weak", "relevance": 2, "confidence": 0.9, "agrees": True},
-            {"judgment_id": "disagreement", "relevance": 1, "confidence": 0.9, "agrees": True},
+            {"judgment_id": "positive", "relevance": 3, "agrees": True},
+            {"judgment_id": "negative", "relevance": 0, "agrees": True},
+            {"judgment_id": "weak", "relevance": 2, "agrees": True},
+            {"judgment_id": "disagreement", "relevance": 1, "agrees": True},
         ]
 
         with tempfile.TemporaryDirectory() as directory:
@@ -547,9 +540,9 @@ class EvaluationServiceTest(unittest.TestCase):
 
         self.assertEqual(len(positive_rows), 2)
         self.assertEqual(len(negative_rows), 3)
-        self.assertIn(",3,0.9,positive", positive_rows[1])
-        self.assertIn(",0,0.2,negative", negative_rows[1])
-        self.assertIn(",2,0.9,negative", negative_rows[2])
+        self.assertIn(",3,positive", positive_rows[1])
+        self.assertIn(",0,negative", negative_rows[1])
+        self.assertIn(",2,negative", negative_rows[2])
 
     def test_resolved_judgments_clamp_llm_scores_to_schema(self) -> None:
         pair = {
@@ -566,7 +559,7 @@ class EvaluationServiceTest(unittest.TestCase):
 
         self.assertEqual(result["relevance"], 3)
         self.assertEqual(result["topic_match"], 0)
-        self.assertEqual(result["confidence"], 1.0)
+        self.assertNotIn("confidence", result)
 
     def test_resolved_verifications_clamp_scores_and_require_boolean_agreement(self) -> None:
         result = _resolve_verifications(
@@ -575,7 +568,7 @@ class EvaluationServiceTest(unittest.TestCase):
         )[0]
 
         self.assertEqual(result["relevance"], 3)
-        self.assertEqual(result["confidence"], 0.0)
+        self.assertNotIn("confidence", result)
         self.assertFalse(result["agrees"])
 
 
@@ -658,7 +651,6 @@ class _EchoCompletions:
                         "chunk_id": pool["chunk_id"],
                         "mdl_doc_id": candidate["mdl"]["doc_id"],
                         "relevance": 1,
-                        "confidence": 0.8,
                     }
                 )
         for judgment in payload.get("judgments", []):
@@ -666,7 +658,6 @@ class _EchoCompletions:
                 {
                     "judgment_id": judgment["judgment_id"],
                     "relevance": judgment["proposed_judgment"]["relevance"],
-                    "confidence": 0.8,
                     "agrees": True,
                 }
             )
@@ -720,7 +711,6 @@ def _judgment(pair: dict, relevance: int, confidence: float) -> dict:
         "chunk_id": pair["chunk_id"],
         "mdl_doc_id": pair["mdl"]["doc_id"],
         "relevance": relevance,
-        "confidence": confidence,
     }
 
 

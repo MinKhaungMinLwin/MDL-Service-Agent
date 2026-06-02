@@ -38,20 +38,17 @@ GROUND_TRUTH_HEADER = [
     "chunk_id",
     "mdl_doc_id",
     "relevance",
-    "confidence",
     "topic_match",
     "deliverable_match",
     "requirement_coverage",
     "context_fit",
     "reason",
     "verifier_relevance",
-    "verifier_confidence",
     "verifier_agrees",
 ]
 HIGH_PRECISION_HEADER = [
     *GROUND_TRUTH_HEADER,
     "final_relevance",
-    "final_confidence",
     "label_status",
 ]
 MDL_CANDIDATE_FIELDS = (
@@ -742,7 +739,6 @@ def write_high_precision_ground_truth(
                 {
                     **row,
                     "final_relevance": final_relevance,
-                    "final_confidence": verification["confidence"],
                     "label_status": label_status,
                 }
             )
@@ -872,14 +868,12 @@ def _build_ground_truth_row(judgment: dict[str, Any], verification: dict[str, An
         "chunk_id": judgment.get("chunk_id", ""),
         "mdl_doc_id": judgment.get("mdl_doc_id", ""),
         "relevance": _clamp_int(judgment.get("relevance"), 0, 3),
-        "confidence": judgment.get("confidence", ""),
         "topic_match": judgment.get("topic_match", ""),
         "deliverable_match": judgment.get("deliverable_match", ""),
         "requirement_coverage": judgment.get("requirement_coverage", ""),
         "context_fit": judgment.get("context_fit", ""),
         "reason": judgment.get("reason", ""),
         "verifier_relevance": verification.get("relevance", ""),
-        "verifier_confidence": verification.get("confidence", ""),
         "verifier_agrees": verification.get("agrees", ""),
     }
 
@@ -981,18 +975,18 @@ def _pool_key(row: dict[str, Any]) -> tuple[str, str]:
 
 def _normalize_judgment(judgment: dict[str, Any]) -> dict[str, Any]:
     normalized = dict(judgment)
+    normalized.pop("confidence", None)
     for field in ("topic_match", "deliverable_match", "requirement_coverage", "context_fit", "relevance"):
         if field in normalized:
             normalized[field] = _clamp_int(normalized[field], 0, 3)
-    normalized["confidence"] = _clamp_float(normalized.get("confidence"), 0.0, 1.0)
     return normalized
 
 
 def _normalize_verification(verification: dict[str, Any]) -> dict[str, Any]:
     normalized = dict(verification)
+    normalized.pop("confidence", None)
     if normalized.get("relevance") != "":
         normalized["relevance"] = _clamp_int(normalized.get("relevance"), 0, 3)
-    normalized["confidence"] = _clamp_float(normalized.get("confidence"), 0.0, 1.0)
     normalized["agrees"] = normalized.get("agrees") is True
     return normalized
 
@@ -1003,10 +997,6 @@ def _stable_seed(value: str) -> int:
 
 def _clamp_int(value: Any, minimum: int, maximum: int) -> int:
     return max(minimum, min(maximum, int(value)))
-
-
-def _clamp_float(value: Any, minimum: float, maximum: float) -> float:
-    return max(minimum, min(maximum, float(value)))
 
 
 def _chunked(items: list[dict[str, Any]], size: int) -> list[list[dict[str, Any]]]:
