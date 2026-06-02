@@ -107,6 +107,10 @@ def build_json_record(
         "cross_encoder_candidate_count": cross_encoder_candidate_count,
         "keywords": _json_safe_value(source_row.get("Keywords", "")),
         "search_query": _json_safe_value(source_row.get("Search Query", "")),
+        "retrieval_candidates": [
+            _format_retrieval_candidate(candidate, rank)
+            for rank, candidate in enumerate(retrieval_candidates, start=1)
+        ],
         "candidates": [
             _format_json_candidate(candidate, rank)
             for rank, candidate in enumerate(top_matches, start=1)
@@ -157,6 +161,14 @@ def _format_json_candidate(candidate: Candidate, rank: int) -> dict[str, Any]:
         "rrf_score": candidate.get("rrf_score"),
         "cross_encoder_score": candidate.get("cross_encoder_score"),
         "matched_terms": candidate.get("matched_terms", []),
+    }
+
+
+def _format_retrieval_candidate(candidate: Candidate, rank: int) -> dict[str, Any]:
+    return {
+        "rank": rank,
+        "retrieval_rank": candidate.get("retrieval_rank"),
+        "doc_id": _json_safe_value(candidate.get("doc_id")),
     }
 
 

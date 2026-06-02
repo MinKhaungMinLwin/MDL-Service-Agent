@@ -87,3 +87,20 @@ Defaults:
 - output ground-truth files: `output/current_test_env/evaluation/ground_truth`
 - LLM judge payloads do not expose retrieval mode, rank, or score
 - verification runs for every LLM judgment
+
+## ITB To MDL Matching Evaluation
+
+Evaluate matching quality against the generated ground truth:
+
+```powershell
+uv run itb-eval-matching
+```
+
+Defaults:
+
+- input matching JSON files: `output/current_test_env/matching/<retrieval-mode>`
+- input ground truth: `output/current_test_env/evaluation/ground_truth/itb_mdl_matching_ground_truth.csv`
+- output reports: `output/current_test_env/evaluation/matching`
+- retrieval stage metrics: `recall_at_100` and `judged_at_100`
+- cross-encoder stage metrics: `ndcg_at_20`, `recall_at_20`, and `judged_at_20`
+- recall uses `relevance_threshold=3`, recorded once in `report.json`

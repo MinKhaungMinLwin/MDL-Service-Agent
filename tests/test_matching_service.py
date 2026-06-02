@@ -98,6 +98,25 @@ class MatchingServiceTest(unittest.TestCase):
         self.assertIn("DROP INDEX test_mdl_document_fulltext_idx", conn.calls[1][0])
         self.assertIn("CREATE FULLTEXT INDEX test_mdl_document_fulltext_idx", conn.calls[2][0])
 
+    def test_repository_can_search_only_one_source_without_changing_default_exclusion(self) -> None:
+        conn = _SearchConnection()
+        config = MatchingConfig(
+            retrieval_candidate_limit=5,
+            output_limit=5,
+            excluded_source_text="",
+            included_source_text="R&N_MDL.xlsx",
+        )
+
+        MDLSearchRepository(conn, config).search_keyword("pump")
+
+        query, parameters = conn.calls[0]
+        self.assertIn("$included_source_text", query)
+        self.assertIn("$excluded_source_text", query)
+        self.assertEqual(parameters["included_source_text"], "R&N_MDL.xlsx")
+        self.assertEqual(parameters["excluded_source_text"], "")
+        self.assertEqual(MatchingConfig().excluded_source_text, "R&N_MDL")
+        self.assertEqual(MatchingConfig().included_source_text, "")
+
     def test_default_matching_paths_read_itb_extract_and_write_mode_output(self) -> None:
         files = _files_to_process(
             inputs=None,
@@ -155,6 +174,11 @@ class MatchingServiceTest(unittest.TestCase):
         self.assertIn("[Sample] 1 - Doc 1", csv_output.loc[0, "Matched_Doc_1"])
         self.assertEqual(json_output[0]["retrieval_candidate_count"], 100)
         self.assertEqual(json_output[0]["cross_encoder_candidate_count"], 100)
+        self.assertEqual(len(json_output[0]["retrieval_candidates"]), 100)
+        self.assertEqual(
+            json_output[0]["retrieval_candidates"][0],
+            {"rank": 1, "retrieval_rank": 1, "doc_id": "1"},
+        )
         self.assertEqual(len(json_output[0]["candidates"]), 20)
 
     def test_schedule_candidate_parser_accepts_cross_encoder_score(self) -> None:
@@ -306,6 +330,29 @@ class _RecordingResult:
 
     def single(self):
         return {"properties": self.index_properties} if self.index_properties is not None else None
+
+
+class _SearchConnection:
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, dict]] = []
+
+    def session(self):
+        return _SearchSession(self.calls)
+
+
+class _SearchSession:
+    def __init__(self, calls: list[tuple[str, dict]]) -> None:
+        self.calls = calls
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+        pass
+
+    def run(self, query: str, **parameters):
+        self.calls.append((query, parameters))
+        return []
 
 
 def _source_row() -> dict[str, str]:

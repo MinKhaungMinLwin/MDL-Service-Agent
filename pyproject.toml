@@ -34,6 +34,7 @@ mdl-ingest = "mdl_service.cli:ingest"
 itb-extract = "itb_service.cli:extract"
 itb-match = "matching_service.cli:match"
 itb-eval-build-ground-truth = "evaluation_service.ground_truth.cli:build_ground_truth"
+itb-eval-matching = "evaluation_service.matching_evaluation.cli:evaluate"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
