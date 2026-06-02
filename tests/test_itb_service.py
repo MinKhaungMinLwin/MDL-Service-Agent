@@ -9,11 +9,13 @@ import unittest
 from pathlib import Path
 from types import SimpleNamespace
 
-from itb_service.extraction import fallback_search_query, parse_batch_results, parse_json_output
+from common.llm_json import parse_json_output
+from itb_service.extraction import fallback_search_query, parse_batch_results
 from itb_service.loader import find_known_abbreviations, load_target_chunks, normalize_hierarchy, prepare_chunks
 from itb_service.models import OUTPUT_HEADER, ITBExtractionConfig, ITBTarget
 from itb_service.output import build_csv_row
 from itb_service.service import ITBExtractionService
+from itb_service.verification import build_verification_payload
 
 
 class ITBServiceTest(unittest.TestCase):
@@ -51,7 +53,7 @@ class ITBServiceTest(unittest.TestCase):
         self.assertEqual(query, "HVAC Fresh Air Intake SMACNA NFPA 90A")
 
     def test_parses_batch_results_and_builds_matching_csv_contract(self) -> None:
-        parsed = parse_json_output('prefix {\"results\":[{\"chunk_id\":\"chunk-1\",\"depth_1\":\"HVAC\"}]} suffix')
+        parsed = parse_json_output('{"results":[{"chunk_id":"chunk-1","depth_1":"HVAC"}]}')
         results = parse_batch_results(parsed, [{"chunk_id": "chunk-1"}])
         row = build_csv_row(
             "R&N_ITB",
@@ -70,6 +72,17 @@ class ITBServiceTest(unittest.TestCase):
 
     def test_empty_single_chunk_response_is_not_treated_as_valid(self) -> None:
         self.assertEqual(parse_batch_results({}, [{"chunk_id": "chunk-1"}]), {})
+
+    def test_verification_payload_includes_known_abbreviations(self) -> None:
+        payload = build_verification_payload(
+            "R&N_ITB",
+            _chunk("chunk-1", [95], "GSUT outage modes"),
+            "6.6 Plant Performance",
+            {"GSUT": "Generator Step-Up Transformer"},
+            {"depth_1": "Plant Performance"},
+        )
+
+        self.assertEqual(payload["source_input"]["known_abbreviations"], {"GSUT": "Generator Step-Up Transformer"})
 
     def test_service_writes_verified_csv_json_and_token_outputs(self) -> None:
         client = _ChatClient(
@@ -178,6 +191,57 @@ class ITBServiceTest(unittest.TestCase):
 
         self.assertEqual(json_rows[0]["llm_verification"]["severity"], "error")
         self.assertIn("Missing model verification result", json_rows[0]["llm_verification"]["issues"][0])
+
+    def test_service_writes_section_boundary_rejections_to_audit_outputs(self) -> None:
+        client = _ChatClient(
+            [
+                {
+                    "results": [
+                        {
+                            "chunk_id": "chunk-1",
+                            "belongs_to_requested_section": False,
+                            "actual_section": "8 Plant Control and Operational System",
+                            "section_boundary_reason": "Chunk starts the next top-level section.",
+                            "depth_1": "Plant Control and Operational System",
+                            "depth_2": "Process Control System",
+                            "keywords": ["DCS"],
+                            "confidence": "high",
+                            "needs_review": False,
+                        }
+                    ]
+                },
+            ]
+        )
+        config = ITBExtractionConfig(model="deployment", batch_delay_seconds=0, requested_section="7")
+        service = ITBExtractionService(client, config, "extract prompt", {}, sleep=lambda _: None)
+
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            chunks_path = base / "chunks.json"
+            chunks_path.write_text(
+                json.dumps({"chunks": [_chunk("chunk-1", [124], "Plant control system")]}),
+                encoding="utf-8",
+            )
+            count = service.extract_to_files(
+                [ITBTarget(chunks_path, "R&N_ITB", 97, 124)],
+                base / "output.csv",
+                base / "output.json",
+                base / "tokens.csv",
+                base / "rejected.csv",
+                base / "rejected.json",
+            )
+            with open(base / "output.csv", newline="", encoding="utf-8-sig") as file:
+                csv_rows = list(csv.DictReader(file))
+            with open(base / "rejected.csv", newline="", encoding="utf-8-sig") as file:
+                rejected_rows = list(csv.DictReader(file))
+            rejected_json_rows = json.loads((base / "rejected.json").read_text(encoding="utf-8"))
+
+        self.assertEqual(count, 0)
+        self.assertEqual(csv_rows, [])
+        self.assertEqual(rejected_rows[0]["Requested Section"], "7")
+        self.assertEqual(rejected_rows[0]["Actual Section"], "8 Plant Control and Operational System")
+        self.assertEqual(rejected_json_rows[0]["llm_output"]["keywords"], ["DCS"])
+        self.assertEqual(client.prompts, ["extract prompt"])
 
 
 class _ChatClient:

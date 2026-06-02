@@ -1,0 +1,14 @@
+﻿Document,Chunk ID,Page,Section,Section Path,Requested Section,Actual Section,Belongs To Requested Section,Boundary Reason,Confidence,Chunk Text
+R&N_ITB,test_temp_R&N_ITB_chunk_407,"88, 89",2._Develop_Unit_models,2,6,2 Develop Unit models / 3 Analyse and Review,False,"Chunk section is 2 (and includes start of 3), which does not match requested section prefix 6.",high,"- Build Reliability Block Diagrams for each unit (RBDs)
+- Populate model with equipment failure data
+- Populate model with planned events (shutdowns, planned maintenance, etc.)
+- Run/debug unit model
+- Verify and validate the model with the project team
+3. Analyse and Review
+- Identify bottlenecks and constraints within the unit model
+- Define and run comparison cases
+- Analyse base case and comparison case results
+- Define final model configuration and recommendations"
+R&N_ITB,test_temp_R&N_ITB_chunk_429,"97, 98",7.1_Scope_of_Civil_Works,"7, 1",6,7.1 Scope of Civil Works,False,"Chunk section is 7.1 (Civil Works), which does not start with requested section prefix 6.",high,"The civil engineering and building works to be provided by the Contractor shall comprise the full detailed design of all permanent and temporary works, including detailed assessment of existing site conditions, structures  and  any  required  clearance  tasks,  supplementary  site  investigation  studies,  detailing  and preparation  of  design  and  construction  drawings,  construction  as  built  drawings,  and  completion  and maintenance  of  all  the  various  foundations  (including  transmission  towers),  structures,  plant  related buildings,  support  services  9buildings,  installations  and  services  etc.  required  for  the  installation, commissioning, operation and maintenance of the equipment and plant for the Facility.
+In general terms, a common and consistent set of standards shall be used throughout the facility for Civil, structural and Architectural work. If any requirements mentioned in Section 7 of OTS with respect to any codes and standards, doesn't exactly match with the requirements mentioned in the code and standard EPC Contractor wants to follow within the Codes and standards envelops mentioned in OTS, the equivalent or more stringent requirement shall be followed.
+The clear Headroom of for the ceilings shall be minimum 3.0m, OEM recommendation, as per relevant applicable code and Operational requirement whichever is stringent. Following scope of work shall be included for Civil/Structural and Architectural works;"

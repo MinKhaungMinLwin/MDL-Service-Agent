@@ -6,6 +6,8 @@ import json
 import re
 from typing import Any
 
+from common.llm_json import parse_json_output
+
 
 def extract_chunk_batch(
     client: Any,
@@ -26,23 +28,6 @@ def extract_chunk_batch(
     )
     parsed = parse_json_output(response.choices[0].message.content or "{}")
     return parse_batch_results(parsed, batch_payload), get_token_usage(response)
-
-
-def parse_json_output(output: str) -> dict[str, Any]:
-    """Parse a JSON object from a model response, tolerating surrounding text."""
-    try:
-        value = json.loads(output)
-        return value if isinstance(value, dict) else {}
-    except json.JSONDecodeError:
-        start = output.find("{")
-        end = output.rfind("}")
-        if start == -1 or end == -1 or end <= start:
-            return {}
-        try:
-            value = json.loads(output[start : end + 1])
-            return value if isinstance(value, dict) else {}
-        except json.JSONDecodeError:
-            return {}
 
 
 def parse_batch_results(parsed: dict[str, Any], batch_payload: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:

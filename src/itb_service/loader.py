@@ -36,6 +36,7 @@ def prepare_chunks(
     document_name: str,
     chunks: list[dict[str, Any]],
     abbreviation_rules: dict[str, str],
+    requested_section: str = "",
 ) -> list[PreparedChunk]:
     """Normalize and prepare non-empty source chunks for extraction."""
     prepared = []
@@ -50,7 +51,7 @@ def prepare_chunks(
                 chunk=chunk,
                 hierarchy=hierarchy,
                 known_abbreviations=known_abbreviations,
-                payload=build_chunk_payload(document_name, chunk, hierarchy, known_abbreviations),
+                payload=build_chunk_payload(document_name, chunk, hierarchy, known_abbreviations, requested_section),
             )
         )
     return prepared
@@ -80,9 +81,10 @@ def build_chunk_payload(
     chunk: dict[str, Any],
     hierarchy: str,
     known_abbreviations: dict[str, str],
+    requested_section: str = "",
 ) -> dict[str, Any]:
     """Build one source-grounded chunk payload for model extraction."""
-    return {
+    payload = {
         "document": document_name,
         "chunk_id": chunk.get("chunk_id", ""),
         "pages": chunk.get("page_num", []),
@@ -94,3 +96,6 @@ def build_chunk_payload(
         "known_abbreviations": known_abbreviations,
         "chunk_text": chunk.get("text", ""),
     }
+    if requested_section:
+        payload["requested_section"] = requested_section
+    return payload

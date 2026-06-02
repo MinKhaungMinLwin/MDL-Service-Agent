@@ -36,6 +36,19 @@ OUTPUT_HEADER = [
     "Chunk Text",
 ]
 TOKEN_HEADER = ["Document", "Page", "Prompt Tokens", "Completion Tokens", "Total Tokens", "Chunk Text"]
+REJECTED_HEADER = [
+    "Document",
+    "Chunk ID",
+    "Page",
+    "Section",
+    "Section Path",
+    "Requested Section",
+    "Actual Section",
+    "Belongs To Requested Section",
+    "Boundary Reason",
+    "Confidence",
+    "Chunk Text",
+]
 
 
 @dataclass(frozen=True)
@@ -61,6 +74,7 @@ class ITBExtractionConfig:
     max_chunks: int = 0
     enable_verification: bool = False
     batch_delay_seconds: float = 1.5
+    requested_section: str = ""
 
     def __post_init__(self) -> None:
         if not self.model:

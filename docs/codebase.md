@@ -66,10 +66,13 @@ data/schedule_sources/
     activity_base_date_policy.csv           Base date policy per activity type
 
 output/current_test_env/
-  output_itb_section6_focused.csv           ITB keyword extraction (Section 6)
-  output_itb_section7_focused.csv           ITB keyword extraction (Section 7)
-  output_match_all_projects_section6.csv    ITB → MDL Neo4j matches (Section 6)
-  output_match_all_projects_section7.csv    ITB → MDL Neo4j matches (Section 7)
+  itb_extract/
+    output_itb_section6_focused.csv         ITB keyword extraction (Section 6)
+    output_itb_section7_focused.csv         ITB keyword extraction (Section 7)
+  matching/
+    keyword|semantic|hybrid/
+      output_match_all_projects_section6.csv ITB to MDL Neo4j matches (Section 6)
+      output_match_all_projects_section7.csv ITB to MDL Neo4j matches (Section 7)
   Fadhili_MDL_classified.csv                Classified MDL (2682 rows)
   Grati_MDL_classified.csv
   ... (one per historical project)

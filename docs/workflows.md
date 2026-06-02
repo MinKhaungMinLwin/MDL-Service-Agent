@@ -34,7 +34,8 @@ uv run itb-extract --section 7
 Defaults:
 
 - input chunks: `data/current_test_env/data/itb_chunks/R&N_ITB_chunks.json`
-- output CSV/JSON/token files: `output/current_test_env`
+- output CSV/JSON/token/rejected files: `output/current_test_env/itb_extract`
+- token files are section-specific, e.g. `output_itb_section7_focused_tokens.csv`
 - packaged prompts: `src/itb_service/prompts/`
 
 ## ITB To MDL Matching
@@ -45,7 +46,44 @@ uv run itb-match
 
 Defaults:
 
-- input extraction CSV files: `output/current_test_env/output_itb_section*_focused.csv`
-- output matching CSV/JSON files: `output/current_test_env`
+- input extraction CSV files: `output/current_test_env/itb_extract/output_itb_section*_focused.csv`
+- output matching CSV/JSON files: `output/current_test_env/matching/<retrieval-mode>`
+- retrieval mode: `keyword`, `semantic`, or `hybrid`
+- keyword mode merges aggregated depth and keyword full-text searches
+- semantic mode embeds one comma-separated depth-and-keyword query per ITB chunk
+- hybrid mode merges keyword and semantic rankings with reciprocal rank fusion
+- all modes preserve detected abbreviations and append canonical expansions from `src/common/normalization_rules/abbreviations.json`
+- retrieved MDL candidates passed to the cross-encoder: `100`
+- final cross-encoder matches written per ITB chunk: `20`
+
+Examples:
+
+```powershell
+uv run itb-match --retrieval-mode keyword
+uv run itb-match --retrieval-mode semantic
+uv run itb-match --retrieval-mode hybrid
+```
 
 Use `--help` on any command to see path and runtime overrides.
+
+## ITB To MDL Ground Truth
+
+Build a blind candidate pool from the top matching results for sections 6 and 7:
+
+```powershell
+uv run itb-eval-build-ground-truth --pool-only
+```
+
+Generate resumable LLM-assisted silver ground truth with full LLM verification:
+
+```powershell
+uv run itb-eval-build-ground-truth --verify
+```
+
+Defaults:
+
+- input matching JSON files: `output/current_test_env/matching/<retrieval-mode>`
+- pooled candidates per mode and ITB chunk: `20`
+- output ground-truth files: `output/current_test_env/evaluation/ground_truth`
+- LLM judge payloads do not expose retrieval mode, rank, or score
+- verification runs for every LLM judgment

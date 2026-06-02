@@ -1,0 +1,332 @@
+﻿Document,Page,Prompt Tokens,Completion Tokens,Total Tokens,Chunk Text
+R&N_ITB,79,2605,395,3000,"Each Plant shall have GNCPC of 1800(±5%) MW net on natural gas and when operated on back-up fuel the net power output shall follow Appendix C in the EPC Contract.  The Plant shall comprise of Power Blocks consisting of Gas turbines, HRSGs and Steam turbine. The additional power capacity achieved by SF must not exceed 10% of the Contracted Capacity.
+Refer to section3 and 4 of OTS Part A."
+R&N_ITB,79,2718,609,3327,"The Plant shall be designed as a Combined Cycle Power Plant, consisting of but not limited to:
+- Dual Fuel Gas Turbine (GTs)
+- Dry low NOx combustors;
+- Heat Recovery Steam Generators (HRSGs),
+- By-pass  stack  including  diverter  dampers  horizontal  and  vertical  sealing  guillotine damper.
+- Condensing Steam Turbine (CST) with Air Cooled Condenser
+- Synchronous Generators for Gas Turbines and Steam Turbine
+- Generator Circuit Breakers for GTGs and STGs
+- 2 winding Generator Step-up transformers;
+- 2 or 3 winding Auxiliary transformers
+- HV Circuit Breakers for GSU Transformers of GTGs and STG
+The plant shall be designed preferably symmetrically; this means the Plant shall consist of equally designed Groups (same number and type of GTs/HRSGs/ST)."
+R&N_ITB,79,2579,244,2823,"In  order  to achieve an optimum cost solution, the final configuration and number of power and steam generation  units  to  be  proposed  shall  be  based  on  the  contractor's  own  optimization  by  taking  into consideration the type and size of gas turbines available in the world market for meeting the required power generation capacity."
+R&N_ITB,"80, 81",3220,565,3785,"The condenser shall be capable of condensing the whole of the steam exhaust from the steam turbine (including the bypass systems) under all conditions of load and operation. For this the EPC Contractor shall provide  with  his  proposal  supporting  calculations.  Additionally,  supporting  calculations  demonstrating that the wind direction at the site will not impact the performance of the ACCs shall be provided. The ACC location shall be selected so that it will not be in the predominant wind direction.
+The systems and components for the ACC shall be provided by the Contractor and shall include but not limited to the following:
+- Condensate extraction pumps and strainers;
+- Vacuum raising and maintaining system;
+- Turbine blow off tank;
+- Condensate, air extraction, recirculation, air, drain and atmospheric exhaust pipework and valves;
+- Vent pipework routed to a safe location;
+- Flash boxes (with integral connections to condenser) for feed heater and other drains;
+- Heat exchange sections;
+- Support structure and fan deck;
+- Steam duct / distribution system;
+- Condensate collection system;
+- Condenser air removal system;
+- Cooling air fans with automatic controls
+- Condenser atmospheric relief devices;
+- Holding down bolts, plates, etc;
+- Local ladders, galleries and hand railing;
+- All driving motors with base plates, or stools for all auxiliaries;
+- Local instruments, gauges, control and panels;
+- Additional  tapping  points,  complete  with  isolation  and  all  necessary  instruments  for performance testing;
+- Any special lifting tackle, spanners and tools;
+- All other equipment required for the safe and efficient operation of the plant.
+The  exhaust  steam  from  the  Steam  Turbine  exhaust  shall  be  directed  to  the  air  cooled  condenser  and condensing  system  via  a  steam  piping  and  ductwork  system;  the  water  will  then  be  forwarded  to  the condensate system.
+The condenser and the cooling system, at a minimum, shall be capable of:
+- i. Condensing the total steam flow from its associated steam turbine operating at maximum flow and at maximum ambient temperature;
+- ii. Accepting the total steam system drain flows;
+- iii. Condensing the full capability of the steam turbine bypass system(s); and
+- iv. simultaneously  operating  with  steam  flow  through  the  steam  turbine  and  the  steam  turbine  bypass system.
+The condensing plant shall be designed and guaranteed to condense the maximum exhaust steam flow from the Steam Turbine; to accept the relevant steam system drains; and to condense the dump steam flows from
+the IP and LP bypass systems under conditions of turbine start-up, rapid load reduction, partial or full load rejection and turbine trip.
+The ACC shall be provided with N+1 fans where N refers to the number of fans required for the maximum load condition. There is no requirement to provide the ACC equipped with elevator.
+The condenser vacuum shall be optimised by the EPC Contractor."
+R&N_ITB,81,2782,506,3288,"The steam turbine outlet connection pieces shall be designed for smooth transition with minimal obstructions from the LP turbine exhaust to the condenser to assure negligible pressure drop.
+The turbine bypass dumps shall be designed with dispersion headers internal to the condenser to adequately disperse the steam safely into the condenser for all possible extreme transient scenarios.
+The Air-Cooled condenser materials shall be selected to provide the necessary reliability at an economical cost taking into account that ACC is being operated with Demineralized water with proper water chemistry required by OEM guidelines. ACC OEM Design will take into consideration of proper material selection as per Demin water quality..
+Vacuum raising and maintaining plant may be based on either steam ejectors or mechanical vacuum pumps. As a minimum, one start-up (hogging) duty and one running duty device shall be provided for each condenser.
+Steam for air ejectors, if supplied, shall be taken from the main steam supply. A silencer shall be provided on each ejector outlet.
+The hotwell tank and condensate system shall be sized in accordance with HEI standards.
+The condensate system shall be equipped with instrumentation that will assist in trouble shooting of any condenser tube leakage."
+R&N_ITB,81,2597,359,2956,The gas turbines of the Plant shall be designed for 100% dual fuel capability with Natural Gas as the primary fuel and liquid fuel (diesel) as back-up fuel and without any limitation on the duration of operation on either fuel. Plant fuel systems and control systems shall be optimized and have sufficient redundancy to ensure the maximum availability of the gas turbines including during a changeover between fuel types.
+R&N_ITB,81,2669,313,2982,"The Fuel Connection Facility for gas will be located so that the area is directly accessible by Saudi Aramco from the outside without using the main gate of the Plant.
+The EPC Contractor shall supply all civil works required for gas station according to the requirements for Rumah and Nairyah. This gas station shall be of sufficient size for any receiving/reducing/booster pumping installations along with the required metering necessities, I&C and electrical requirements.
+The design for the gas installations shall be carried out in close coordination with SPPC and Saudi Aramco"
+R&N_ITB,81,2669,411,3080,"The EPC Contractor shall connect the Back-up Fuel system of the respective plant of Rumah or Nairyah IPPs or both to the Back-up Fuel tank farm.
+Each of the Back-up Fuel oil tanks shall be placed on reinforced concrete ring foundations and be located inside an oil and watertight tank basin of reinforced concrete slabs and surrounding walls with respective oil proof coating.
+In addition, the EPC Contractor shall supply all civil works required for Back-up Fuel delivery by road tankers through an unloading station located adjacent to the Back-up Fuel storage tanks within the plant boundaries."
+R&N_ITB,81,2594,330,2924,"The Power Pant shall be designed and sized for a total net capacity of  1800±5% MW at reference site conditions on natural gas and when operated on back-up fuel the net power output shall follow Appendix C in the EPC Contract. However, the capacity of each gas turbine shall not be limited below maximum gas"
+R&N_ITB,82,2950,485,3435,"turbine output at full opening of GT compressor inlet guide vane during power block operation with single gas turbine, to compensate for GT degradation and during simple cycle operation.
+The configurations as proposed by Contractor shall be based on reaching the lowest Guaranteed Contracted Net Heat Rate (GNCHR) while maintaining maximum possible GNCPC to be demonstrated at COD in conditions as defined in EPC Contract.
+In order to increase the competitiveness of the proposal, Contractor shall consider:
+- To limit its contractor margins and uncertainties to be applied for the purpose of establishing its GNCPC and GNCHR at Early Power Unit Commercial Operation Dates and PCOD;
+- the application of triple pressure reheat HRSG with/without supplementary firing;
+- the application of evaporative/fogging/wet compression system in GT;
+- optimizing the HRSG exhaust gas temperature and gas side pressure drop, while considering proper means to reduce the risk of excessive corrosion;
+- optimizing the feed water system heat recovery performances such as steam & water side pressure drops, pinch point, approach point;
+- consider minimum Blow-down (0%) for the purpose of defining the GNCPC ;
+- optimize the step-up transformers as to limit efficiency losses;
+- minimize the auxiliary power consumption by;
+- -use of best estimate auxiliary power consumption for setting the Contractor GNCPC.
+- -Considering variable speed/hydraulic coupling for feed water  pumps, and gas compressors (if applicable);
+- -Minimizing building free volumes to avoid excessive HVAC
+- -Use of Photo Voltaic panels for plant energy consumption.
+- -Use of the best estimate for the equipment and Plant degradation.
+- -Optimizing the margins on the design and sizing.
+- Minimizing heat losses over the bypass stacks by providing air seal cooling ;
+- means to increase the overall efficiency of the steam cycle;"
+R&N_ITB,"82, 83",2942,412,3354,"The HRSG shall be designed and sized based on the Design Point Performance (to be chosen at a later stage) operating on natural gas specified on OTS Part A Annex 4.1-1 Fuel Gas Specification.
+The  HRSG  shall  be  equipped  with  cold  end  condensate  recirculation  system  and  condensate  bypass arrangement. The HRSG shall achieve the desired plant performance at all the operating points.
+In  case  of  cold  casing  design,  the  HRSG  design  shall  incorporate  adequate  hot  &  cold  end  corrosion protections. Hot and Cold end corrosion protective measures shall include Protective coatings on the casing and protective layers (Teflon or other suitable corrosion protection layers) to minimise the undesirable effects of sulphuric acid corrosion. Alternatively, hot casing design for HRSG shall be provided for hot and cold  end  corrosion  protection.  The  corrosion  protection  methods  employed  shall  be  having  proven commercial operational experience and shall be approved by the OWNER.
+To satisfy the operational requirement as mentioned in OTS Part A. In order to model the degradation due to aging, the following information shall be supplied for HRSG for years following post COD starting from guaranteed values, but applying best estimate degradation in addition to submitting the long-term best estimate degradation curve or factors:
+- Enthalpy of the exhaust gas
+- Mass flow of the exhaust gas
+- Temperature of the exhaust gas
+- Exhaust Gas composition
+- The pressure, temperature and steam flow of each pressure level
+HP steam, after expansion in the HP ST, can be equally split over 2 or 3 HRSGs for reheating, without creating unbalances in the respective HRSGs (if reheat system is applied).
+Condensate return temperature shall be above dew point temperature, to minimize corrosion risk."
+R&N_ITB,83,2584,333,2917,"HP/IP-LP bypass shall be 100% capacity.
+- To cover the loss of ST with GT at full load (transient situation without switch over to open cycle mode)"
+R&N_ITB,83,2550,216,2766,Essential and non-essential HVAC shall be separate systems. Essential HVAC shall be maintained during blackout start and safe shutdown conditions.
+R&N_ITB,83,2596,307,2903,"Emissions control system to meet the requirements of IFC guidelines, World bank, Equator Principles III (2013) and Saudi Arabia requirements. The gaseous emissions from the plant shall not exceed the limits stated in section 4.1.9 of the OTS Part A. The EPC Contractor shall submit all calculations and design data as appropriate to demonstrate full compliance with the Royal Commission requirements."
+R&N_ITB,83,3053,450,3503,"The  Contractor  will  be  required  to  design  and  construct  the  Plant  in  accordance  with  the  applicable environmental laws and standards. The Contractor is also responsible for obtaining and maintaining all the necessary Permits for the construction of the Plant.
+An Environmental Impact Assessment Study (EIA) will be completed by Owner and copy of the same will be made available to Contractor. A Preliminary Environmental Assessment ('PEA') or Environmental and Social Impact Assessment ('E S IA') was conducted by the Offtaker and is provided in OTS Part A, Annex 3.31 of Part III (Drawings and Diagrams).
+It is anticipated that the Project's development will necessitate the involvement of international lenders for financing. Given this, the Project's assessment will need to account for the requirements of international lenders in addition to the local regulations. With the specific international lenders currently unknown, the key requirements, which have been considered within this Scoping report, comprise the Equator Principles III (2013) and associated IFC Performance Standards (2012). The Project will be expected to comply with the most stringent standards should national/IFC requirements differ.
+The Owner will progress the EIA Study with the intention that the Environmental Permit is available soon after the time of Contract Award. Contractor shall be responsible for providing all the necessary technical and environmental inputs to the extent required for the EIA study. After Contract Award any amendment to  the  EIA  Study  and  the  Environmental  Permit  will  be  the  responsibility  of  the  Owner  and  the  EPC Contractor.
+Waste management during construction will be in accordance with the Waste Management Plan developed specifically for this project and in accordance with Government and Company approved plan.
+Hazardous  Area  Classification  drawings  shall  be  developed  in  accordance  with  the  latest  revision  of ANSI/API  RP-505  and  Company  Standard  SAES-B-068  during  the  PP  Phase.  The  Area  Classification drawings shall be prepared from the project plot plans and the process schedule of hazardous materials to determine the potential sources of hazard.
+All areas of the where concentrations of gas may occur due to normal leakage or process fault or ventilation system failure shall be classed as hazardous locations. The Contractor shall calculate and produce area classification drawings and documentation for the whole site area. The classified area shall be as defined within the relevant regulations and standards. All equipment within each area shall be uniquely identified and be fully compliant with the standards and regulations."
+R&N_ITB,84,2543,208,2751,"In addition, all relevant national environmental laws and regulations of Saudi Arabia are to be complied with.
+The Project designs shall ensure compliance with the most stringent source emission control parameters."
+R&N_ITB,84,2789,337,3126,"The Project designs shall ensure compliance with the most stringent source emission control parameters. The maximum permissible air emission levels, which are to be met within the specified temperature range between minimum stable load (which is expected at about 30% of plant load) and maximum continuous rating of each gas turbine are shown in the following table:
+NOx (as NO2), Unit = mg/Nm3 (dry, 15% O2). NOx (as NO2), Gas = 18 2) 3). NOx (as NO2), Backup Fuel = 18 1) 2) 4). CO, Unit = mg/Nm3 (dry, 15% O2). CO, Gas = 50. CO, Backup Fuel = 50. SO2, Unit = mg/Nm3 (dry, 15%O2). SO2, Gas = (According to Sulphur content in the fuel). SO2, Backup Fuel = (According to Sulphur content in the fuel). Smoke Density, Unit = Bacharach. Smoke Density, Gas = 2. Smoke Density, Backup Fuel = 2. Reference -O2, Unit = Vol.-%. Reference -O2, Gas = 15. Reference -O2, Backup Fuel = 15"
+R&N_ITB,"84, 85",2920,608,3528,"- 1) NOX emission for Back-up Fuel is based on maximum fuel bound nitrogen content of 0.015% by weight.
+- 2) This value of 18 mg/Nm3 (or 9 ppmv) applies for combined cycle operation.
+- 3) In case open cycle is implemented, this value may be exceeded up to a value of maximum 50 mg/Nm3 subject to the approval by the competent authorities
+- 4) In case open cycle is implemented, this value may be exceeded up to a value of maximum 150 mg/Nm3 subject to the approval by the competent authorities
+Emission guarantees are given for a daily average and for steady state operation and normal loading and deloading transients. Emissions guarantees will not apply to grid code compliance or frequency following transients.
+The values in above table refer to the flue (exhaust) gas in dry condition, 0 °C temperature and 1013 mbar atmospheric pressure.
+Emissions control system to meet the requirements of IFC guidelines, World Bank, Equator Principles III (2013) and Royal Commission requirements.
+The gaseous emissions from the plant shall not exceed the limits as specified in the above guidelines and as per Environmental and Social Impact Assessment (ESIA) study report.
+The emission guarantee of gas turbine is suggested for purpose of SCR design:
+- <Natural Gas firing>
+- -Ambient temperature is more than 15 degC: from 60% to 100 of the gas turbine load.
+- -Ambient temperature is less than 15 degC: from 80% to 100 of the gas turbine load.
+- <Back up Fuel firing>
+-Ambient temperature is more than 15 degC: from 60% to 100 of the gas turbine load.
+-Ambient temperature is less than 15 degC: from 75% to 100 of the gas turbine load."
+R&N_ITB,85,2638,291,2929,"All plant shall run without undue vibration and with the least practicable amount of noise.
+The Plant shall be designed to achieve all the relevant noise standards and guidelines. As a minimum the Plant shall be designed to meet the requirements as per OTS part A section 4.1.9.5.
+The noise levels shall be measured according to ISO standards.
+To meet the noise level requirements the Plant is required to be equipped with standard noise attenuation features. All machinery which exceeds the permissible noise limits shall be equipped with silencers or with lagging or specially designed acoustic enclosures."
+R&N_ITB,85,2967,444,3411,"The Contractor shall take account of applicable environmental standards and regulations for wastewater re-use and discharge. Effluent discharge limits applicable to the Plant shall be as per EIA recommendations.
+Permissible effluent emission limits for aqueous discharges into the soil are shown below:
+Physio-chemical pollutants Floatable, Unit = -. Physio-chemical pollutants Floatable, Allowable effluent Level = None. pH, Unit = -. pH, Allowable effluent Level = 6-8.4 pH units. Total suspended solids (TSS), Unit = mg/l. Total suspended solids (TSS), Allowable effluent Level = 35. Turbidity, Unit = . Turbidity, Allowable effluent Level = max.5 NTU. Bio-chemical oxygen demand, Unit = mg/l. Bio-chemical oxygen demand, Allowable effluent Level = 25. Chemical oxygen demand, Unit = mg/l. Chemical oxygen demand, Allowable effluent Level = 150. Total organic carbon(TOC), Unit = mg/l. Total organic carbon(TOC), Allowable effluent Level = 50. Total kjeldahi nitrogen(TKN), Unit = mg/l. Total kjeldahi nitrogen(TKN), Allowable effluent Level = 5. Total chlorinated hydrocarbons, Unit = mg/l. Total chlorinated hydrocarbons, Allowable effluent Level = 0.1. Oil and grease, Unit = mg/l. Oil and grease, Allowable effluent Level = 0. Phenols, Unit = mg/l. Phenols, Allowable effluent Level = 0.002
+Non-organic pollutants, 1 = Units. Non-organic pollutants, 2 = Allowable effluent level 30 day average (mg/l). Ammonia as nitrogen, 1 = mg/l. Ammonia as nitrogen, 2 = 1.0. Arsenic(As), 1 = mg/l. Arsenic(As), 2 = 0.1. cadmium(Cd), 1 = mg/l. cadmium(Cd), 2 = 0.1"
+R&N_ITB,86,2931,385,3316,"Chlorine(residual), 1 = mg/l. Chlorine(residual), 2 = 0.5. Chromium, total (Cr), 1 = mg/l. Chromium, total (Cr), 2 = 0.1. Copper (Cu), 1 = mg/l. Copper (Cu), 2 = 0.4. Cyanide (eN), 1 = mg/l. Cyanide (eN), 2 = 0.05. Lead (pb), 1 = mg/l. Lead (pb), 2 = 0.1. Mercury (Hg), 1 = mg/l. Mercury (Hg), 2 = 0.001. Nickel(Ni), 1 = mg/l. Nickel(Ni), 2 = 0.2. Phosphate (total as Phosphorous), 1 = mg/l. Phosphate (total as Phosphorous), 2 = 1.0. Zinc(Zn), 1 = mg/l. Zinc(Zn), 2 = 4.0. , 1 = mg/l. , 2 = . Biological pollutants, 1 = . Biological pollutants, 2 = Allowable effluent level 30 - day average. Total coliform, 1 = . Total coliform, 2 = 2000MPN per 100ml
+Emission limits for aqueous discharges shall be stated by the contractor and must be agreed with the RC. This shall be in line with the environmental and social impact assessment and RC permitting. Emission limits for aqueous discharges shall be stated by the contractor and must be agreed with the RC. This shall be in line with the environmental and social impact assessment and RC permitting. In order to achieve the above  mentioned  permissible  effluent  limits  wastewater  treatment  systems  are  required,  which  shall include an oil drain, a chemical drain and a sewage treatment plant. These wastewater treatment facilities shall be designed to cater for the entire wastewater of the Plant."
+R&N_ITB,"86, 87",3069,474,3543,"The sewage treatment plant and its ancillary systems shall fulfil the requirements to collect, treat/clarify and discharge the domestic and sanitary waste waters streams. The industrial wastewater shall be treated separately in adequate system. Both, domestic and industrial wastes consist of many compounds which could contaminate surface water) groundwater and soil. Furthermore, especially in the case of discharging untreated sanitary wastewater, the bacteriological contamination can result in the occurrence and spread of water borne diseases like cholera, dysentery, typhoid, etc. Therefore, special attention has to be paid by the Contractor during its investigation of the wastewater collection area to ensure that all waste water streams are considered and will be segregated, collected and discharged in a wastewater collecting system. This also includes all the sanitary and other domestic wastewater out of all permanent and temporary site facilities and the industrial wastewater out of the process like backwash water, rinse water, chemical and acid cleaning wastes and other process wastewater which cannot be used in other ways (blow-down water, etc.).
+The wastewater shall be delivered to the wastewater treatment plant in sewers or pipes made of customary and proven materials in adequate diameters according to the amount of wastewater conducted in the pipes. In the case of geodetic constraints, pumping stations must be installed in adequate numbers. In the case of using cesspools, intermediate storage is allowed. The cesspools  must be emptied by vacuum loader(s), which are also part of the scope of supply.
+The collected wastewater should be treated in accordance with the above effluent limits.
+In order to meet the required quality of clarification, sanitary and domestic wastewater streams should at least be treated by screening and primary sedimentation, biological clarification in activated sludge basins, sedimentation for removing the activated sludge and as a last stage an effluent disinfection for discharging
+the wastewater into the sea. The treated sanitary wastewater should also be used for irrigation purposes if required.
+All wastewater streams discharged into the domestic waste water treatment plant shall be free of toxic and inhibitory compounds concerning the process of biological clarification or compounds that can influence the further use of the sewage sludge.
+The sewage sludge should either be treated or dried for use as fertilizer or disposed of in a suitably designed landfill according to US EPA/EU specification.
+In  order  to  meet  the  required  quality  values,  industrial  wastewater  should  be  treated  separately  with special regard to the parameters listed in Table above.
+Special regard is to be paid by the Contractor to the contamination of the several streams and the adequacy and suitability of treatment process wastewater streams with similar contamination can be summarized and mixed before treatment. Oil contaminated water have to be treated in oil separators."
+R&N_ITB,87,2541,276,2817,"All chemical polluted wastewater (coming from storage areas, chemical cleaning, acid cleaning) has at least to be neutralized and detoxicated."
+R&N_ITB,87,2919,474,3393,"The Project shall adhere to local solid waste management guidelines and implement the requirements of WBG for solid wastes and liquid wastes. Oil can become contaminated by oil and chemical spillage during construction,  operation  and  maintenance of  the  Plant.  The  entire  Plant  shall  be  designed,  constructed, operated and maintained in such a way that any soil contamination will be prevented.
+The WBG standards liquid effluents originating from thermal power plants are summarised in Table below.
+Effluents from Thermal Power Plants (IFC, Thermal Power Guidelines 2008)
+pH, Maximum Value (Unit) = 6-9 (pH). TSS, Maximum Value (Unit) = 50 (mg/L). Oil and Grease, Maximum Value (Unit) = 10 (mg/L). Total Residual Chorine, Maximum Value (Unit) = 0.2 (mg/L). Chromium (Total), Maximum Value (Unit) = 0.5 (mg/L). Copper, Maximum Value (Unit) = 0.5 (mg/L). Iron, Maximum Value (Unit) = 1.0 (mg/L). Zinc, Maximum Value (Unit) = 1.0 (mg/L). Lead, Maximum Value (Unit) = 0.5 (mg/L). Cadmium (Cd), Maximum Value (Unit) = 0.1 (mg/L). Mercury (Hg), Maximum Value (Unit) = 0.005 (mg/L). Arsenic (As), Maximum Value (Unit) = 0.5 (mg/L)
+The plant shall be designed, operated, and maintained in such a way to prevent any soil contamination or impact  on  the  terrestrial  ecosystem.  This  shall  be  in  line  with  the  environmental  and  social  impact assessment and RC permitting."
+R&N_ITB,88,2539,210,2749,The Plant design and configuration shall provide suitable equipment size and number to ensure a reliable supply of power.
+R&N_ITB,88,2585,217,2802,"This  section  describes  the  Owner  technical  specification  for  the  RAM  (Reliability,  Availability,  and Maintainability) modelling of the plant's equipment and systems. A set of RAM models are required to support and validate process decisions and equipment selection."
+R&N_ITB,88,2774,254,3028,"The RAM modelling effort  has  several  objectives  based  on  the  activity's  timing  and  the  level  of  detail incorporated in the model.
+The main goals of the RAM assessment shall be:
+- To test the capacity assumptions used in the initial design documents, at the unit and plant level, and identified equipment, systems or other factors contributing to the generation losses
+- To  calculate  the  design  inherent  reliability  of  the  plant  represented  by  electrical  power continuity  of  supply reliability,  based  on  the  final  design  of  the  plant,  including  a  sensitivity analysis  in  order  to  determine  the  effect  on  reliability  output  changes  in  the  different  input parameters
+- Definition  of  conditions  or  assumptions  under  which  that  calculated  reliability  can  be maintained as representative of the 'reliability of the plant operation'. Especially the related considerations of aspects, additional to design, that affect to the final achievable reliability like those which would be in the scope in the Operation & Maintenance of the plant stage."
+R&N_ITB,88,2646,243,2889,"The RAM assessment shall consider all systems, packages, sub-systems and equipment associated with all generating units of the plant and their utilities/ancillary systems/equipment required to maintain their operational status. The assessment will be divided in each unit and facility.
+Finally, results of each specific unit and facility will be combined to assess overall reliability of the Plant. In the assessment, all relevant aspects that affect the expected reliability of the Plant shall be considered.
+All systems that affect to electrical generation of the plant should be considered in the RAM assessment (to be discussed between the parties)."
+R&N_ITB,88,2594,215,2809,"Each unit model shall be developed using the following work process:
+1. Overall Scope Definition
+- draft study execution plan
+- define equipment configurations
+- define production basis for units and overall generation
+- define the level of detail for each phase
+- Identify probable sensitivity cases for comparison with base model"
+R&N_ITB,"88, 89",2586,381,2967,"- Build Reliability Block Diagrams for each unit (RBDs)
+- Populate model with equipment failure data
+- Populate model with planned events (shutdowns, planned maintenance, etc.)
+- Run/debug unit model
+- Verify and validate the model with the project team
+3. Analyse and Review
+- Identify bottlenecks and constraints within the unit model
+- Define and run comparison cases
+- Analyse base case and comparison case results
+- Define final model configuration and recommendations"
+R&N_ITB,89,2875,334,3209,"The RAM assessment to be developed by the EPC Contractor and shall include the following:
+- The RAM software to be employed to perform calculations shall be based on Monte Carlo methodology and performed using Isograph.
+- International standard EN-60812 or similar shall be considered.
+- Establish a Base Case Model with all assumptions, including equipment reliability data used in the assessment.
+- Prepare  Reliability  Block  Diagrams  (RBDs),  including  but  not  limited  to  configuration, sparing, and sizing arrangements. The RBD shall accurately model the system failure logic and include all redundancy in each specific system.
+- Prepare a list of equipment or systems considered in the model with the Failure Mode and Failure Rates included in the models (MTTF, MTTR).
+- Prepare a Base Case Model analysis, providing recommendations for the improvement of overall  reliability.  Perform  sensitivity  analyses,  for  the  recommended  parameters  or equipment or for the client chosen parameters after analysing the first base case draft.
+- Model uncertainty related to equipment failure, to prevent potential effects on the process and identify appropriate actions that will lead to reduced consequences
+- RAM analysis shall be developed 'top-down' and expanded to lower levels.
+- Expected average Plant availability and reliability
+- Identification of all potential critical components and process bottlenecks
+- Identification of failure modes and their consequences
+- Decision  support  to  determine  the  most  cost-optimal  solution  to  improve  reliability results with respect to:
+- Process design
+- Spare part philosophy
+- Mobilization times and contracts
+- Preventive maintenance strategy
+- Identification of cost-effective measures
+- Knowledge of industry performance methodology"
+R&N_ITB,89,2600,222,2822,"The EPC Contractor shall resource the activities with a qualified facilitator and model operator. The RAM facilitator shall:
+- Have a relevant reliability certificate such as CRE (certified reliability engineer by ASQ)
+- domain  industry  experience  (relevant  experience  in  power  plants  operation  and maintenance)
+- hands-on experience in using the simulation solution platform."
+R&N_ITB,90,2711,361,3072,"- During  the  Design  Stage,  the  model  files  will  be  retained  by  the  EPC  Contractor  and updated as needed. Following Design Stage completion, model files shall be made available to Owner for future use.
+- The  RAM  study  deliverable  for  Design  Stage  consists  of  a  report  with  attachments documenting the cases run, results obtained, and recommendations made.
+- List of conditions or assumptions under which that calculated reliability can be maintained as  representative  of  the  ""reliability  of  the  plant  operation"",  especially  the  related considerations of aspects additional to design that affect the final achievable reliability, like those which would be in the scope in the Operation & Maintenance stage of the plant.
+EPC shall also provide the information of all installed equipment at the plant according to the templates available in Schedule E Equipment Data Templates."
+R&N_ITB,90,2688,464,3152,"An appropriate level of redundancy shall be included in each auxiliary system. The Plant shall be designed so that no single auxiliary equipment failure or trip (except main equipment) shall result in the reduction of power capacity. In this context, it is required that all critical auxiliary equipment shall be provided with N+1  configuration.  Station  (common)  auxiliaries  shall  include  similar  redundancy  such  that  no  single equipment failure shall result in any loss of Plant generating capacity. Main equipment refers to all GTs, HRSGs,  STs,  GRMS,  condensers,  generators,  main  transformers,  aux.  transformers,  major  electrical equipment,  cables,  pre-treatment.  Redundant  backup  equipment  shall  start  instantaneously  to  enable continued functioning of the process without consequent malfunction."
+R&N_ITB,"90, 91",3248,675,3923,"All  pumps  and  compressors  shall  be  redundant  with  on-line  switchover  capability  with  following redundancy:
+- Pumps, blowers, compressors, fans : N+1
+- Lube oil pump for HP Feedwater Pump : 2x100% (for each FW pump)
+- Lube oil heater for HP Feedwater Pump : 2x100% (for each FW pump)
+- Power Plant Jockey pumps : 2x100%
+- Heat exchangers (not applicable to fin fan cooler or to air cooled condenser). Redundancy should be considered to eliminate single point of failure that will result in reduced load.
+- Cooling tower/fin fan cooler cells : N+1
+- Tanks (if not mentioned hereunder) : more than 1
+- CCW Expansion Tanks : 1 x 100%
+- Atmospheric drain tank : 1 x 100%
+- Vacuum Flash Tank : 1 x 100%
+- Condensate Storage Tank : 2x50% or 1x100%
+- Service air receiver tank : 2 x 100%
+- Instrument air receiver tank : 2 x 100%
+- H2 Tanks : 2 x 50%
+- Diesel storage tank : 2 x 50%
+- Gas Drain Collection Tank (GT Area) : 1 x 100%
+- GT Fuel Gas Last Chance Filter (per GT) : 2 x 100% Chemical tanks
+- DM plant : N+1 stream
+- Air conditioning :  N+1  (except  for  non-plant  buildings,  such  as: Administration building/ workshop/warehouse/Gate guard house)
+- Ventilation Fans :  N+1  (except  for  non-plant  buildings,  such  as: Administration building/ workshop/warehouse/Gate guard house))
+- Gas reducing station : 3 x 50%
+- Feed water control stations : 2 x 100%
+- Fuel Gas Boosting Compressors: : N+1, where, N=Number of Gas Turbines
+- Air  compressors  with  after  coolers  (after  coolers  if  required,  will  be  confirmed  during  detail engineering) : 3x50%
+- Air filtering skids : 2 x 100%
+- Air dryers : 2 x 100%
+- After Filters : 2 x 100%
+- CO2 rack & manifold station for each GT : 1 x 100%
+- CO2 rack & manifold station for each ST : 1 x 100%
+- N2 rack & manifold station : 1 x 100%
+- H2 generator : 2 x 100%
+- Drain and vent valves :  two  valves  in  series  (If  operating  pressure  is greater than 4 MPa) otherwise single valve
+- Level control valve for HRSG Drums and Feedwater tank :  N+1 (not applicable for startup line, as applicable)
+Provision of bypass valves for control valves shall apply for those systems/facilities which can also be reasonably controlled manually."
+R&N_ITB,91,2591,385,2976,"- Power: Main and Back-Up Power Metering Equipment (Main and Back up Tariff Metering shall be at the HV side of the Transformer (Delivery Point) and meet the requirements of OTS Part A. GTG OEM shall provide the performance metering system.
+- Gas: Main and Back-Up Gas Metering Equipment"
+R&N_ITB,91,2813,381,3194,"- No single main equipment (GTU, STU, GSUT and HRSG) failure shall result in a Forced Outage of the entire Plant.
+- No single auxiliary equipment (all other equipment than main equipment as specified above) failure shall result in the Forced Derating of Plant. The compliance with the above criterion requires to a large extent  redundancy  of  the  entire  auxiliary  equipment.  Following  examples  shall  illustrate  this requirement:
+- The Plant shall have a redundant power supply concept for the auxiliary services (redundant UATs, MV - distributions, LV- distributions, DC-system, UPS- system)
+- Electronic devices of the protection systems must be redundant in case process redundancy is not available, while the requirement doesn't apply to MV&LV protection relay.
+- Redundant active equipment shall be powered from separate buses and physically segregated where feasible. The system design shall be such that the standby equipment shall be activated automatically when the control system detects a failure of the running equipment to perform its intended function.
+- GT MCC shall have the redundant / double incoming CB, and divided to two buses, normal bus and essential bus bar, with bus-coupler."
+R&N_ITB,92,2906,618,3524,"- The capacity of MV, LV bus sections and the sources feeding the bus sections should be adequate to take the load of the other bus section when the bus coupler closes in case of supply failure to other bus section.
+- The n-1 redundancy criteria shall be maintained for each switchboard/MCC.
+- Redundancy shall be provided for cooling fans such that with one group of fan or oil pump out of service the transformer would deliver the rated output within the specified temperature rise.
+- Battery and battery chargers shall be provided with N+ 1 redundancy. DC System contains 2 x 100 % Battery and 2 x 100 % Battery Chargers to meet the redundancy requirements.
+- UPS shall be provided with N+ 1 redundancy.
+- Each LV system switchboard shall consist of two bus sections with two incomers and one bus- coupler. Each incomer shall be supplied by 1x100% capacity transformer.
+- Diesel Generator shall be provided with N+1 criteria, where EDG cum BSDG concept to be adopted. The DG sizing shall consider all possible scenarios, including emergency shutdown during black start operation. Emergency cum BSDG DG sets shall have the capability of testing even if respective block is in normal operation OR when the respective block switchgear bus have no voltage. 1 x 100% battery starting system will be applied for BSEDG.
+- All electrical system switchboards shall be labelled for Hazard Risk category (HRC) as per results of ARC Flash assessment study using NFPA 70 or relevant IEC standards (as applicable).
+- For Gas turbine package, redundancy concept of LV & DC distribution for equipment supplied by OEM would be of OEM's standard design."
+R&N_ITB,92,2893,422,3315,"Redundancy for control & instrumentation shall be as given below:
+- All redundant instrumentation shall have the hot swap capability. Critical Redundant equipment shall be change over automatically in case of failure one equipment / Instrument. (For Gas turbine package, the hot swap capability is not applicable due to safety reason. Especially, it is not allowed to enter GT enclosure during operation, hence any person cannot access the instruments in GT enclosure.)
+- Electronic modules in GT control system shall not be removed while the gas turbine is in operation.
+- In general, devices shall be preferred that contain intrinsic safety, to avoid expensive supervision/monitoring installations, possibly subject to failure (In Gas turbine package, explosionproof type instruments will be used in the hazardous area.)
+- Where redundant equipment is installed, it shall be possible to perform maintenance and repair works on one equipment while the others are in service.
+- Hardware part of controls & instrumentation:
+- Turbine GT/ST protection system (fail-safe and dual redundant system), For Gas turbine package GT Protection Panel which will consist of Tricon CX triple modular redundant safety PLC system by Schneider Electric Systems as per Supplier's standard design is considered.
+- HRSG-protection (fail-safe and triple modular redundant for BMS)
+- Triple redundant transmitters for Plant protection signals such as steam drum and main steam parameters.
+- Critical measurements, which are supplied with redundant instrumentation shall be connected to different I/O cards.
+- Software Protections:
+- SIL study shall be performed by the EPC in order to consider the voting logic function but not limited to the following:"
+R&N_ITB,93,2993,497,3490,"- All protection signals leading to a trip of the Plant or to a load reduction shall use 2 out of 3 voting logic. For Generator Protection System, signal shall be achieved through 1 out of 2 with two multifunction protective relays shall be provided for generator.
+- Other controls can be achieved through 2oo2 or 1oo2 voting as per OEM's recommendations.
+- Protection for people and environment shall be considered in SIL study according to IEC 61508 and IEC 61511. Allocation of the safety related function (the SIL loop) and its SIL level will be determined according to result of the SIL study.
+- All  control  panels,  control  systems  shall  be  provided  with  redundant control supplies. Control and Protection Panels shall be fed from either two redundant DC Source or redundant AC Source (UPS). So, in case of failure one source, the second standby source will take over automatically and will not have any power interruption. (For Gas turbine package, the power supply of GT control system will be fed from essential AC and DC system as per Supplier's standards and power supply for the Gas turbine equipment and CCR will be fed from UPS.)
+- Unit protection shall preferably be independently implemented in separate hardware to the control system(s)  to  avoid  common  mode  failure  and  with  appropriate  redundancy  to  ensure  security  of operation.
+- For redundancy provisions of equipment, no single fault within the control system shall cause the failure of the duty equipment and at the same time cause the standby equipment to be unavailable.
+- Redundancy in the DCS shall include
+- Processer redundancy
+- Power supply redundancy
+- Network redundancy
+- Server redundancy
+- I/O card segregation
+- I/O  card  redundancy  for  critical  signals  (each  of  the  1oo2  or  2oo3  redundant  signals  will  be hardwired to different I/O cards, with each cabinet having redundant power supplies)
+- In the case of redundant signals are connected to the different cards, redundant I/O cards are not required."
+R&N_ITB,93,3087,491,3578,"Lube Oil System, Equipment = Lube Oil Pump. Lube Oil System, Number ( /GT) = 100%x2 (AC) 100%x1 (DC). Lube Oil System, Category of concept 'N' = - ②. Lube Oil System, Remarks = DC type: Used for only emergency period. Lube Oil System, Equipment = Lube Oil Cooler. Lube Oil System, Number ( /GT) = 100%x2. Lube Oil System, Category of concept 'N' = -. Lube Oil System, Remarks = . Lube Oil System, Equipment = Lube Oil Mist Separator. Lube Oil System, Number ( /GT) = 100%x1. Lube Oil System, Category of concept 'N' = ①. Lube Oil System, Remarks = With separator bypass line. Lube Oil System, Equipment = LO Vapor Extractor. Lube Oil System, Number ( /GT) = 100%x2. Lube Oil System, Category of concept 'N' = -. Lube Oil System, Remarks = . Fuel Gas System, Equipment = Fuel Gas Flow Meter. Fuel Gas System, Number ( /GT) = 100%x1. Fuel Gas System, Category of concept 'N' = ③. Fuel Gas System, Remarks = Composed as Coriolis type which is high reliability. Fuel Gas System, Equipment = Fuel Gas Heater. Fuel Gas System, Number ( /GT) = 100%x1 (Shell & Tube type) 100%x1 (Radiator type). Fuel Gas System, Category of concept 'N' = ③ ① and ②. Fuel Gas System, Remarks = Shell& Tube type: Based on OEMexperienced standard Radiator type: If one fan stops, GT runs back. And used only for simple cycle operation.. Fuel Gas System, Equipment = Fuel Gas Last Chance Filter. Fuel Gas System, Number ( /GT) = 100%x2. Fuel Gas System, Category of concept 'N' = -. Fuel Gas System, Remarks = . Fuel Gas System, Equipment = Sweep Air Cooler. Fuel Gas System, Number ( /GT) = 50%x2. Fuel Gas System, Category of concept 'N' = ③. Fuel Gas System, Remarks = Fintubed-pipes with high reliability. Fuel Gas System, Equipment = Ignition System. Fuel Gas System, Number ( /GT) = 100%x1. Fuel Gas System, Category of concept 'N' = ①. Fuel Gas System, Remarks = Used for only shutdown period. Fuel Gas System, Equipment = Fuel Gas Unit. Fuel Gas System, Number ( /GT) = 100%x1. Fuel Gas System, Category of concept 'N' = ③. Fuel Gas System, Remarks = Based on OEMexperienced standard"
+R&N_ITB,94,3122,497,3619,"Fuel Oil System, Fuel Gas Calorie Meter &Pressure Reduction Unit = Main Fuel Oil Pump. Fuel Oil System, 100%x1 = 50%x2. Fuel Oil System, ① = ②. Fuel Oil System, This equipment failure does not cause the loss of power production = Used for only back up fuel operation. Fuel Oil System, Fuel Gas Calorie Meter &Pressure Reduction Unit = Fuel Oil Drain Tank & Pump. Fuel Oil System, 100%x1 = 100%x1. Fuel Oil System, ① = ②. Fuel Oil System, This equipment failure does not cause the loss of power production = Ditto. Fuel Oil System, Fuel Gas Calorie Meter &Pressure Reduction Unit = Fuel Oil Unit. Fuel Oil System, 100%x1 = 100%x1. Fuel Oil System, ① = ③. Fuel Oil System, This equipment failure does not cause the loss of power production = Based on OEMexperienced standard. Fuel Oil System, Fuel Gas Calorie Meter &Pressure Reduction Unit = Flow Divider Unit. Fuel Oil System, 100%x1 = 100%x1. Fuel Oil System, ① = ③. Fuel Oil System, This equipment failure does not cause the loss of power production = Based on OEMexperienced standard. Water Injection System, Fuel Gas Calorie Meter &Pressure Reduction Unit = Water Injection Pump. Water Injection System, 100%x1 = 100%x1. Water Injection System, ① = ②. Water Injection System, This equipment failure does not cause the loss of power production = Ditto. Purge Air System, Fuel Gas Calorie Meter &Pressure Reduction Unit = Purge Air Compressor. Purge Air System, 100%x1 = 100%x1. Purge Air System, ① = ②. Purge Air System, This equipment failure does not cause the loss of power production = Used for only period from shut down after FO firing to re-start. Purge Air System, Fuel Gas Calorie Meter &Pressure Reduction Unit = Purge Air Receiver. Purge Air System, 100%x1 = 100%x1. Purge Air System, ① = ②. Purge Air System, This equipment failure does not cause the loss of power production = Ditto. Purge Air System, Fuel Gas Calorie Meter &Pressure Reduction Unit = Purge Air Cooler. Purge Air System, 100%x1 = 100%x1. Purge Air System, ① = ③. Purge Air System, This equipment failure does not cause the loss of power production = Based on OEMexperienced standard. Air& Flue gas system, Fuel Gas Calorie Meter &Pressure Reduction Unit = GT Cooling Air Cooler. Air& Flue gas system, 100%x1 = 100%x1 (Shell & Tube type) 100%x1 (Radiator type). Air& Flue gas"
+R&N_ITB,94,3109,506,3615,"system, ① = ③ ① and ②. Air& Flue gas system, This equipment failure does not cause the loss of power production = Shell& Tube type: Based on OEMexperienced standard Radiator type: If one fan stops, GT runs back. And used for only simple cycle operation.. Air& Flue gas system, Fuel Gas Calorie Meter &Pressure Reduction Unit = GT Cooling Air Filter. Air& Flue gas system, 100%x1 = 100%x1. Air& Flue gas system, ① = ③. Air& Flue gas system, This equipment failure does not cause the loss of power production = Its composed as inertia type filter which has no cogging risk. Air& Flue gas system, Fuel Gas Calorie Meter &Pressure Reduction Unit = 2C Cooler. Air& Flue gas system, 100%x1 = 100%x1 (Shell & Tube type) /GT. Air& Flue gas system, ① = ③. Air& Flue gas system, This equipment failure does not cause the loss of power production = . Air& Flue gas system, Fuel Gas Calorie Meter &Pressure Reduction Unit = 4S Cooler. Air& Flue gas system, 100%x1 = 100%x1 (Radiator type) /GT. Air& Flue gas system, ① = ①. Air& Flue gas system, This equipment failure does not cause the loss of power production = If one fan stops, GT runs back. Air& Flue gas system, Fuel Gas Calorie Meter &Pressure Reduction Unit = 4S Cooling Air Filter. Air& Flue gas system, 100%x1 = 100%x1. Air& Flue gas system, ① = ③. Air& Flue gas system, This equipment failure does not cause the loss of power production = Its composed as inertia type filter which has no cogging risk. GT Casing Cooling Air system, Fuel Gas Calorie Meter &Pressure Reduction Unit = Casing Cooling Fan. GT Casing Cooling Air system, 100%x1 = 100%x1. GT Casing Cooling Air system, ① = ②. GT Casing Cooling Air system, This equipment failure does not cause the loss of power production = Used for only shutdown period. GT Protection System/GT Air Intake System, Fuel Gas Calorie Meter &Pressure Reduction Unit = GT package Ventilation fan. GT Protection System/GT Air Intake System, 100%x1 = 50%x3. GT Protection System/GT Air Intake System, ① = -. GT Protection System/GT Air Intake System, This equipment failure does not cause the loss of power production = . GT Protection System/GT Air Intake System, Fuel Gas Calorie Meter &Pressure Reduction Unit = Turning Device. GT Protection System/GT Air"
+R&N_ITB,94,3101,476,3577,"Intake System, 100%x1 = 100%x1. GT Protection System/GT Air Intake System, ① = ②. GT Protection System/GT Air Intake System, This equipment failure does not cause the loss of power production = Used for only turning period. GT Protection System/GT Air Intake System, Fuel Gas Calorie Meter &Pressure Reduction Unit = Air intake filter. GT Protection System/GT Air Intake System, 100%x1 = With multiple filter elements. GT Protection System/GT Air Intake System, ① = -. GT Protection System/GT Air Intake System, This equipment failure does not cause the loss of power production = . GT Protection System/GT Air Intake System, Fuel Gas Calorie Meter &Pressure Reduction Unit = Evaporative Cooler System. GT Protection System/GT Air Intake System, 100%x1 = 100%x1 /GT. GT Protection System/GT Air Intake System, ① = ②. GT Protection System/GT Air Intake System, This equipment failure does not cause the loss of power production = Operated only for lowRH condition. GT Protection System/GT Air Intake System, Fuel Gas Calorie Meter &Pressure Reduction Unit = Wet Compression System. GT Protection System/GT Air Intake System, 100%x1 = 100%x1 /GT. GT Protection System/GT Air Intake System, ① = ①. GT Protection System/GT Air Intake System, This equipment failure does not cause the loss of power production = Operated only for power augument at OP1. Enhanced Cooling Air System, Fuel Gas Calorie Meter &Pressure Reduction Unit = Enhanced Cooling Air. Enhanced Cooling Air System, 100%x1 = 100%x1 (Radiator type). Enhanced Cooling Air System, ① = ①. Enhanced Cooling Air System, This equipment failure does not cause the loss of power production = Radiator type: If one fan stops, GT runs back. Enhanced Cooling Air System, Fuel Gas Calorie Meter &Pressure Reduction Unit = Cooler Enhanced Cooling Air Drain Mist Separator. Enhanced Cooling Air System, 100%x1 = 100%x1. Enhanced Cooling Air System, ① = ③. Enhanced Cooling Air System, This equipment failure does not cause the loss of power production = Its composed as inertia type filter which has no cogging risk. Enhanced Cooling Air System, Fuel Gas Calorie Meter &Pressure Reduction Unit = Enhanced Cooling Air Compressor. Enhanced Cooling Air System, 100%x1 = 100%x2. Enhanced Cooling Air System, ① = -. Enhanced Cooling Air System, This equipment failure does not cause the loss of power production = . Enhanced Cooling Air System, Fuel Gas Calorie Meter &Pressure Reduction Unit = Enhanced Cooling Air Filter. Enhanced Cooling Air System, 100%x1 = 100%x1. Enhanced Cooling Air System, ① = ②. Enhanced Cooling Air System,"
+R&N_ITB,94,3047,530,3577,"This equipment failure does not cause the loss of power production = This is simple Y type strainer, which is high reliability item. Additionally, major filtering function is provided by Drain Mist Separator and this filter is only for emergency dust. Clean Agent FF system, Fuel Gas Calorie Meter &Pressure Reduction Unit = Clean Agent FF system. Clean Agent FF system, 100%x1 = 100%x2 (including online reserve). Clean Agent FF system, ① = -. Clean Agent FF system, This equipment failure does not cause the loss of power production = . Instruments, Fuel Gas Calorie Meter &Pressure Reduction Unit = Instruments. Instruments, 100%x1 = 100%x2 or 3 (control or inter lock) 100%x1 (detection-use). Instruments, ① = - ※ ①. Instruments, This equipment failure does not cause the loss of power production = Minor detection-use which does not cause the reduction of power. Valves, Pipings, and others not specified in above, Fuel Gas Calorie Meter &Pressure Reduction Unit = Valves, Pipings, and others not specified in above. Valves, Pipings, and others not specified in above, 100%x1 = 100%x1. Valves, Pipings, and others not specified in above, ① = ③. Valves, Pipings, and others not specified in above, This equipment failure does not cause the loss of power production = Based on OEMexperienced standard. AC Distribution System for GT Auxiliary, Fuel Gas Calorie Meter &Pressure Reduction Unit = GT MCC. AC Distribution System for GT Auxiliary, 100%x1 = Normal Bus 100% x 1 Essential Bus 100% x 1. AC Distribution System for GT Auxiliary, ① = ③. AC Distribution System for GT Auxiliary, This equipment failure does not cause the loss of power production = Tie CB between Normal Bus and Essential Bus is provided. Thus, the equipment has high reliability.. AC Distribution System for GT Auxiliary, Fuel Gas Calorie Meter &Pressure Reduction Unit = GT AC DB. AC Distribution System for GT Auxiliary, 100%x1 = Normal 100% x 1 Essential 100% x 1. AC Distribution System for GT Auxiliary, ① = ③. AC Distribution System for GT Auxiliary, This equipment failure does not cause the loss of power production = DB consists of simple components such as Busbar"
+R&N_ITB,95,2663,387,3050,"DC Distribution System for GT Auxiliary,  = Battery& Charger. DC Distribution System for GT Auxiliary,  = 100%x2. DC Distribution System for GT Auxiliary,  = -. DC Distribution System for GT Auxiliary, and MCBs. Thus, the equipment has high reliability. = . ,  = DC DB. ,  = 100%x1. ,  = ③. , and MCBs. Thus, the equipment has high reliability. = DB consists of simple components such as Busbar and MCBs. Thus, the equipment has high reliability. ,  = DC Motor Starter Panel. ,  = . ,  = ②. , and MCBs. Thus, the equipment has high reliability. = Used for only emergency period"
+R&N_ITB,95,3085,375,3460,"GTG (H2&CO2 gas and seal oil systems), Equipment = Generator H2 gas dryer blower. GTG (H2&CO2 gas and seal oil systems), Number ( /GT) = 100%x1. GTG (H2&CO2 gas and seal oil systems), Category of concept 'N' = ①. GTG (H2&CO2 gas and seal oil systems), Remarks = If the H2 gas dryer blower fails, generator can be continuous operation. It can also be replaced while the generator is running.. GTG (H2&CO2 gas and seal oil systems), Equipment = seal oil pump. GTG (H2&CO2 gas and seal oil systems), Number ( /GT) = 100%x2(AC) + Emergency Backup （ DC ）. GTG (H2&CO2 gas and seal oil systems), Category of concept 'N' = ②. GTG (H2&CO2 gas and seal oil systems), Remarks = The seal oil system is equipped with two AC seal oil pumps (which one pump is reserved as standby use) and a DC emergency seal oil pump. DC emergency seal oil pump starts automatically in case the AC seal pump fails due to any reason. The AC seal oil pumps can be changed as normal use and standby use at any time. This change is carried out by manual operating.. GTG (H2&CO2 gas and seal oil systems), Equipment = Seal oil vacuum pump. GTG (H2&CO2 gas and seal oil systems), Number ( /GT) = 100%x1. GTG (H2&CO2 gas and seal oil systems), Category of concept 'N' = ①. GTG (H2&CO2 gas and seal oil systems), Remarks = The proposed seal oil system is vacuum treatment type. If the vacuum pumpfails, the purity and pressure of the hydrogen gas in the generator are gradually reduced. But it does not immediately affect normal operation. In addition, by manually adding hydrogen gas, the purity and pressure of the hydrogen gas can be maintained at almost normal conditions, generator can be continuous operation.. GTG (H2&CO2 gas and seal oil systems), Equipment = Generator vapor extractor. GTG (H2&CO2 gas and seal oil systems), Number ( /GT) = 100%x1. GTG (H2&CO2 gas and seal oil systems), Category of concept 'N' = ①. GTG (H2&CO2 gas and seal oil systems), Remarks = If the generator vapor extractor fails, generator can be continuous operation. It can also be replaced while the generator is running."
+R&N_ITB,95,2511,163,2674,The Contractor shall provide the following as a part of Plant Performances and Schedule:
+R&N_ITB,"95, 96",2965,552,3517,"Performance correction curves and formulae for the correction of measured performance data at conditions different from the Reference Conditions shall be provided by the contractor for both the primary and the backup fuel:
+- Gas Turbine Standard correction curves
+- Gas Turbine generator capability curve
+- Steam Turbine generator capability curve
+- CC Start-up curves
+- CC Shutdown curve
+- Capacity of GT system vs ambient temperature
+- Gas Turbine GSUT capacity curve
+- Response capability curve (frequency response chart)
+- Emissions table
+- Steam turbine load changes
+- Power output vs gas pressure
+- CC Correction curves (to be provided for):
+- Evaporative Cooler ON (Only for Base Load),
+- Wet Compression On (only after Evaporative Cooler is ON)
+- Evaporative Cooler OFF (Base Load and partial loads)
+- Duct Firing On (if applicable)
+- o The corrections of the net capacity and net heat rate of the total Plant in combined cycle configuration shall be provided for:
+- ambient air temperature
+- ambient air humidity
+- ambient barometric pressure
+- Fuel Gas Lower Heating value (LHV)
+- Fuel Gas C:H ratio
+- Inlet  Air  Condition  Difference  Between  Cooling  Tower/ACC  and  Gas Turbine
+- Grid Frequency
+- Power Factor
+- Cycle Unaccounted Losses
+- Natural Gas Pressure at the Terminal Point
+- Natural Gas Temperature at the Terminal Point
+- Partial load (only for EVC OFF case)
+- Degradation with GT fired hours
+- condensate return flow and temperature
+- b. Outage modes
+The important and different outage modes encountered during the operation shall be furnished by the Contractor. Corresponding H&M balance drawings are to be supplied by the Contractor.
+The outage durations of GT, HRSG and ST shall be defined.
+The  outage  frequency  shall  be  defined  for  HRSG,  ST  and  GT  (in  line  with  the  typical  LTSA assumptions)."
+R&N_ITB,"96, 97",3022,378,3400,"The following reference operating points are assumed for the Rumah 1 IPP and Rumah 2 IPP or Group dispatch:
+Fuel, Unit = . Fuel, RSC = . Fuel, OP1 = Gas. Fuel, OP2 = Gas. Fuel, OP3 = Gas. Fuel, OP4 = Gas. Fuel, OP5 = Gas. Air Temperature (dry bulb), Unit = °C. Air Temperature (dry bulb), RSC = 48. Air Temperature (dry bulb), OP1 = 48. Air Temperature (dry bulb), OP2 = 40. Air Temperature (dry bulb), OP3 = 35. Air Temperature (dry bulb), OP4 = 25. Air Temperature (dry bulb), OP5 = 15. Relative humidity, Unit = %. Relative humidity, RSC = 20. Relative humidity, OP1 = 20. Relative humidity, OP2 = 30. Relative humidity, OP3 = 60. Relative humidity, OP4 = 70. Relative humidity, OP5 = 70. Atmospheric pressure, Unit = mbar. Atmospheric pressure, RSC = 955. Atmospheric pressure, OP1 = 955. Atmospheric pressure, OP2 = 955. Atmospheric pressure, OP3 = 955. Atmospheric pressure, OP4 = 955. Atmospheric pressure, OP5 = 955. Net Dependable Capacity (Export), Unit = %. Net Dependable Capacity (Export), RSC = . Net Dependable Capacity (Export), OP1 = 100. Net Dependable Capacity (Export), OP2 = 90. Net Dependable Capacity (Export), OP3 = 75. Net Dependable Capacity (Export), OP4 = 60. Net Dependable Capacity (Export), OP5 = 30. Annual operation hours, Unit = h/year. Annual operation hours, RSC = . Annual operation hours, OP1 = 100. Annual operation hours, OP2 = 3400. Annual operation hours, OP3 = 3300. Annual operation hours, OP4 = 1150. Annual operation hours, OP5 = 810
+The following reference operating points are assumed for the Nairyah 1 IPP and Nairyah 2 IPP or Group dispatch:"
+R&N_ITB,97,2969,448,3417,"Fuel, Unit = . Fuel, RSC = . Fuel, OP1 = Gas. Fuel, OP2 = Gas. Fuel, OP3 = Gas. Fuel, OP4 = Gas. Fuel, OP5 = Gas. Air Temperature (dry bulb), Unit = °C. Air Temperature (dry bulb), RSC = 48. Air Temperature (dry bulb), OP1 = 48. Air Temperature (dry bulb), OP2 = 40. Air Temperature (dry bulb), OP3 = 35. Air Temperature (dry bulb), OP4 = 25. Air Temperature (dry bulb), OP5 = 15. Relative humidity, Unit = %. Relative humidity, RSC = 30. Relative humidity, OP1 = 30. Relative humidity, OP2 = 30. Relative humidity, OP3 = 60. Relative humidity, OP4 = 70. Relative humidity, OP5 = 70. Atmospheric pressure, Unit = mbar. Atmospheric pressure, RSC = 1005. Atmospheric pressure, OP1 = 1005. Atmospheric pressure, OP2 = 1005. Atmospheric pressure, OP3 = 1005. Atmospheric pressure, OP4 = 1005. Atmospheric pressure, OP5 = 1005. Net Dependable Capacity (Export), Unit = %. Net Dependable Capacity (Export), RSC = . Net Dependable Capacity (Export), OP1 = 100. Net Dependable Capacity (Export), OP2 = 90. Net Dependable Capacity (Export), OP3 = 75. Net Dependable Capacity (Export), OP4 = 60. Net Dependable Capacity (Export), OP5 = 30. Annual operation hours, Unit = h/year. Annual operation hours, RSC = . Annual operation hours, OP1 = 100. Annual operation hours, OP2 = 3400. Annual operation hours, OP3 = 3300. Annual operation hours, OP4 = 1150. Annual operation hours, OP5 = 810"
+R&N_ITB,"97, 98",2803,343,3146,"The civil engineering and building works to be provided by the Contractor shall comprise the full detailed design of all permanent and temporary works, including detailed assessment of existing site conditions, structures  and  any  required  clearance  tasks,  supplementary  site  investigation  studies,  detailing  and preparation  of  design  and  construction  drawings,  construction  as  built  drawings,  and  completion  and maintenance  of  all  the  various  foundations  (including  transmission  towers),  structures,  plant  related buildings,  support  services  9buildings,  installations  and  services  etc.  required  for  the  installation, commissioning, operation and maintenance of the equipment and plant for the Facility.
+In general terms, a common and consistent set of standards shall be used throughout the facility for Civil, structural and Architectural work. If any requirements mentioned in Section 7 of OTS with respect to any codes and standards, doesn't exactly match with the requirements mentioned in the code and standard EPC Contractor wants to follow within the Codes and standards envelops mentioned in OTS, the equivalent or more stringent requirement shall be followed.
+The clear Headroom of for the ceilings shall be minimum 3.0m, OEM recommendation, as per relevant applicable code and Operational requirement whichever is stringent. Following scope of work shall be included for Civil/Structural and Architectural works;"

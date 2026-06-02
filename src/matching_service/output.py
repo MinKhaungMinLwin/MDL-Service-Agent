@@ -25,6 +25,9 @@ BASE_COLUMNS = [
     "Depth_Context",
     "Depth_Filter_Query",
     "Depth_Keywords",
+    "Depth_Filter_Terms",
+    "Keyword_Filter_Query",
+    "Semantic_Query",
     "Vector_Terms",
     "Retrieval_Mode",
     "Retrieval_Candidate_Count",
@@ -53,17 +56,26 @@ def format_candidate(candidate: Candidate) -> str:
         parts.append(f"CrossEncoder: {candidate['cross_encoder_score']:.4f}")
     if candidate.get("bm25_score") is not None:
         parts.append(f"BM25: {candidate['bm25_score']:.4f}")
+    if candidate.get("keyword_rrf_score") is not None:
+        parts.append(f"KeywordRRF: {candidate['keyword_rrf_score']:.4f}")
+    if candidate.get("keyword_score") is not None:
+        parts.append(f"Keyword: {candidate['keyword_score']:.4f}")
     if candidate.get("semantic_score") is not None:
         parts.append(f"Semantic: {candidate['semantic_score']:.4f}")
     if candidate.get("rrf_score") is not None:
         parts.append(f"RRF: {candidate['rrf_score']:.4f}")
-    return f"[{project}] {candidate['title']} ({' / '.join(parts) if parts else 'No score'})"
+    document_no = str(candidate.get("document_no") or "").strip()
+    title = f"{document_no} - {candidate['title']}" if document_no else candidate["title"]
+    return f"[{project}] {title} ({' / '.join(parts) if parts else 'No score'})"
 
 
 def build_json_record(
     source_row: Mapping[str, Any],
     depth_filter_query: str,
     depth_filter_terms: list[str],
+    keyword_terms: list[str],
+    keyword_filter_query: str,
+    semantic_query: str,
     retrieval_mode: str,
     retrieval_candidates: list[Candidate],
     keyword_candidate_count: int,
@@ -84,7 +96,9 @@ def build_json_record(
         "depth_context": get_depth_context(source_row),
         "depth_filter_query": depth_filter_query,
         "depth_filter_terms": depth_filter_terms,
-        "vector_terms": depth_filter_terms,
+        "keyword_filter_query": keyword_filter_query,
+        "semantic_query": semantic_query,
+        "vector_terms": semantic_query,
         "retrieval_mode": retrieval_mode,
         "retrieval_candidate_count": len(retrieval_candidates),
         "keyword_candidate_count": keyword_candidate_count,
@@ -137,6 +151,8 @@ def _format_json_candidate(candidate: Candidate, rank: int) -> dict[str, Any]:
         "others": _json_safe_value(candidate.get("others")),
         "deliverable": _json_safe_value(candidate.get("deliverable")),
         "bm25_score": candidate.get("bm25_score"),
+        "keyword_rrf_score": candidate.get("keyword_rrf_score"),
+        "keyword_score": candidate.get("keyword_score"),
         "semantic_score": candidate.get("semantic_score"),
         "rrf_score": candidate.get("rrf_score"),
         "cross_encoder_score": candidate.get("cross_encoder_score"),

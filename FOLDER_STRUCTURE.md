@@ -13,7 +13,10 @@ This repository keeps runtime code, reference documents, source data, and genera
 | `data/sample_documents/project_samples/` | Project sample ITB/MDL source documents. |
 | `data/source_archives/SourceData/` | Original SourceData zip archives. |
 | `data/schedule_sources/` | Raw/processed guide schedule files and validation rules. |
-| `output/current_test_env/` | Generated MDL classification, ITB extraction, and ITB-to-MDL matching outputs. |
+| `output/current_test_env/` | Generated MDL classification outputs and workflow root outputs. |
+| `output/current_test_env/itb_extract/` | Generated ITB extraction, verification, token, and rejected-boundary audit outputs. |
+| `output/current_test_env/matching/<mode>/` | Generated ITB-to-MDL matching outputs split by retrieval mode: `keyword`, `semantic`, or `hybrid`. |
+| `output/current_test_env/evaluation/ground_truth/` | Candidate pools and LLM-assisted silver ground truth. |
 | `output/schedule_service/` | Generated schedule API/CLI outputs. |
 | `01_legacy_poc/` | First POC code kept as historical reference only. |
 | `02_experiments/` | Experiment and prompt-test history. |
@@ -30,6 +33,7 @@ uv run mdl-classify
 uv run mdl-ingest
 uv run itb-extract --section 7
 uv run itb-match
+uv run itb-eval-build-ground-truth --pool-only
 ```
 
 See `docs/workflows.md` for command details and default paths.
