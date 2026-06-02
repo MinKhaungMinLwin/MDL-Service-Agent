@@ -63,6 +63,11 @@ def _tokenize(text: str) -> set[str]:
     return {tok for tok in _TOKEN_RE.findall(text.lower()) if len(tok) >= _MIN_TOKEN_LEN}
 
 
+# Priority multiplier applied to hybrid scores so specific rules (priority 1)
+# beat generic rules (priority 3) even when semantic similarity is slightly higher.
+_PRIORITY_WEIGHT: dict[int, float] = {1: 1.0, 2: 0.85, 3: 0.70}
+
+
 class RuleTable:
     """Rule table with token inverted index and match cache for fast lookup."""
 
@@ -70,6 +75,8 @@ class RuleTable:
         self._rules = rules
         # token → [rule_index] — built once at init, reduces 5,918 → ~30-100 candidates
         self._index: dict[str, list[int]] = self._build_index()
+        # id(rule) → list index — for O(1) lookup of semantic embedding by rule object
+        self._rule_to_idx: dict[int, int] = {id(r): i for i, r in enumerate(rules)}
         # document+equipment → matched rule — cross-row cache for duplicate doc titles
         self._cache: dict[str, ValidationRule | None] = {}
 
@@ -172,4 +179,57 @@ class RuleTable:
                     best_rule = rule
 
         self._cache[cache_key] = best_rule
+        return best_rule
+
+    def match_with_embedding(
+        self,
+        document: str,
+        rule_similarities: list[float],
+        equipment: str = "",
+        semantic_weight: float = 0.5,
+    ) -> ValidationRule | None:
+        """Return the best rule using a hybrid token + semantic score.
+
+        Args:
+            document:          The query string (rule_query or title).
+            rule_similarities: Pre-computed cosine similarities, one per rule
+                               in the same order as self._rules.  Call
+                               RuleSemanticIndex.score(query_embedding) to get these.
+            equipment:         Optional equipment string appended to query tokens.
+            semantic_weight:   0 = token-only, 1 = semantic-only.  Default 0.5.
+        """
+        doc_tokens = _expand_query_tokens(_tokenize(f"{document} {equipment}"))
+        candidates = self._candidates(doc_tokens)
+
+        best_rule: ValidationRule | None = None
+        best_score = 0.0
+        for rule in candidates:
+            kw_tokens = rule._doc_kw_tokens
+            if not kw_tokens:
+                continue
+            inter = len(kw_tokens & doc_tokens)
+            token_score = inter / max(len(kw_tokens), 3) if inter else 0.0
+
+            rule_idx = self._rule_to_idx[id(rule)]
+            sem_score = max(rule_similarities[rule_idx], 0.0)
+
+            hybrid = token_score * (1.0 - semantic_weight) + sem_score * semantic_weight
+            # Require minimum token overlap (avoids pure-semantic false positives)
+            if token_score < 0.15 and inter == 0:
+                continue
+            final = hybrid * _PRIORITY_WEIGHT.get(rule.priority, 0.60)
+            if final < 0.2:
+                continue
+
+            if final > best_score:
+                best_score = final
+                best_rule = rule
+            elif final == best_score and best_rule:
+                cand_item_ok = not rule._item_tokens or bool(rule._item_tokens & doc_tokens)
+                curr_item_ok = not best_rule._item_tokens or bool(best_rule._item_tokens & doc_tokens)
+                better_context = cand_item_ok and not curr_item_ok
+                same_context_higher_priority = cand_item_ok == curr_item_ok and rule.priority < best_rule.priority
+                if better_context or same_context_higher_priority:
+                    best_rule = rule
+
         return best_rule
