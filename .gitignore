@@ -31,6 +31,8 @@ Thumbs.db
 # Parser/chunker service code kept local
 src/parser_service/
 src/chunker_service/
+neo4j_export/
+neo4j_export.7z
 
 backup/
 .omc/
