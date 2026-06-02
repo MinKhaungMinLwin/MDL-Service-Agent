@@ -174,6 +174,11 @@ class MatchingServiceTest(unittest.TestCase):
         self.assertIn("[Sample] 1 - Doc 1", csv_output.loc[0, "Matched_Doc_1"])
         self.assertEqual(json_output[0]["retrieval_candidate_count"], 100)
         self.assertEqual(json_output[0]["cross_encoder_candidate_count"], 100)
+        self.assertEqual(len(json_output[0]["retrieval_candidates"]), 100)
+        self.assertEqual(
+            json_output[0]["retrieval_candidates"][0],
+            {"rank": 1, "retrieval_rank": 1, "doc_id": "1"},
+        )
         self.assertEqual(len(json_output[0]["candidates"]), 20)
 
     def test_schedule_candidate_parser_accepts_cross_encoder_score(self) -> None:
