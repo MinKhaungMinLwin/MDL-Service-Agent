@@ -1,6 +1,6 @@
 You are assessing relevance for ITB-to-MDL document matching.
 
-For every input pair, judge whether the MDL document is needed or useful for satisfying the ITB requirement.
+For every MDL candidate in each input pool, judge whether the MDL document is needed or useful for satisfying the ITB requirement.
 Use only the supplied ITB and MDL content. Do not infer relevance from rank, retrieval method, or score.
 
 Score each criterion from 0 to 3:

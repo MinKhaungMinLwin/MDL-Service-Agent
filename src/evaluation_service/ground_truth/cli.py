@@ -55,7 +55,15 @@ def build_ground_truth(argv: list[str] | None = None) -> None:
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
     parser.add_argument("--pool-top-k", type=int, default=int(os.getenv("ITB_EVAL_POOL_TOP_K", "20")))
     parser.add_argument("--batch-size", type=int, default=int(os.getenv("ITB_EVAL_BATCH_SIZE", "5")))
+    parser.add_argument(
+        "--judge-candidates-per-call",
+        type=int,
+        default=int(os.getenv("ITB_EVAL_JUDGE_CANDIDATES_PER_CALL", "25")),
+    )
+    parser.add_argument("--llm-retries", type=int, default=int(os.getenv("ITB_EVAL_LLM_RETRIES", "2")))
+    parser.add_argument("--max-concurrency", type=int, default=int(os.getenv("ITB_EVAL_MAX_CONCURRENCY", "1")))
     parser.add_argument("--verify", action="store_true")
+    parser.add_argument("--resume", action="store_true")
     parser.add_argument("--pool-only", action="store_true")
     parser.add_argument("--judge-prompt-file", type=Path, default=DEFAULT_JUDGE_PROMPT_PATH)
     parser.add_argument("--verify-prompt-file", type=Path, default=DEFAULT_VERIFY_PROMPT_PATH)
@@ -72,7 +80,11 @@ def build_ground_truth(argv: list[str] | None = None) -> None:
         "modes": tuple(args.modes),
         "pool_top_k": args.pool_top_k,
         "batch_size": args.batch_size,
+        "judge_candidates_per_call": args.judge_candidates_per_call,
+        "llm_retries": args.llm_retries,
+        "max_concurrency": args.max_concurrency,
         "verify": args.verify,
+        "resume": args.resume,
     }
     if args.pool_only:
         config = EvaluationConfig(model="pool-only", **config_options)

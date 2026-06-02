@@ -7,7 +7,8 @@ import hashlib
 import json
 import random
 import time
-from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -46,7 +47,11 @@ class EvaluationConfig:
     modes: tuple[str, ...] = ("keyword", "semantic", "hybrid")
     pool_top_k: int = 20
     batch_size: int = 5
+    judge_candidates_per_call: int = 25
+    llm_retries: int = 2
+    max_concurrency: int = 1
     verify: bool = False
+    resume: bool = False
     batch_delay_seconds: float = 0.5
 
     def __post_init__(self) -> None:
@@ -62,12 +67,41 @@ class EvaluationConfig:
             raise ValueError("pool_top_k must be positive")
         if self.batch_size <= 0:
             raise ValueError("batch_size must be positive")
+        if self.judge_candidates_per_call <= 0:
+            raise ValueError("judge_candidates_per_call must be positive")
+        if self.llm_retries < 0:
+            raise ValueError("llm_retries cannot be negative")
+        if self.max_concurrency <= 0:
+            raise ValueError("max_concurrency must be positive")
         if self.batch_delay_seconds < 0:
             raise ValueError("batch_delay_seconds cannot be negative")
 
 
+class LLMResponseError(ValueError):
+    """Raised when the LLM response does not match the expected schema."""
+
+
+@dataclass(frozen=True)
+class _JudgeTask:
+    order: int
+    pool_index: int
+    pool_count: int
+    chunk_index: int
+    chunk_count: int
+    pool: dict[str, Any]
+    pairs: list[dict[str, Any]]
+
+
+@dataclass(frozen=True)
+class _VerifyTask:
+    order: int
+    batch_index: int
+    batch_count: int
+    payloads: list[dict[str, Any]]
+
+
 class GroundTruthService:
-    """Build candidate pools and produce resumable LLM relevance judgments."""
+    """Build candidate pools and produce LLM relevance judgments."""
 
     def __init__(
         self,
@@ -91,7 +125,12 @@ class GroundTruthService:
         matching_records = load_matching_records(matching_dir, self.config.sections, self.config.modes)
         pools = build_candidate_pool(itb_rows, matching_records, self.config.pool_top_k)
         write_json(pool_path, pools)
-        logger.info("Saved {} ITB candidate pools: {}", len(pools), pool_path)
+        logger.info(
+            "Saved {} ITB candidate pools with {} MDL candidates: {}",
+            len(pools),
+            _candidate_count(pools),
+            pool_path,
+        )
         return pools
 
     def judge_to_files(
@@ -105,32 +144,117 @@ class GroundTruthService:
         pairs = iter_judge_pairs(pools)
         pair_ids = {pair["judgment_id"] for pair in pairs}
         judgments = [row for row in read_json_list(judgments_path) if row.get("judgment_id") in pair_ids]
-        judgments = self._judge_pairs(pairs, judgments, judgments_path, ground_truth_path)
         verifications = [row for row in read_json_list(verifications_path) if row.get("judgment_id") in pair_ids]
+        if not self.config.resume:
+            judgments = []
+            verifications = []
+        judgments = self._judge_pools(pools, pairs, judgments, judgments_path, ground_truth_path)
         if self.config.verify:
             verifications = self._verify_judgments(pairs, judgments, verifications, verifications_path)
         write_ground_truth(ground_truth_path, judgments, verifications)
         logger.info("Saved silver ground truth: {}", ground_truth_path)
 
-    def _judge_pairs(
+    def _judge_pools(
         self,
+        pools: list[dict[str, Any]],
         pairs: list[dict[str, Any]],
         judgments: list[dict[str, Any]],
         judgments_path: Path,
         ground_truth_path: Path,
     ) -> list[dict[str, Any]]:
         completed_ids = {row.get("judgment_id") for row in judgments}
-        pending_pairs = [pair for pair in pairs if pair["judgment_id"] not in completed_ids]
-        batches = _chunked(pending_pairs, self.config.batch_size)
-        for batch_index, batch in enumerate(batches, start=1):
-            logger.info("Judging batch {}/{} ({} pair{})", batch_index, len(batches), len(batch), _plural(batch))
-            results = _run_llm_batch(self.client, self.config.model, self.judge_prompt, "pairs", batch)
-            judgments.extend(_resolve_judgments(batch, results))
+        pairs_by_pool = _group_pairs_by_pool(pairs)
+        pools_to_judge = []
+        candidate_count = 0
+        for pool in pools:
+            pool_pairs = [
+                pair
+                for pair in pairs_by_pool.get(_pool_key(pool), [])
+                if pair["judgment_id"] not in completed_ids
+            ]
+            if pool_pairs:
+                pools_to_judge.append((pool, pool_pairs))
+                candidate_count += len(pool_pairs)
+        logger.info(
+            "Ground truth judge will process {} candidates across {} ITB pools ({} already completed, max {} candidates per call, concurrency {})",
+            candidate_count,
+            len(pools_to_judge),
+            len(completed_ids),
+            self.config.judge_candidates_per_call,
+            self.config.max_concurrency,
+        )
+        tasks = []
+        task_order = 0
+        for pool_index, (pool, pool_pairs) in enumerate(pools_to_judge, start=1):
+            pair_chunks = _chunked(pool_pairs, self.config.judge_candidates_per_call)
+            for chunk_index, pair_chunk in enumerate(pair_chunks, start=1):
+                task_order += 1
+                tasks.append(
+                    _JudgeTask(
+                        order=task_order,
+                        pool_index=pool_index,
+                        pool_count=len(pools_to_judge),
+                        chunk_index=chunk_index,
+                        chunk_count=len(pair_chunks),
+                        pool=pool,
+                        pairs=pair_chunk,
+                    )
+                )
+        pair_order = _judgment_order(pairs)
+        for _order, resolved in self._run_judge_tasks(tasks):
+            judgments.extend(resolved)
+            judgments.sort(key=lambda row: pair_order.get(row.get("judgment_id"), len(pair_order)))
             write_json(judgments_path, judgments)
             write_ground_truth(ground_truth_path, judgments, [])
             self.sleep(self.config.batch_delay_seconds)
         logger.info("Completed {} relevance judgments", len(judgments))
         return judgments
+
+    def _run_judge_tasks(self, tasks: list[_JudgeTask]) -> Iterator[tuple[int, list[dict[str, Any]]]]:
+        if self.config.max_concurrency == 1:
+            for task in tasks:
+                yield task.order, self._run_judge_task(task)
+            return
+
+        completed: dict[int, list[dict[str, Any]]] = {}
+        next_order = 1
+        with ThreadPoolExecutor(max_workers=self.config.max_concurrency) as executor:
+            futures = {executor.submit(self._run_judge_task, task): task for task in tasks}
+            for future in as_completed(futures):
+                task = futures[future]
+                completed[task.order] = future.result()
+                while next_order in completed:
+                    yield next_order, completed.pop(next_order)
+                    next_order += 1
+
+    def _run_judge_task(self, task: _JudgeTask) -> list[dict[str, Any]]:
+        pool = task.pool
+        logger.info(
+            "Judging pool {}/{} chunk {}/{}: section {}, chunk {}, page {} ({} candidate{})",
+            task.pool_index,
+            task.pool_count,
+            task.chunk_index,
+            task.chunk_count,
+            pool["section"],
+            pool["chunk_id"],
+            pool["itb"].get("page", ""),
+            len(task.pairs),
+            _plural(task.pairs),
+        )
+        payload = _build_judge_pool_payload(pool, task.pairs)
+        return _run_with_retries(
+            lambda: _resolve_judgments(
+                task.pairs,
+                _run_llm_batch(self.client, self.config.model, self.judge_prompt, "pools", [payload]),
+            ),
+            retries=self.config.llm_retries,
+            sleep=self.sleep,
+            delay_seconds=self.config.batch_delay_seconds,
+            description=(
+                f"judge section {pool['section']} chunk {pool['chunk_id']} "
+                f"pool {task.pool_index}/{task.pool_count} chunk {task.chunk_index}/{task.chunk_count}"
+            ),
+        )
 
     def _verify_judgments(
         self,
@@ -141,20 +265,71 @@ class GroundTruthService:
     ) -> list[dict[str, Any]]:
         pair_by_id = {pair["judgment_id"]: pair for pair in pairs}
         completed_ids = {row.get("judgment_id") for row in verifications}
-        pending = [
+        payloads = [
             {**pair_by_id[judgment["judgment_id"]], "proposed_judgment": judgment}
             for judgment in judgments
             if judgment["judgment_id"] in pair_by_id and judgment["judgment_id"] not in completed_ids
         ]
-        batches = _chunked(pending, self.config.batch_size)
-        for batch_index, batch in enumerate(batches, start=1):
-            logger.info("Verifying batch {}/{} ({} judgment{})", batch_index, len(batches), len(batch), _plural(batch))
-            results = _run_llm_batch(self.client, self.config.model, self.verify_prompt, "judgments", batch)
-            verifications.extend(_resolve_verifications(batch, results))
+        batches = _chunked(payloads, self.config.batch_size)
+        logger.info(
+            "Ground truth verification will process {} judgments ({} already completed, concurrency {})",
+            len(payloads),
+            len(completed_ids),
+            self.config.max_concurrency,
+        )
+        tasks = [
+            _VerifyTask(
+                order=index,
+                batch_index=index,
+                batch_count=len(batches),
+                payloads=batch,
+            )
+            for index, batch in enumerate(batches, start=1)
+        ]
+        judgment_order = _judgment_order(judgments)
+        for _order, resolved in self._run_verify_tasks(tasks):
+            verifications.extend(resolved)
+            verifications.sort(key=lambda row: judgment_order.get(row.get("judgment_id"), len(judgment_order)))
             write_json(verifications_path, verifications)
             self.sleep(self.config.batch_delay_seconds)
         logger.info("Completed {} relevance verifications", len(verifications))
         return verifications
+
+    def _run_verify_tasks(self, tasks: list[_VerifyTask]) -> Iterator[tuple[int, list[dict[str, Any]]]]:
+        if self.config.max_concurrency == 1:
+            for task in tasks:
+                yield task.order, self._run_verify_task(task)
+            return
+
+        completed: dict[int, list[dict[str, Any]]] = {}
+        next_order = 1
+        with ThreadPoolExecutor(max_workers=self.config.max_concurrency) as executor:
+            futures = {executor.submit(self._run_verify_task, task): task for task in tasks}
+            for future in as_completed(futures):
+                task = futures[future]
+                completed[task.order] = future.result()
+                while next_order in completed:
+                    yield next_order, completed.pop(next_order)
+                    next_order += 1
+
+    def _run_verify_task(self, task: _VerifyTask) -> list[dict[str, Any]]:
+        logger.info(
+            "Verifying batch {}/{} ({} judgment{})",
+            task.batch_index,
+            task.batch_count,
+            len(task.payloads),
+            _plural(task.payloads),
+        )
+        return _run_with_retries(
+            lambda: _resolve_verifications(
+                task.payloads,
+                _run_llm_batch(self.client, self.config.model, self.verify_prompt, "judgments", task.payloads),
+            ),
+            retries=self.config.llm_retries,
+            sleep=self.sleep,
+            delay_seconds=self.config.batch_delay_seconds,
+            description=f"verify batch {task.batch_index}/{task.batch_count}",
+        )
 
 
 def load_itb_rows(extract_dir: Path, sections: tuple[str, ...]) -> dict[str, dict[str, Any]]:
@@ -252,6 +427,21 @@ def iter_judge_pairs(pools: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return pairs
 
 
+def _build_judge_pool_payload(pool: dict[str, Any], pairs: list[dict[str, Any]]) -> dict[str, Any]:
+    return {
+        "section": pool["section"],
+        "chunk_id": pool["chunk_id"],
+        "itb": pool["itb"],
+        "candidates": [
+            {
+                "judgment_id": pair["judgment_id"],
+                "mdl": pair["mdl"],
+            }
+            for pair in pairs
+        ],
+    }
+
+
 def write_ground_truth(
     ground_truth_path: Path,
     judgments: list[dict[str, Any]],
@@ -284,16 +474,28 @@ def _run_llm_batch(
             {"role": "user", "content": json.dumps({payload_name: payloads}, ensure_ascii=False)},
         ],
         temperature=0.0,
-        max_completion_tokens=min(8192, 1024 * len(payloads)),
+        max_completion_tokens=_max_completion_tokens(payloads),
         response_format={"type": "json_object"},
     )
-    parsed = parse_json_output(response.choices[0].message.content or "{}")
+    try:
+        parsed = parse_json_output(response.choices[0].message.content or "{}")
+    except json.JSONDecodeError as exc:
+        raise LLMResponseError("LLM response is not valid JSON") from exc
     results = parsed.get("results")
     if not isinstance(results, list):
-        raise ValueError("LLM response must contain a results list")
+        raise LLMResponseError("LLM response must contain a results list")
     if not all(isinstance(item, dict) for item in results):
-        raise ValueError("LLM results must be JSON objects")
+        raise LLMResponseError("LLM results must be JSON objects")
     return results
+
+
+def _max_completion_tokens(payloads: list[dict[str, Any]]) -> int:
+    result_count = sum(len(payload.get("candidates", [])) or 1 for payload in payloads)
+    return min(8192, 1024 * result_count)
+
+
+def _candidate_count(pools: list[dict[str, Any]]) -> int:
+    return sum(len(pool.get("candidates", [])) for pool in pools)
 
 
 def _build_pool_record(section: str, record: dict[str, Any], itb_row: dict[str, Any]) -> dict[str, Any]:
@@ -334,6 +536,9 @@ def _resolve_judgments(
     results: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
     results_by_id = {str(row.get("judgment_id") or ""): row for row in results}
+    missing_ids = [pair["judgment_id"] for pair in pairs if pair["judgment_id"] not in results_by_id]
+    if missing_ids:
+        raise LLMResponseError(f"LLM response missing judgments: {_format_missing_ids(missing_ids)}")
     resolved = []
     for pair in pairs:
         judgment_id = pair["judgment_id"]
@@ -355,12 +560,60 @@ def _resolve_verifications(
     results: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
     results_by_id = {str(row.get("judgment_id") or ""): row for row in results}
+    missing_ids = [payload["judgment_id"] for payload in payloads if payload["judgment_id"] not in results_by_id]
+    if missing_ids:
+        raise LLMResponseError(f"LLM response missing verifications: {_format_missing_ids(missing_ids)}")
     resolved = []
     for payload in payloads:
         judgment_id = payload["judgment_id"]
         result = results_by_id[judgment_id]
         resolved.append({**_normalize_verification(result), "judgment_id": judgment_id})
     return resolved
+
+
+def _run_with_retries(
+    operation: Callable[[], list[dict[str, Any]]],
+    retries: int,
+    sleep: Callable[[float], None],
+    delay_seconds: float,
+    description: str,
+) -> list[dict[str, Any]]:
+    for attempt in range(retries + 1):
+        try:
+            return operation()
+        except LLMResponseError as exc:
+            if attempt >= retries:
+                raise
+            logger.warning(
+                "{} failed on attempt {}/{}: {}. Retrying...",
+                description,
+                attempt + 1,
+                retries + 1,
+                exc,
+            )
+            sleep(delay_seconds)
+    raise AssertionError("unreachable")
+
+
+def _format_missing_ids(missing_ids: list[str]) -> str:
+    preview = missing_ids[:5]
+    suffix = "" if len(missing_ids) <= len(preview) else f", ... ({len(missing_ids)} total)"
+    return ", ".join(preview) + suffix
+
+
+def _judgment_order(rows: list[dict[str, Any]]) -> dict[str, int]:
+    return {str(row["judgment_id"]): index for index, row in enumerate(rows)}
+
+
+def _group_pairs_by_pool(pairs: list[dict[str, Any]]) -> dict[tuple[str, str], list[dict[str, Any]]]:
+    pairs_by_pool: dict[tuple[str, str], list[dict[str, Any]]] = {}
+    for pair in pairs:
+        pairs_by_pool.setdefault(_pool_key(pair), []).append(pair)
+    return pairs_by_pool
+
+
+def _pool_key(row: dict[str, Any]) -> tuple[str, str]:
+    return (str(row["section"]), str(row["chunk_id"]))
 
 
 def _normalize_judgment(judgment: dict[str, Any]) -> dict[str, Any]:
