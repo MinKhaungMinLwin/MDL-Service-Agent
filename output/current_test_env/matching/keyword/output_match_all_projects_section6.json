@@ -28,6 +28,208 @@
     "cross_encoder_candidate_count": 40,
     "keywords": "GNCPC 1800 MW net, ±5% tolerance, natural gas operation, back-up fuel operation, net power output per Appendix C, EPC Contract Appendix C, power blocks, gas turbines, HRSGs, steam turbine, SF additional power capacity limit 10%, contracted capacity",
     "search_query": "GNCPC 1800 MW net ±5%, natural gas, back-up fuel, Appendix C net power output, SF limit 10% contracted capacity, gas turbines, HRSG, steam turbine",
+    "retrieval_candidates": [
+      {
+        "rank": 1,
+        "retrieval_rank": 1,
+        "doc_id": "Karabatan_MDL_classified_T14211-7315-03-ME-B16-0001_2075"
+      },
+      {
+        "rank": 2,
+        "retrieval_rank": 2,
+        "doc_id": "Karabatan_MDL_classified_T14211-7316-03-ME-B16-0001_473"
+      },
+      {
+        "rank": 3,
+        "retrieval_rank": 3,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B113-03-ME-B16-0022_711"
+      },
+      {
+        "rank": 4,
+        "retrieval_rank": 4,
+        "doc_id": "Muara Tawar_MDL_classified_MRT-XM00-P2MAA-220012_1085"
+      },
+      {
+        "rank": 5,
+        "retrieval_rank": 5,
+        "doc_id": "Muara Tawar_MDL_classified_MRT-DM02-P2MAA-220165_1195"
+      },
+      {
+        "rank": 6,
+        "retrieval_rank": 6,
+        "doc_id": "Muara Tawar_MDL_classified_MRT-DM02-P3MAA-220174_1196"
+      },
+      {
+        "rank": 7,
+        "retrieval_rank": 7,
+        "doc_id": "Muara Tawar_MDL_classified_MRT-CQ02-P3MAA-220202_1264"
+      },
+      {
+        "rank": 8,
+        "retrieval_rank": 8,
+        "doc_id": "Muara Tawar_MDL_classified_MRT-CQ02-P2MAA-220202_1263"
+      },
+      {
+        "rank": 9,
+        "retrieval_rank": 9,
+        "doc_id": "Muara Tawar_MDL_classified_MRT-CQ02-P3MAA-220201_1262"
+      },
+      {
+        "rank": 10,
+        "retrieval_rank": 10,
+        "doc_id": "Muara Tawar_MDL_classified_MRT-CQ02-P2MAA-220201_1261"
+      },
+      {
+        "rank": 11,
+        "retrieval_rank": 11,
+        "doc_id": "Muara Tawar_MDL_classified_MRT-DM02-P3MAA-220133_1192"
+      },
+      {
+        "rank": 12,
+        "retrieval_rank": 12,
+        "doc_id": "Muara Tawar_MDL_classified_MRT-DM02-P2MAA-220134_1191"
+      },
+      {
+        "rank": 13,
+        "retrieval_rank": 13,
+        "doc_id": "Muara Tawar_MDL_classified_MRT-XM00-P3MAA-220012_1086"
+      },
+      {
+        "rank": 14,
+        "retrieval_rank": 14,
+        "doc_id": "Ukudu_MDL_classified_DOC_648_648"
+      },
+      {
+        "rank": 15,
+        "retrieval_rank": 15,
+        "doc_id": "Ukudu_MDL_classified_DOC_588_588"
+      },
+      {
+        "rank": 16,
+        "retrieval_rank": 16,
+        "doc_id": "Grati_MDL_classified_DOC_3140_3140"
+      },
+      {
+        "rank": 17,
+        "retrieval_rank": 17,
+        "doc_id": "Karabatan_MDL_classified_T14211-7348-AC-555-0002_1600"
+      },
+      {
+        "rank": 18,
+        "retrieval_rank": 18,
+        "doc_id": "Muara Tawar_MDL_classified_MRT-DN05-P3MAA-220205_1256"
+      },
+      {
+        "rank": 19,
+        "retrieval_rank": 19,
+        "doc_id": "Muara Tawar_MDL_classified_MRT-DN05-P2MAA-220205_1255"
+      },
+      {
+        "rank": 20,
+        "retrieval_rank": 20,
+        "doc_id": "Grati_MDL_classified_DOC_3055_3055"
+      },
+      {
+        "rank": 21,
+        "retrieval_rank": 21,
+        "doc_id": "Muara Tawar_MDL_classified_MRT-XH01-P3UMA-144000_599"
+      },
+      {
+        "rank": 22,
+        "retrieval_rank": 22,
+        "doc_id": "Muara Tawar_MDL_classified_MRT-XH01-P3UMA-143000_598"
+      },
+      {
+        "rank": 23,
+        "retrieval_rank": 23,
+        "doc_id": "Muara Tawar_MDL_classified_MRT-XH01-P2UMA-142000_597"
+      },
+      {
+        "rank": 24,
+        "retrieval_rank": 24,
+        "doc_id": "Grati_MDL_classified_GRT-YK10-P0MA-200057_445"
+      },
+      {
+        "rank": 25,
+        "retrieval_rank": 25,
+        "doc_id": "Muara Tawar_MDL_classified_MRT-XT00-P3MAA-220002_1169"
+      },
+      {
+        "rank": 26,
+        "retrieval_rank": 26,
+        "doc_id": "Muara Tawar_MDL_classified_MRT-XT00-P2MAA-220002_1168"
+      },
+      {
+        "rank": 27,
+        "retrieval_rank": 27,
+        "doc_id": "Muara Tawar_MDL_classified_MRT-CA07-P2MAA-220003_1170"
+      },
+      {
+        "rank": 28,
+        "retrieval_rank": 28,
+        "doc_id": "Muara Tawar_MDL_classified_MRT-UF00-P2MAA-220023_1178"
+      },
+      {
+        "rank": 29,
+        "retrieval_rank": 29,
+        "doc_id": "Grati_MDL_classified_DOC_3151_3151"
+      },
+      {
+        "rank": 30,
+        "retrieval_rank": 30,
+        "doc_id": "Karabatan_MDL_classified_T14211-7315-03-ME-E13-0001_2130"
+      },
+      {
+        "rank": 31,
+        "retrieval_rank": 31,
+        "doc_id": "Karabatan_MDL_classified_T14211-7316-03-ME-B27-0001_494"
+      },
+      {
+        "rank": 32,
+        "retrieval_rank": 32,
+        "doc_id": "Ukudu_MDL_classified_DOC_1338_1338"
+      },
+      {
+        "rank": 33,
+        "retrieval_rank": 33,
+        "doc_id": "Muara Tawar_MDL_classified_MRT-CA07-P3MAA-220003_1171"
+      },
+      {
+        "rank": 34,
+        "retrieval_rank": 34,
+        "doc_id": "Muara Tawar_MDL_classified_MRT-UF00-P3MAA-220023_1179"
+      },
+      {
+        "rank": 35,
+        "retrieval_rank": 35,
+        "doc_id": "Karabatan_MDL_classified_T14211-7316-PI-121-0001_2539"
+      },
+      {
+        "rank": 36,
+        "retrieval_rank": 36,
+        "doc_id": "Fadhili_MDL_classified_T16182-XG02-P6MAA-220025_2526"
+      },
+      {
+        "rank": 37,
+        "retrieval_rank": 37,
+        "doc_id": "Fadhili_MDL_classified_T16182-XG02-P7MAA-220026_2527"
+      },
+      {
+        "rank": 38,
+        "retrieval_rank": 38,
+        "doc_id": "Grati_MDL_classified_DOC_3176_3176"
+      },
+      {
+        "rank": 39,
+        "retrieval_rank": 39,
+        "doc_id": "Grati_MDL_classified_GRT-YK09-P0MA-200052_442"
+      },
+      {
+        "rank": 40,
+        "retrieval_rank": 40,
+        "doc_id": "Grati_MDL_classified_GRT-YK09-P0MA-200051_441"
+      }
+    ],
     "candidates": [
       {
         "rank": 1,
@@ -540,6 +742,488 @@
     "cross_encoder_candidate_count": 96,
     "keywords": "Combined Cycle Power Plant, dual fuel gas turbines (GTs), dry low NOx combustors, heat recovery steam generators (HRSGs), by-pass stack, diverter dampers, horizontal and vertical sealing guillotine damper, condensing steam turbine (CST), air cooled condenser, synchronous generators, generator circuit breakers (GTGs, STGs), generator step-up transformers (2 winding), auxiliary transformers (2 or 3 winding), HV circuit breakers for GSU transformers, symmetrical plant design, equally designed groups (GT/HRSG/ST)",
     "search_query": "Plant configuration, combined cycle power plant, dual fuel gas turbines GT, dry low NOx combustors, HRSG, by-pass stack, diverter dampers, guillotine damper, condensing steam turbine CST, air cooled condenser, synchronous generators, generator circuit breakers GTG STG, generator step-up transformer 2 winding, auxiliary transformer 2 or 3 winding, HV circuit breakers GSU, symmetrical groups",
+    "retrieval_candidates": [
+      {
+        "rank": 1,
+        "retrieval_rank": 1,
+        "doc_id": "Ukudu_MDL_classified_DOC_828_828"
+      },
+      {
+        "rank": 2,
+        "retrieval_rank": 2,
+        "doc_id": "Ukudu_MDL_classified_DOC_2111_2111"
+      },
+      {
+        "rank": 3,
+        "retrieval_rank": 3,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-CV-ACC-0007_1346"
+      },
+      {
+        "rank": 4,
+        "retrieval_rank": 4,
+        "doc_id": "Fadhili_MDL_classified_T16182-XB02-P0ULC-171302_1945"
+      },
+      {
+        "rank": 5,
+        "retrieval_rank": 5,
+        "doc_id": "Fadhili_MDL_classified_T16182-VN01-P0MAG-123055_330"
+      },
+      {
+        "rank": 6,
+        "retrieval_rank": 6,
+        "doc_id": "Karabatan_MDL_classified_T14211-7300-IA-315-0009_1158"
+      },
+      {
+        "rank": 7,
+        "retrieval_rank": 7,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-CS-PPI-0001-000_30"
+      },
+      {
+        "rank": 8,
+        "retrieval_rank": 8,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-CV-ACC-0001_1307"
+      },
+      {
+        "rank": 9,
+        "retrieval_rank": 9,
+        "doc_id": "Fadhili_MDL_classified_T16182-VE04-P0ULC-171301_1944"
+      },
+      {
+        "rank": 10,
+        "retrieval_rank": 10,
+        "doc_id": "Karabatan_MDL_classified_T14211-7300-IA-318-0009_1182"
+      },
+      {
+        "rank": 11,
+        "retrieval_rank": 11,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-CV-ACC-0002_1326"
+      },
+      {
+        "rank": 12,
+        "retrieval_rank": 12,
+        "doc_id": "Fadhili_MDL_classified_T16182-YT01-P0SMU-128037_662"
+      },
+      {
+        "rank": 13,
+        "retrieval_rank": 13,
+        "doc_id": "Fadhili_MDL_classified_T16182-YD00-P0SMU-128032_657"
+      },
+      {
+        "rank": 14,
+        "retrieval_rank": 14,
+        "doc_id": "Fadhili_MDL_classified_T16182-VK02-P0ULC-171308_1947"
+      },
+      {
+        "rank": 15,
+        "retrieval_rank": 15,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-04-ME-B27-001_241"
+      },
+      {
+        "rank": 16,
+        "retrieval_rank": 16,
+        "doc_id": "Fadhili_MDL_classified_T16182-YK09-P0SMU-128042_667"
+      },
+      {
+        "rank": 17,
+        "retrieval_rank": 17,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-CV-ACC-0005_1344"
+      },
+      {
+        "rank": 18,
+        "retrieval_rank": 18,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-CV-ACC-0003_1342"
+      },
+      {
+        "rank": 19,
+        "retrieval_rank": 19,
+        "doc_id": "Fadhili_MDL_classified_T16182-XB02-P0ULC-171303_1946"
+      },
+      {
+        "rank": 20,
+        "retrieval_rank": 20,
+        "doc_id": "Karabatan_MDL_classified_T14211- 7300-IA-308-0005_2993"
+      },
+      {
+        "rank": 21,
+        "retrieval_rank": 21,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B216-IA-329-0001_498"
+      },
+      {
+        "rank": 22,
+        "retrieval_rank": 22,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B116-IA-329-0001_497"
+      },
+      {
+        "rank": 23,
+        "retrieval_rank": 23,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-CV-ACC-0004_1343"
+      },
+      {
+        "rank": 24,
+        "retrieval_rank": 24,
+        "doc_id": "Fadhili_MDL_classified_T16182-VK02-P0ULC-171309_1948"
+      },
+      {
+        "rank": 25,
+        "retrieval_rank": 25,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-CV-ACC-0003_3059"
+      },
+      {
+        "rank": 26,
+        "retrieval_rank": 26,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-CV-ACC-0001_3032"
+      },
+      {
+        "rank": 27,
+        "retrieval_rank": 27,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-CV-ACC-0002_3050"
+      },
+      {
+        "rank": 28,
+        "retrieval_rank": 28,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-CV-ACC-0006_1345"
+      },
+      {
+        "rank": 29,
+        "retrieval_rank": 29,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-CV-ACC-0008_1347"
+      },
+      {
+        "rank": 30,
+        "retrieval_rank": 30,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B089-IA-308-0004_472"
+      },
+      {
+        "rank": 31,
+        "retrieval_rank": 31,
+        "doc_id": "Karabatan_MDL_classified_T14211- 7300-IA-330-0025_2963"
+      },
+      {
+        "rank": 32,
+        "retrieval_rank": 32,
+        "doc_id": "Karabatan_MDL_classified_T14211- 7300-IA-330-0026_2964"
+      },
+      {
+        "rank": 33,
+        "retrieval_rank": 33,
+        "doc_id": "Fadhili_MDL_classified_T16182-YE03-P0BAU-152533_1548"
+      },
+      {
+        "rank": 34,
+        "retrieval_rank": 34,
+        "doc_id": "Fadhili_MDL_classified_T16182-YE03-P0BAU-152532_1547"
+      },
+      {
+        "rank": 35,
+        "retrieval_rank": 35,
+        "doc_id": "Fadhili_MDL_classified_T16182-XH01-P6UMA-140025_1182"
+      },
+      {
+        "rank": 36,
+        "retrieval_rank": 36,
+        "doc_id": "Karabatan_MDL_classified_T14211-7300-IA-330-0025_1242"
+      },
+      {
+        "rank": 37,
+        "retrieval_rank": 37,
+        "doc_id": "Karabatan_MDL_classified_T14211-7300-IA-330-0026_1243"
+      },
+      {
+        "rank": 38,
+        "retrieval_rank": 38,
+        "doc_id": "Fadhili_MDL_classified_T16182-YD00-P0MAG-123054_329"
+      },
+      {
+        "rank": 39,
+        "retrieval_rank": 39,
+        "doc_id": "Fadhili_MDL_classified_T16182-XH01-P7UMA-140026_1183"
+      },
+      {
+        "rank": 40,
+        "retrieval_rank": 40,
+        "doc_id": "Karabatan_MDL_classified_T14211-7300-IA-308-0005_1264"
+      },
+      {
+        "rank": 41,
+        "retrieval_rank": 41,
+        "doc_id": "Karabatan_MDL_classified_T14211-7328-04-ME-B19-001_2182"
+      },
+      {
+        "rank": 42,
+        "retrieval_rank": 42,
+        "doc_id": "Karabatan_MDL_classified_T14211-7300-ME-TBE-0004_1846"
+      },
+      {
+        "rank": 43,
+        "retrieval_rank": 43,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-04-ME-B18-001_514"
+      },
+      {
+        "rank": 44,
+        "retrieval_rank": 44,
+        "doc_id": "Fadhili_MDL_classified_T16182-XS00-P0MAG-123004_287"
+      },
+      {
+        "rank": 45,
+        "retrieval_rank": 45,
+        "doc_id": "Fadhili_MDL_classified_T16182-XJ00-P0MAG-123019_301"
+      },
+      {
+        "rank": 46,
+        "retrieval_rank": 46,
+        "doc_id": "Fadhili_MDL_classified_T16182-XK00-P0MAG-123027_308"
+      },
+      {
+        "rank": 47,
+        "retrieval_rank": 47,
+        "doc_id": "Fadhili_MDL_classified_T16182-XS00-P0MAG-123005_288"
+      },
+      {
+        "rank": 48,
+        "retrieval_rank": 48,
+        "doc_id": "Fadhili_MDL_classified_T16182-YV02-P0MAG-123033_313"
+      },
+      {
+        "rank": 49,
+        "retrieval_rank": 49,
+        "doc_id": "Fadhili_MDL_classified_T16182-YF00-P0MAG-123032_312"
+      },
+      {
+        "rank": 50,
+        "retrieval_rank": 50,
+        "doc_id": "Fadhili_MDL_classified_T16182-XK00-P0MAG-123008_291"
+      },
+      {
+        "rank": 51,
+        "retrieval_rank": 51,
+        "doc_id": "Fadhili_MDL_classified_T16182-YL00-P0MAG-123031_311"
+      },
+      {
+        "rank": 52,
+        "retrieval_rank": 52,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B116-04-ME-B01-0001_542"
+      },
+      {
+        "rank": 53,
+        "retrieval_rank": 53,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-EL-373-0011_1000"
+      },
+      {
+        "rank": 54,
+        "retrieval_rank": 54,
+        "doc_id": "Fadhili_MDL_classified_T16182-VN02-P0MAG-123006_289"
+      },
+      {
+        "rank": 55,
+        "retrieval_rank": 55,
+        "doc_id": "Fadhili_MDL_classified_T16182-DS00-P0MAG-123053_328"
+      },
+      {
+        "rank": 56,
+        "retrieval_rank": 56,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B116-04-ME-K06-0001_540"
+      },
+      {
+        "rank": 57,
+        "retrieval_rank": 57,
+        "doc_id": "Karabatan_MDL_classified_T14211-7328-04-ME-G18-001_2166"
+      },
+      {
+        "rank": 58,
+        "retrieval_rank": 58,
+        "doc_id": "Fadhili_MDL_classified_T16182-VN01-P0MAG-123050_325"
+      },
+      {
+        "rank": 59,
+        "retrieval_rank": 59,
+        "doc_id": "Karabatan_MDL_classified_T14211-7328-04-ME-B19-002_2183"
+      },
+      {
+        "rank": 60,
+        "retrieval_rank": 60,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-EL-372-0051_2796"
+      },
+      {
+        "rank": 61,
+        "retrieval_rank": 61,
+        "doc_id": "Fadhili_MDL_classified_T16182-DH02-P0MAG-123011_294"
+      },
+      {
+        "rank": 62,
+        "retrieval_rank": 62,
+        "doc_id": "Karabatan_MDL_classified_T14211-7300-ME-REQ-0004_1790"
+      },
+      {
+        "rank": 63,
+        "retrieval_rank": 63,
+        "doc_id": "Karabatan_MDL_classified_T14211-7328-04-ME-B19-003_2184"
+      },
+      {
+        "rank": 64,
+        "retrieval_rank": 64,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B116-04-ME-B16-0002_519"
+      },
+      {
+        "rank": 65,
+        "retrieval_rank": 65,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B116-04-ME-H03-0001_520"
+      },
+      {
+        "rank": 66,
+        "retrieval_rank": 66,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-04-ME-A07-001_501"
+      },
+      {
+        "rank": 67,
+        "retrieval_rank": 67,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-04-ME-G18-001_500"
+      },
+      {
+        "rank": 68,
+        "retrieval_rank": 68,
+        "doc_id": "Fadhili_MDL_classified_T16182-VN01-P0MAG-123045_320"
+      },
+      {
+        "rank": 69,
+        "retrieval_rank": 69,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-04-ME-B01-001_498"
+      },
+      {
+        "rank": 70,
+        "retrieval_rank": 70,
+        "doc_id": "Turkistan_MDL_classified_CCP-PW-B016-CV-ACC-0005_197"
+      },
+      {
+        "rank": 71,
+        "retrieval_rank": 71,
+        "doc_id": "Fadhili_MDL_classified_T16182-VN01-P0MAG-123046_321"
+      },
+      {
+        "rank": 72,
+        "retrieval_rank": 72,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-ME-TDS-0001_171"
+      },
+      {
+        "rank": 73,
+        "retrieval_rank": 73,
+        "doc_id": "Fadhili_MDL_classified_T16182-VN01-P0MAG-123047_322"
+      },
+      {
+        "rank": 74,
+        "retrieval_rank": 74,
+        "doc_id": "Karabatan_MDL_classified_T14211-7328-04-ME-A07-001_2167"
+      },
+      {
+        "rank": 75,
+        "retrieval_rank": 75,
+        "doc_id": "Karabatan_MDL_classified_T14211-7328-04-ME-B01-001_2164"
+      },
+      {
+        "rank": 76,
+        "retrieval_rank": 76,
+        "doc_id": "Fadhili_MDL_classified_T16182-YU03-P0BFA-150952_1387"
+      },
+      {
+        "rank": 77,
+        "retrieval_rank": 77,
+        "doc_id": "Fadhili_MDL_classified_T16182-YD00-P0MAG-123001_285"
+      },
+      {
+        "rank": 78,
+        "retrieval_rank": 78,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B116-04-ME-P10-0001_526"
+      },
+      {
+        "rank": 79,
+        "retrieval_rank": 79,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-04-ME-B18-003_516"
+      },
+      {
+        "rank": 80,
+        "retrieval_rank": 80,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-04-ME-B18-002_515"
+      },
+      {
+        "rank": 81,
+        "retrieval_rank": 81,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B116-04-ME-H21-0001_538"
+      },
+      {
+        "rank": 82,
+        "retrieval_rank": 82,
+        "doc_id": "Fadhili_MDL_classified_T16182-XG02-P0MAG-123002_286"
+      },
+      {
+        "rank": 83,
+        "retrieval_rank": 83,
+        "doc_id": "Karabatan_MDL_classified_DOC_2163_2163"
+      },
+      {
+        "rank": 84,
+        "retrieval_rank": 84,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-04-ME-B06-001_499"
+      },
+      {
+        "rank": 85,
+        "retrieval_rank": 85,
+        "doc_id": "Karabatan_MDL_classified_DOC_497_497"
+      },
+      {
+        "rank": 86,
+        "retrieval_rank": 86,
+        "doc_id": "Karabatan_MDL_classified_T14211-7328-04-ME-B06-001_2165"
+      },
+      {
+        "rank": 87,
+        "retrieval_rank": 87,
+        "doc_id": "Fadhili_MDL_classified_T16182-XH01-P0MAG-123016_299"
+      },
+      {
+        "rank": 88,
+        "retrieval_rank": 88,
+        "doc_id": "Fadhili_MDL_classified_T16182-YL01-P0MAG-123034_314"
+      },
+      {
+        "rank": 89,
+        "retrieval_rank": 89,
+        "doc_id": "Turkistan_MDL_classified_CCP-PW-B016-CV-ACC-0004_196"
+      },
+      {
+        "rank": 90,
+        "retrieval_rank": 90,
+        "doc_id": "Turkistan_MDL_classified_CCP-PW-B016-CV-ACC-0003_192"
+      },
+      {
+        "rank": 91,
+        "retrieval_rank": 91,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-EL-374-0021_1023"
+      },
+      {
+        "rank": 92,
+        "retrieval_rank": 92,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-EL-385-0011_1001"
+      },
+      {
+        "rank": 93,
+        "retrieval_rank": 93,
+        "doc_id": "Karabatan_MDL_classified_T14211-7328-04-ME-B99-007_2181"
+      },
+      {
+        "rank": 94,
+        "retrieval_rank": 94,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-EL-371-0041_2778"
+      },
+      {
+        "rank": 95,
+        "retrieval_rank": 95,
+        "doc_id": "Fadhili_MDL_classified_T16182-VN02-P0MAG-123022_304"
+      },
+      {
+        "rank": 96,
+        "retrieval_rank": 96,
+        "doc_id": "Fadhili_MDL_classified_T16182-XA00-P0MAG-123049_324"
+      }
+    ],
     "candidates": [
       {
         "rank": 1,
@@ -1052,6 +1736,7 @@
     "cross_encoder_candidate_count": 0,
     "keywords": "optimum cost solution, final configuration, number of power generation units, steam generation units, contractor optimization, gas turbine type and size, world market availability, required power generation capacity",
     "search_query": "Plant configuration optimization, optimum cost solution, number of power and steam generation units, gas turbine type and size, world market availability, required power generation capacity",
+    "retrieval_candidates": [],
     "candidates": []
   },
   {
@@ -1083,6 +1768,498 @@
     "cross_encoder_candidate_count": 98,
     "keywords": "condense steam turbine exhaust (including bypass systems), wind direction impact on ACC performance, ACC location not in predominant wind direction, condensate extraction pumps and strainers, vacuum raising and maintaining system, steam duct / distribution system, condensate collection system, condenser air removal system, cooling air fans with automatic controls, N+1 fans for maximum load condition, IP and LP bypass dump steam flows, turbine start-up, rapid load reduction, load rejection, turbine trip",
     "search_query": "Air Cooled Condenser (ACC), steam turbine exhaust condensing, bypass systems IP LP, wind direction predominant wind, vacuum raising maintaining system, condenser air removal system, condensate extraction pumps, steam duct distribution, N+1 fans, turbine trip load rejection",
+    "retrieval_candidates": [
+      {
+        "rank": 1,
+        "retrieval_rank": 1,
+        "doc_id": "Fadhili_MDL_classified_T16182-DN05-P0ZEN-860001_2658"
+      },
+      {
+        "rank": 2,
+        "retrieval_rank": 2,
+        "doc_id": "Fadhili_MDL_classified_T16182-XB02-P0ULC-171302_1945"
+      },
+      {
+        "rank": 3,
+        "retrieval_rank": 3,
+        "doc_id": "Fadhili_MDL_classified_T16182-DN05-P0ZEN-860003_2660"
+      },
+      {
+        "rank": 4,
+        "retrieval_rank": 4,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-CV-ACC-0007_1346"
+      },
+      {
+        "rank": 5,
+        "retrieval_rank": 5,
+        "doc_id": "Karabatan_MDL_classified_T14211-7300-CS-PPI-0003-000_41"
+      },
+      {
+        "rank": 6,
+        "retrieval_rank": 6,
+        "doc_id": "Fadhili_MDL_classified_T16182-VN01-P0MAG-123055_330"
+      },
+      {
+        "rank": 7,
+        "retrieval_rank": 7,
+        "doc_id": "Karabatan_MDL_classified_T14211-7300-IA-315-0009_1158"
+      },
+      {
+        "rank": 8,
+        "retrieval_rank": 8,
+        "doc_id": "Karabatan_MDL_classified_T14211-7300-IA-318-0009_1182"
+      },
+      {
+        "rank": 9,
+        "retrieval_rank": 9,
+        "doc_id": "Fadhili_MDL_classified_T16182-VE04-P0ULC-171301_1944"
+      },
+      {
+        "rank": 10,
+        "retrieval_rank": 10,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-CV-ACC-0001_1307"
+      },
+      {
+        "rank": 11,
+        "retrieval_rank": 11,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-CS-PPI-0001-000_30"
+      },
+      {
+        "rank": 12,
+        "retrieval_rank": 12,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-CV-ACC-0002_1326"
+      },
+      {
+        "rank": 13,
+        "retrieval_rank": 13,
+        "doc_id": "Fadhili_MDL_classified_T16182-YT01-P0SMU-128037_662"
+      },
+      {
+        "rank": 14,
+        "retrieval_rank": 14,
+        "doc_id": "Fadhili_MDL_classified_T16182-YD00-P0SMU-128032_657"
+      },
+      {
+        "rank": 15,
+        "retrieval_rank": 15,
+        "doc_id": "Fadhili_MDL_classified_T16182-VK02-P0ULC-171308_1947"
+      },
+      {
+        "rank": 16,
+        "retrieval_rank": 16,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-04-ME-B27-001_241"
+      },
+      {
+        "rank": 17,
+        "retrieval_rank": 17,
+        "doc_id": "Fadhili_MDL_classified_T16182-YK09-P0SMU-128042_667"
+      },
+      {
+        "rank": 18,
+        "retrieval_rank": 18,
+        "doc_id": "Fadhili_MDL_classified_T16182-XB02-P0ULC-171303_1946"
+      },
+      {
+        "rank": 19,
+        "retrieval_rank": 19,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-CV-ACC-0003_1342"
+      },
+      {
+        "rank": 20,
+        "retrieval_rank": 20,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-CV-ACC-0005_1344"
+      },
+      {
+        "rank": 21,
+        "retrieval_rank": 21,
+        "doc_id": "Karabatan_MDL_classified_T14211- 7300-IA-308-0005_2993"
+      },
+      {
+        "rank": 22,
+        "retrieval_rank": 22,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B216-IA-329-0001_498"
+      },
+      {
+        "rank": 23,
+        "retrieval_rank": 23,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B116-IA-329-0001_497"
+      },
+      {
+        "rank": 24,
+        "retrieval_rank": 24,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-CV-ACC-0004_1343"
+      },
+      {
+        "rank": 25,
+        "retrieval_rank": 25,
+        "doc_id": "Fadhili_MDL_classified_T16182-VK02-P0ULC-171309_1948"
+      },
+      {
+        "rank": 26,
+        "retrieval_rank": 26,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-CV-ACC-0003_3059"
+      },
+      {
+        "rank": 27,
+        "retrieval_rank": 27,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-CV-ACC-0001_3032"
+      },
+      {
+        "rank": 28,
+        "retrieval_rank": 28,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-CV-ACC-0002_3050"
+      },
+      {
+        "rank": 29,
+        "retrieval_rank": 29,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-CV-ACC-0006_1345"
+      },
+      {
+        "rank": 30,
+        "retrieval_rank": 30,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-CV-ACC-0008_1347"
+      },
+      {
+        "rank": 31,
+        "retrieval_rank": 31,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B089-IA-308-0004_472"
+      },
+      {
+        "rank": 32,
+        "retrieval_rank": 32,
+        "doc_id": "Karabatan_MDL_classified_T14211- 7300-IA-330-0026_2964"
+      },
+      {
+        "rank": 33,
+        "retrieval_rank": 33,
+        "doc_id": "Karabatan_MDL_classified_T14211- 7300-IA-330-0025_2963"
+      },
+      {
+        "rank": 34,
+        "retrieval_rank": 34,
+        "doc_id": "Fadhili_MDL_classified_T16182-YE03-P0BAU-152533_1548"
+      },
+      {
+        "rank": 35,
+        "retrieval_rank": 35,
+        "doc_id": "Fadhili_MDL_classified_T16182-YE03-P0BAU-152532_1547"
+      },
+      {
+        "rank": 36,
+        "retrieval_rank": 36,
+        "doc_id": "Fadhili_MDL_classified_T16182-XH01-P6UMA-140025_1182"
+      },
+      {
+        "rank": 37,
+        "retrieval_rank": 37,
+        "doc_id": "Karabatan_MDL_classified_T14211-7300-IA-330-0026_1243"
+      },
+      {
+        "rank": 38,
+        "retrieval_rank": 38,
+        "doc_id": "Karabatan_MDL_classified_T14211-7300-IA-330-0025_1242"
+      },
+      {
+        "rank": 39,
+        "retrieval_rank": 39,
+        "doc_id": "Fadhili_MDL_classified_T16182-YD00-P0MAG-123054_329"
+      },
+      {
+        "rank": 40,
+        "retrieval_rank": 40,
+        "doc_id": "Fadhili_MDL_classified_T16182-XH01-P7UMA-140026_1183"
+      },
+      {
+        "rank": 41,
+        "retrieval_rank": 41,
+        "doc_id": "Karabatan_MDL_classified_T14211-7300-IA-308-0005_1264"
+      },
+      {
+        "rank": 42,
+        "retrieval_rank": 42,
+        "doc_id": "Karabatan_MDL_classified_T14211-7328-04-ME-B19-001_2182"
+      },
+      {
+        "rank": 43,
+        "retrieval_rank": 43,
+        "doc_id": "Karabatan_MDL_classified_T14211-7300-ME-TBE-0004_1846"
+      },
+      {
+        "rank": 44,
+        "retrieval_rank": 44,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-04-ME-B18-001_514"
+      },
+      {
+        "rank": 45,
+        "retrieval_rank": 45,
+        "doc_id": "Fadhili_MDL_classified_T16182-XS00-P0MAG-123004_287"
+      },
+      {
+        "rank": 46,
+        "retrieval_rank": 46,
+        "doc_id": "Fadhili_MDL_classified_T16182-XJ00-P0MAG-123019_301"
+      },
+      {
+        "rank": 47,
+        "retrieval_rank": 47,
+        "doc_id": "Fadhili_MDL_classified_T16182-XK00-P0MAG-123027_308"
+      },
+      {
+        "rank": 48,
+        "retrieval_rank": 48,
+        "doc_id": "Fadhili_MDL_classified_T16182-XS00-P0MAG-123005_288"
+      },
+      {
+        "rank": 49,
+        "retrieval_rank": 49,
+        "doc_id": "Fadhili_MDL_classified_T16182-YV02-P0MAG-123033_313"
+      },
+      {
+        "rank": 50,
+        "retrieval_rank": 50,
+        "doc_id": "Fadhili_MDL_classified_T16182-YF00-P0MAG-123032_312"
+      },
+      {
+        "rank": 51,
+        "retrieval_rank": 51,
+        "doc_id": "Fadhili_MDL_classified_T16182-XK00-P0MAG-123008_291"
+      },
+      {
+        "rank": 52,
+        "retrieval_rank": 52,
+        "doc_id": "Fadhili_MDL_classified_T16182-YL00-P0MAG-123031_311"
+      },
+      {
+        "rank": 53,
+        "retrieval_rank": 53,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B116-04-ME-B01-0001_542"
+      },
+      {
+        "rank": 54,
+        "retrieval_rank": 54,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-EL-373-0011_1000"
+      },
+      {
+        "rank": 55,
+        "retrieval_rank": 55,
+        "doc_id": "Fadhili_MDL_classified_T16182-VN02-P0MAG-123006_289"
+      },
+      {
+        "rank": 56,
+        "retrieval_rank": 56,
+        "doc_id": "Fadhili_MDL_classified_T16182-DS00-P0MAG-123053_328"
+      },
+      {
+        "rank": 57,
+        "retrieval_rank": 57,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B116-04-ME-K06-0001_540"
+      },
+      {
+        "rank": 58,
+        "retrieval_rank": 58,
+        "doc_id": "Karabatan_MDL_classified_T14211-7328-04-ME-G18-001_2166"
+      },
+      {
+        "rank": 59,
+        "retrieval_rank": 59,
+        "doc_id": "Karabatan_MDL_classified_T14211-7328-04-ME-B19-002_2183"
+      },
+      {
+        "rank": 60,
+        "retrieval_rank": 60,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-EL-372-0051_2796"
+      },
+      {
+        "rank": 61,
+        "retrieval_rank": 61,
+        "doc_id": "Fadhili_MDL_classified_T16182-DH02-P0MAG-123011_294"
+      },
+      {
+        "rank": 62,
+        "retrieval_rank": 62,
+        "doc_id": "Fadhili_MDL_classified_T16182-VN01-P0MAG-123050_325"
+      },
+      {
+        "rank": 63,
+        "retrieval_rank": 63,
+        "doc_id": "Karabatan_MDL_classified_T14211-7300-ME-REQ-0004_1790"
+      },
+      {
+        "rank": 64,
+        "retrieval_rank": 64,
+        "doc_id": "Karabatan_MDL_classified_T14211-7328-04-ME-B19-003_2184"
+      },
+      {
+        "rank": 65,
+        "retrieval_rank": 65,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B116-04-ME-B16-0002_519"
+      },
+      {
+        "rank": 66,
+        "retrieval_rank": 66,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B116-04-ME-H03-0001_520"
+      },
+      {
+        "rank": 67,
+        "retrieval_rank": 67,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-04-ME-A07-001_501"
+      },
+      {
+        "rank": 68,
+        "retrieval_rank": 68,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-04-ME-G18-001_500"
+      },
+      {
+        "rank": 69,
+        "retrieval_rank": 69,
+        "doc_id": "Fadhili_MDL_classified_T16182-VN01-P0MAG-123045_320"
+      },
+      {
+        "rank": 70,
+        "retrieval_rank": 70,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-04-ME-B01-001_498"
+      },
+      {
+        "rank": 71,
+        "retrieval_rank": 71,
+        "doc_id": "Turkistan_MDL_classified_CCP-PW-B016-CV-ACC-0005_197"
+      },
+      {
+        "rank": 72,
+        "retrieval_rank": 72,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-ME-TDS-0001_171"
+      },
+      {
+        "rank": 73,
+        "retrieval_rank": 73,
+        "doc_id": "Fadhili_MDL_classified_T16182-VN01-P0MAG-123046_321"
+      },
+      {
+        "rank": 74,
+        "retrieval_rank": 74,
+        "doc_id": "Karabatan_MDL_classified_T14211-7328-04-ME-B01-001_2164"
+      },
+      {
+        "rank": 75,
+        "retrieval_rank": 75,
+        "doc_id": "Fadhili_MDL_classified_T16182-VN01-P0MAG-123047_322"
+      },
+      {
+        "rank": 76,
+        "retrieval_rank": 76,
+        "doc_id": "Karabatan_MDL_classified_T14211-7328-04-ME-A07-001_2167"
+      },
+      {
+        "rank": 77,
+        "retrieval_rank": 77,
+        "doc_id": "Fadhili_MDL_classified_T16182-YU03-P0BFA-150952_1387"
+      },
+      {
+        "rank": 78,
+        "retrieval_rank": 78,
+        "doc_id": "Fadhili_MDL_classified_T16182-YD00-P0MAG-123001_285"
+      },
+      {
+        "rank": 79,
+        "retrieval_rank": 79,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B116-04-ME-P10-0001_526"
+      },
+      {
+        "rank": 80,
+        "retrieval_rank": 80,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-04-ME-B18-003_516"
+      },
+      {
+        "rank": 81,
+        "retrieval_rank": 81,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-04-ME-B18-002_515"
+      },
+      {
+        "rank": 82,
+        "retrieval_rank": 82,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B116-04-ME-H21-0001_538"
+      },
+      {
+        "rank": 83,
+        "retrieval_rank": 83,
+        "doc_id": "Fadhili_MDL_classified_T16182-XG02-P0MAG-123002_286"
+      },
+      {
+        "rank": 84,
+        "retrieval_rank": 84,
+        "doc_id": "Karabatan_MDL_classified_DOC_2163_2163"
+      },
+      {
+        "rank": 85,
+        "retrieval_rank": 85,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-04-ME-B06-001_499"
+      },
+      {
+        "rank": 86,
+        "retrieval_rank": 86,
+        "doc_id": "Karabatan_MDL_classified_DOC_497_497"
+      },
+      {
+        "rank": 87,
+        "retrieval_rank": 87,
+        "doc_id": "Karabatan_MDL_classified_T14211-7328-04-ME-B06-001_2165"
+      },
+      {
+        "rank": 88,
+        "retrieval_rank": 88,
+        "doc_id": "Fadhili_MDL_classified_T16182-XH01-P0MAG-123016_299"
+      },
+      {
+        "rank": 89,
+        "retrieval_rank": 89,
+        "doc_id": "Fadhili_MDL_classified_T16182-YL01-P0MAG-123034_314"
+      },
+      {
+        "rank": 90,
+        "retrieval_rank": 90,
+        "doc_id": "Turkistan_MDL_classified_CCP-PW-B016-CV-ACC-0004_196"
+      },
+      {
+        "rank": 91,
+        "retrieval_rank": 91,
+        "doc_id": "Turkistan_MDL_classified_CCP-PW-B016-CV-ACC-0003_192"
+      },
+      {
+        "rank": 92,
+        "retrieval_rank": 92,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-EL-374-0021_1023"
+      },
+      {
+        "rank": 93,
+        "retrieval_rank": 93,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-EL-385-0011_1001"
+      },
+      {
+        "rank": 94,
+        "retrieval_rank": 94,
+        "doc_id": "Karabatan_MDL_classified_T14211-7328-04-ME-B99-007_2181"
+      },
+      {
+        "rank": 95,
+        "retrieval_rank": 95,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-EL-371-0041_2778"
+      },
+      {
+        "rank": 96,
+        "retrieval_rank": 96,
+        "doc_id": "Fadhili_MDL_classified_T16182-VN02-P0MAG-123022_304"
+      },
+      {
+        "rank": 97,
+        "retrieval_rank": 97,
+        "doc_id": "Fadhili_MDL_classified_T16182-XA00-P0MAG-123049_324"
+      },
+      {
+        "rank": 98,
+        "retrieval_rank": 98,
+        "doc_id": "Fadhili_MDL_classified_T16182-YT01-P0MAG-123014_297"
+      }
+    ],
     "candidates": [
       {
         "rank": 1,
@@ -1595,6 +2772,483 @@
     "cross_encoder_candidate_count": 95,
     "keywords": "LP turbine exhaust to condenser transition, steam turbine outlet connection pieces, negligible pressure drop, turbine bypass dumps, dispersion headers internal to condenser, ACC materials selection, demineralized water chemistry, OEM guidelines, vacuum raising and maintaining plant, steam ejectors, mechanical vacuum pumps, hogging duty and running duty device (1+1 per condenser), HEI standards hotwell tank and condensate system, air ejector steam from main steam supply, ejector outlet silencer, condensate system instrumentation for condenser tube leakage",
     "search_query": "Air Cooled Condenser (ACC), LP turbine exhaust transition, turbine bypass dumps dispersion headers, demineralized water chemistry OEM guidelines, vacuum system steam ejectors mechanical vacuum pumps hogging running duty, HEI hotwell tank condensate system, ejector silencer, condenser tube leakage instrumentation",
+    "retrieval_candidates": [
+      {
+        "rank": 1,
+        "retrieval_rank": 1,
+        "doc_id": "Fadhili_MDL_classified_T16182-XB02-P0ULC-171302_1945"
+      },
+      {
+        "rank": 2,
+        "retrieval_rank": 2,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-CV-ACC-0007_1346"
+      },
+      {
+        "rank": 3,
+        "retrieval_rank": 3,
+        "doc_id": "Fadhili_MDL_classified_T16182-VN01-P0MAG-123055_330"
+      },
+      {
+        "rank": 4,
+        "retrieval_rank": 4,
+        "doc_id": "Karabatan_MDL_classified_T14211-7300-IA-315-0009_1158"
+      },
+      {
+        "rank": 5,
+        "retrieval_rank": 5,
+        "doc_id": "Karabatan_MDL_classified_T14211-7300-IA-318-0009_1182"
+      },
+      {
+        "rank": 6,
+        "retrieval_rank": 6,
+        "doc_id": "Fadhili_MDL_classified_T16182-VE04-P0ULC-171301_1944"
+      },
+      {
+        "rank": 7,
+        "retrieval_rank": 7,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-CV-ACC-0001_1307"
+      },
+      {
+        "rank": 8,
+        "retrieval_rank": 8,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-CS-PPI-0001-000_30"
+      },
+      {
+        "rank": 9,
+        "retrieval_rank": 9,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-CV-ACC-0002_1326"
+      },
+      {
+        "rank": 10,
+        "retrieval_rank": 10,
+        "doc_id": "Fadhili_MDL_classified_T16182-YT01-P0SMU-128037_662"
+      },
+      {
+        "rank": 11,
+        "retrieval_rank": 11,
+        "doc_id": "Fadhili_MDL_classified_T16182-YD00-P0SMU-128032_657"
+      },
+      {
+        "rank": 12,
+        "retrieval_rank": 12,
+        "doc_id": "Fadhili_MDL_classified_T16182-VK02-P0ULC-171308_1947"
+      },
+      {
+        "rank": 13,
+        "retrieval_rank": 13,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-04-ME-B27-001_241"
+      },
+      {
+        "rank": 14,
+        "retrieval_rank": 14,
+        "doc_id": "Fadhili_MDL_classified_T16182-YK09-P0SMU-128042_667"
+      },
+      {
+        "rank": 15,
+        "retrieval_rank": 15,
+        "doc_id": "Fadhili_MDL_classified_T16182-XB02-P0ULC-171303_1946"
+      },
+      {
+        "rank": 16,
+        "retrieval_rank": 16,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-CV-ACC-0003_1342"
+      },
+      {
+        "rank": 17,
+        "retrieval_rank": 17,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-CV-ACC-0005_1344"
+      },
+      {
+        "rank": 18,
+        "retrieval_rank": 18,
+        "doc_id": "Karabatan_MDL_classified_T14211- 7300-IA-308-0005_2993"
+      },
+      {
+        "rank": 19,
+        "retrieval_rank": 19,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B216-IA-329-0001_498"
+      },
+      {
+        "rank": 20,
+        "retrieval_rank": 20,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B116-IA-329-0001_497"
+      },
+      {
+        "rank": 21,
+        "retrieval_rank": 21,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-CV-ACC-0004_1343"
+      },
+      {
+        "rank": 22,
+        "retrieval_rank": 22,
+        "doc_id": "Fadhili_MDL_classified_T16182-VK02-P0ULC-171309_1948"
+      },
+      {
+        "rank": 23,
+        "retrieval_rank": 23,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-CV-ACC-0003_3059"
+      },
+      {
+        "rank": 24,
+        "retrieval_rank": 24,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-CV-ACC-0001_3032"
+      },
+      {
+        "rank": 25,
+        "retrieval_rank": 25,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-CV-ACC-0002_3050"
+      },
+      {
+        "rank": 26,
+        "retrieval_rank": 26,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-CV-ACC-0006_1345"
+      },
+      {
+        "rank": 27,
+        "retrieval_rank": 27,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-CV-ACC-0008_1347"
+      },
+      {
+        "rank": 28,
+        "retrieval_rank": 28,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B089-IA-308-0004_472"
+      },
+      {
+        "rank": 29,
+        "retrieval_rank": 29,
+        "doc_id": "Karabatan_MDL_classified_T14211- 7300-IA-330-0026_2964"
+      },
+      {
+        "rank": 30,
+        "retrieval_rank": 30,
+        "doc_id": "Karabatan_MDL_classified_T14211- 7300-IA-330-0025_2963"
+      },
+      {
+        "rank": 31,
+        "retrieval_rank": 31,
+        "doc_id": "Fadhili_MDL_classified_T16182-YE03-P0BAU-152533_1548"
+      },
+      {
+        "rank": 32,
+        "retrieval_rank": 32,
+        "doc_id": "Fadhili_MDL_classified_T16182-YE03-P0BAU-152532_1547"
+      },
+      {
+        "rank": 33,
+        "retrieval_rank": 33,
+        "doc_id": "Fadhili_MDL_classified_T16182-XH01-P6UMA-140025_1182"
+      },
+      {
+        "rank": 34,
+        "retrieval_rank": 34,
+        "doc_id": "Karabatan_MDL_classified_T14211-7300-IA-330-0026_1243"
+      },
+      {
+        "rank": 35,
+        "retrieval_rank": 35,
+        "doc_id": "Karabatan_MDL_classified_T14211-7300-IA-330-0025_1242"
+      },
+      {
+        "rank": 36,
+        "retrieval_rank": 36,
+        "doc_id": "Fadhili_MDL_classified_T16182-YD00-P0MAG-123054_329"
+      },
+      {
+        "rank": 37,
+        "retrieval_rank": 37,
+        "doc_id": "Fadhili_MDL_classified_T16182-XH01-P7UMA-140026_1183"
+      },
+      {
+        "rank": 38,
+        "retrieval_rank": 38,
+        "doc_id": "Karabatan_MDL_classified_T14211-7300-IA-308-0005_1264"
+      },
+      {
+        "rank": 39,
+        "retrieval_rank": 39,
+        "doc_id": "Karabatan_MDL_classified_T14211-7328-04-ME-B19-001_2182"
+      },
+      {
+        "rank": 40,
+        "retrieval_rank": 40,
+        "doc_id": "Karabatan_MDL_classified_T14211-7300-ME-TBE-0004_1846"
+      },
+      {
+        "rank": 41,
+        "retrieval_rank": 41,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-04-ME-B18-001_514"
+      },
+      {
+        "rank": 42,
+        "retrieval_rank": 42,
+        "doc_id": "Fadhili_MDL_classified_T16182-XS00-P0MAG-123004_287"
+      },
+      {
+        "rank": 43,
+        "retrieval_rank": 43,
+        "doc_id": "Fadhili_MDL_classified_T16182-XJ00-P0MAG-123019_301"
+      },
+      {
+        "rank": 44,
+        "retrieval_rank": 44,
+        "doc_id": "Fadhili_MDL_classified_T16182-XK00-P0MAG-123027_308"
+      },
+      {
+        "rank": 45,
+        "retrieval_rank": 45,
+        "doc_id": "Fadhili_MDL_classified_T16182-XS00-P0MAG-123005_288"
+      },
+      {
+        "rank": 46,
+        "retrieval_rank": 46,
+        "doc_id": "Fadhili_MDL_classified_T16182-YV02-P0MAG-123033_313"
+      },
+      {
+        "rank": 47,
+        "retrieval_rank": 47,
+        "doc_id": "Fadhili_MDL_classified_T16182-YF00-P0MAG-123032_312"
+      },
+      {
+        "rank": 48,
+        "retrieval_rank": 48,
+        "doc_id": "Fadhili_MDL_classified_T16182-XK00-P0MAG-123008_291"
+      },
+      {
+        "rank": 49,
+        "retrieval_rank": 49,
+        "doc_id": "Fadhili_MDL_classified_T16182-YL00-P0MAG-123031_311"
+      },
+      {
+        "rank": 50,
+        "retrieval_rank": 50,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B116-04-ME-B01-0001_542"
+      },
+      {
+        "rank": 51,
+        "retrieval_rank": 51,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-EL-373-0011_1000"
+      },
+      {
+        "rank": 52,
+        "retrieval_rank": 52,
+        "doc_id": "Fadhili_MDL_classified_T16182-VN02-P0MAG-123006_289"
+      },
+      {
+        "rank": 53,
+        "retrieval_rank": 53,
+        "doc_id": "Fadhili_MDL_classified_T16182-DS00-P0MAG-123053_328"
+      },
+      {
+        "rank": 54,
+        "retrieval_rank": 54,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B116-04-ME-K06-0001_540"
+      },
+      {
+        "rank": 55,
+        "retrieval_rank": 55,
+        "doc_id": "Karabatan_MDL_classified_T14211-7328-04-ME-G18-001_2166"
+      },
+      {
+        "rank": 56,
+        "retrieval_rank": 56,
+        "doc_id": "Karabatan_MDL_classified_T14211-7328-04-ME-B19-002_2183"
+      },
+      {
+        "rank": 57,
+        "retrieval_rank": 57,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-EL-372-0051_2796"
+      },
+      {
+        "rank": 58,
+        "retrieval_rank": 58,
+        "doc_id": "Fadhili_MDL_classified_T16182-DH02-P0MAG-123011_294"
+      },
+      {
+        "rank": 59,
+        "retrieval_rank": 59,
+        "doc_id": "Fadhili_MDL_classified_T16182-VN01-P0MAG-123050_325"
+      },
+      {
+        "rank": 60,
+        "retrieval_rank": 60,
+        "doc_id": "Karabatan_MDL_classified_T14211-7300-ME-REQ-0004_1790"
+      },
+      {
+        "rank": 61,
+        "retrieval_rank": 61,
+        "doc_id": "Karabatan_MDL_classified_T14211-7328-04-ME-B19-003_2184"
+      },
+      {
+        "rank": 62,
+        "retrieval_rank": 62,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B116-04-ME-B16-0002_519"
+      },
+      {
+        "rank": 63,
+        "retrieval_rank": 63,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B116-04-ME-H03-0001_520"
+      },
+      {
+        "rank": 64,
+        "retrieval_rank": 64,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-04-ME-A07-001_501"
+      },
+      {
+        "rank": 65,
+        "retrieval_rank": 65,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-04-ME-G18-001_500"
+      },
+      {
+        "rank": 66,
+        "retrieval_rank": 66,
+        "doc_id": "Fadhili_MDL_classified_T16182-VN01-P0MAG-123045_320"
+      },
+      {
+        "rank": 67,
+        "retrieval_rank": 67,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-04-ME-B01-001_498"
+      },
+      {
+        "rank": 68,
+        "retrieval_rank": 68,
+        "doc_id": "Turkistan_MDL_classified_CCP-PW-B016-CV-ACC-0005_197"
+      },
+      {
+        "rank": 69,
+        "retrieval_rank": 69,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-ME-TDS-0001_171"
+      },
+      {
+        "rank": 70,
+        "retrieval_rank": 70,
+        "doc_id": "Fadhili_MDL_classified_T16182-VN01-P0MAG-123046_321"
+      },
+      {
+        "rank": 71,
+        "retrieval_rank": 71,
+        "doc_id": "Karabatan_MDL_classified_T14211-7328-04-ME-B01-001_2164"
+      },
+      {
+        "rank": 72,
+        "retrieval_rank": 72,
+        "doc_id": "Fadhili_MDL_classified_T16182-VN01-P0MAG-123047_322"
+      },
+      {
+        "rank": 73,
+        "retrieval_rank": 73,
+        "doc_id": "Karabatan_MDL_classified_T14211-7328-04-ME-A07-001_2167"
+      },
+      {
+        "rank": 74,
+        "retrieval_rank": 74,
+        "doc_id": "Fadhili_MDL_classified_T16182-YU03-P0BFA-150952_1387"
+      },
+      {
+        "rank": 75,
+        "retrieval_rank": 75,
+        "doc_id": "Fadhili_MDL_classified_T16182-YD00-P0MAG-123001_285"
+      },
+      {
+        "rank": 76,
+        "retrieval_rank": 76,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B116-04-ME-P10-0001_526"
+      },
+      {
+        "rank": 77,
+        "retrieval_rank": 77,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-04-ME-B18-003_516"
+      },
+      {
+        "rank": 78,
+        "retrieval_rank": 78,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-04-ME-B18-002_515"
+      },
+      {
+        "rank": 79,
+        "retrieval_rank": 79,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B116-04-ME-H21-0001_538"
+      },
+      {
+        "rank": 80,
+        "retrieval_rank": 80,
+        "doc_id": "Fadhili_MDL_classified_T16182-XG02-P0MAG-123002_286"
+      },
+      {
+        "rank": 81,
+        "retrieval_rank": 81,
+        "doc_id": "Karabatan_MDL_classified_DOC_2163_2163"
+      },
+      {
+        "rank": 82,
+        "retrieval_rank": 82,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-04-ME-B06-001_499"
+      },
+      {
+        "rank": 83,
+        "retrieval_rank": 83,
+        "doc_id": "Karabatan_MDL_classified_DOC_497_497"
+      },
+      {
+        "rank": 84,
+        "retrieval_rank": 84,
+        "doc_id": "Karabatan_MDL_classified_T14211-7328-04-ME-B06-001_2165"
+      },
+      {
+        "rank": 85,
+        "retrieval_rank": 85,
+        "doc_id": "Fadhili_MDL_classified_T16182-XH01-P0MAG-123016_299"
+      },
+      {
+        "rank": 86,
+        "retrieval_rank": 86,
+        "doc_id": "Fadhili_MDL_classified_T16182-YL01-P0MAG-123034_314"
+      },
+      {
+        "rank": 87,
+        "retrieval_rank": 87,
+        "doc_id": "Turkistan_MDL_classified_CCP-PW-B016-CV-ACC-0004_196"
+      },
+      {
+        "rank": 88,
+        "retrieval_rank": 88,
+        "doc_id": "Turkistan_MDL_classified_CCP-PW-B016-CV-ACC-0003_192"
+      },
+      {
+        "rank": 89,
+        "retrieval_rank": 89,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-EL-374-0021_1023"
+      },
+      {
+        "rank": 90,
+        "retrieval_rank": 90,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-EL-385-0011_1001"
+      },
+      {
+        "rank": 91,
+        "retrieval_rank": 91,
+        "doc_id": "Karabatan_MDL_classified_T14211-7328-04-ME-B99-007_2181"
+      },
+      {
+        "rank": 92,
+        "retrieval_rank": 92,
+        "doc_id": "Karabatan_MDL_classified_T14211-7341-EL-371-0041_2778"
+      },
+      {
+        "rank": 93,
+        "retrieval_rank": 93,
+        "doc_id": "Fadhili_MDL_classified_T16182-VN02-P0MAG-123022_304"
+      },
+      {
+        "rank": 94,
+        "retrieval_rank": 94,
+        "doc_id": "Fadhili_MDL_classified_T16182-XA00-P0MAG-123049_324"
+      },
+      {
+        "rank": 95,
+        "retrieval_rank": 95,
+        "doc_id": "Fadhili_MDL_classified_T16182-YT01-P0MAG-123014_297"
+      }
+    ],
     "candidates": [
       {
         "rank": 1,
@@ -2107,6 +3761,7 @@
     "cross_encoder_candidate_count": 0,
     "keywords": "gas turbines, 100% dual fuel capability, Natural Gas primary fuel, liquid fuel (diesel) back-up, no limitation on duration of operation on either fuel, fuel changeover between fuel types, plant fuel systems optimization, control systems optimization, redundancy for maximum availability",
     "search_query": "Fuel Supply, gas turbines, 100% dual fuel capability, Natural Gas primary, diesel back-up, unlimited duration on either fuel, fuel changeover, fuel systems redundancy, control systems redundancy",
+    "retrieval_candidates": [],
     "candidates": []
   },
   {
@@ -2139,6 +3794,7 @@
     "cross_encoder_candidate_count": 0,
     "keywords": "Fuel Connection Facility location accessible by Saudi Aramco, outside access without main plant gate, gas station civil works, receiving/reducing/booster pumping installations, metering necessities, I&C requirements, electrical requirements, coordination with SPPC and Saudi Aramco, Rumah and Nairyah requirements",
     "search_query": "Natural Gas, Fuel Connection Facility, gas station civil works, receiving reducing booster pumping, metering, I&C, electrical requirements, Saudi Aramco access, SPPC, Rumah Nairyah",
+    "retrieval_candidates": [],
     "candidates": []
   },
   {
@@ -2171,6 +3827,7 @@
     "cross_encoder_candidate_count": 0,
     "keywords": "Back-up Fuel system connection, Back-up Fuel tank farm, Back-up Fuel oil tanks, reinforced concrete ring foundations, oil and watertight tank basin, reinforced concrete slabs and surrounding walls, oil proof coating, Back-up Fuel delivery by road tankers, unloading station adjacent to storage tanks, within plant boundaries, Rumah IPP, Nairyah IPP",
     "search_query": "Back-up Fuel, Back-up Fuel tank farm, Back-up Fuel oil tanks, reinforced concrete ring foundations, oil and watertight tank basin, oil proof coating, road tanker unloading station, Rumah IPP, Nairyah IPP",
+    "retrieval_candidates": [],
     "candidates": []
   },
   {
@@ -2202,6 +3859,7 @@
     "cross_encoder_candidate_count": 0,
     "keywords": "total net capacity 1800±5% MW, reference site conditions, natural gas, back-up fuel, net power output, Appendix C, EPC Contract, gas turbine capacity, maximum gas",
     "search_query": "Plant performance, total net capacity 1800±5% MW, reference site conditions, natural gas, back-up fuel, net power output, Appendix C",
+    "retrieval_candidates": [],
     "candidates": []
   },
   {
@@ -2233,6 +3891,13 @@
     "cross_encoder_candidate_count": 1,
     "keywords": "Guaranteed Contracted Net Heat Rate (GNCHR), Guaranteed Net Continuous Power Capacity (GNCPC), GT compressor inlet guide vane full opening, GT degradation compensation, single gas turbine power block operation, simple cycle operation, triple pressure reheat HRSG, supplementary firing, evaporative fogging wet compression system, HRSG exhaust gas temperature optimization, gas side pressure drop, feedwater system heat recovery (pinch point, approach point)",
     "search_query": "Plant performance, GNCHR, GNCPC, GT inlet guide vane full opening, GT degradation, triple pressure reheat HRSG, supplementary firing, evaporative fogging wet compression, HRSG exhaust gas temperature, gas side pressure drop, pinch point, approach point",
+    "retrieval_candidates": [
+      {
+        "rank": 1,
+        "retrieval_rank": 1,
+        "doc_id": "Fadhili_MDL_classified_T16182-DN05-P0ZEN-860022_2678"
+      }
+    ],
     "candidates": [
       {
         "rank": 1,
@@ -2289,6 +3954,7 @@
     "cross_encoder_candidate_count": 0,
     "keywords": "HRSG design point performance, natural gas fuel gas specification (OTS Part A Annex 4.1-1), cold end condensate recirculation system, condensate bypass arrangement, hot & cold end corrosion protection, protective coatings on casing, Teflon protective layers, sulphuric acid corrosion, hot casing design (alternative), degradation due to aging post COD, long-term degradation curve / factors, condensate return temperature above dew point",
     "search_query": "HRSG design and output degradation, design point performance, natural gas fuel gas specification OTS Part A Annex 4.1-1, cold end condensate recirculation, condensate bypass, hot and cold end corrosion protection, Teflon protective layers, sulphuric acid corrosion, post COD aging degradation curve factors, condensate return temperature above dew point",
+    "retrieval_candidates": [],
     "candidates": []
   },
   {
@@ -2320,6 +3986,7 @@
     "cross_encoder_candidate_count": 0,
     "keywords": "HP/IP-LP bypass, 100% capacity, loss of ST, GT full load, transient situation, open cycle mode switch-over",
     "search_query": "HP/IP-LP bypass, 100% capacity, loss of ST, GT full load, transient, open cycle mode switch-over",
+    "retrieval_candidates": [],
     "candidates": []
   },
   {
@@ -2351,6 +4018,418 @@
     "cross_encoder_candidate_count": 82,
     "keywords": "essential HVAC, non-essential HVAC, separate systems, blackout start, safe shutdown conditions, HVAC maintained during blackout",
     "search_query": "HVAC, essential HVAC, non-essential HVAC, separate systems, blackout start, safe shutdown conditions",
+    "retrieval_candidates": [
+      {
+        "rank": 1,
+        "retrieval_rank": 1,
+        "doc_id": "Grati_MDL_classified_GRTBCP-YS01-P0BJM-156095_1269"
+      },
+      {
+        "rank": 2,
+        "retrieval_rank": 2,
+        "doc_id": "Grati_MDL_classified_GRT-YT01-P0BJN-156096_1206"
+      },
+      {
+        "rank": 3,
+        "retrieval_rank": 3,
+        "doc_id": "Grati_MDL_classified_GRT-YU01-P0BJM-156094_1288"
+      },
+      {
+        "rank": 4,
+        "retrieval_rank": 4,
+        "doc_id": "Karabatan_MDL_classified_DOC_640_640"
+      },
+      {
+        "rank": 5,
+        "retrieval_rank": 5,
+        "doc_id": "Karabatan_MDL_classified_DOC_2273_2273"
+      },
+      {
+        "rank": 6,
+        "retrieval_rank": 6,
+        "doc_id": "Karabatan_MDL_classified_DOC_633_633"
+      },
+      {
+        "rank": 7,
+        "retrieval_rank": 7,
+        "doc_id": "Grati_MDL_classified_GRT-HM03-P0EBM-135647_1406"
+      },
+      {
+        "rank": 8,
+        "retrieval_rank": 8,
+        "doc_id": "Fadhili_MDL_classified_T16182-YT01-P0SAA-136002_878"
+      },
+      {
+        "rank": 9,
+        "retrieval_rank": 9,
+        "doc_id": "Fadhili_MDL_classified_T16182-YT01-P0SAA-136003_879"
+      },
+      {
+        "rank": 10,
+        "retrieval_rank": 10,
+        "doc_id": "Fadhili_MDL_classified_T16182-YT01-P0SAA-136001_877"
+      },
+      {
+        "rank": 11,
+        "retrieval_rank": 11,
+        "doc_id": "Ukudu_MDL_classified_DOC_2172_2172"
+      },
+      {
+        "rank": 12,
+        "retrieval_rank": 12,
+        "doc_id": "Fadhili_MDL_classified_T16182-XW03-P0SAQ-135203_867"
+      },
+      {
+        "rank": 13,
+        "retrieval_rank": 13,
+        "doc_id": "Karabatan_MDL_classified_T14211-7361-HV-TBE-0001_1865"
+      },
+      {
+        "rank": 14,
+        "retrieval_rank": 14,
+        "doc_id": "Karabatan_MDL_classified_DOC_3008_3008"
+      },
+      {
+        "rank": 15,
+        "retrieval_rank": 15,
+        "doc_id": "Karabatan_MDL_classified_DOC_2285_2285"
+      },
+      {
+        "rank": 16,
+        "retrieval_rank": 16,
+        "doc_id": "Ukudu_MDL_classified_DOC_923_923"
+      },
+      {
+        "rank": 17,
+        "retrieval_rank": 17,
+        "doc_id": "Karabatan_MDL_classified_T14211-7361-HV-620-0001_637"
+      },
+      {
+        "rank": 18,
+        "retrieval_rank": 18,
+        "doc_id": "Ukudu_MDL_classified_DOC_922_922"
+      },
+      {
+        "rank": 19,
+        "retrieval_rank": 19,
+        "doc_id": "Grati_MDL_classified_GRT-YD00-P0BJN-156093_1202"
+      },
+      {
+        "rank": 20,
+        "retrieval_rank": 20,
+        "doc_id": "Karabatan_MDL_classified_DOC_648_648"
+      },
+      {
+        "rank": 21,
+        "retrieval_rank": 21,
+        "doc_id": "Karabatan_MDL_classified_T14211-7361-HV-617-0001_635"
+      },
+      {
+        "rank": 22,
+        "retrieval_rank": 22,
+        "doc_id": "Karabatan_MDL_classified_DOC_2385_2385"
+      },
+      {
+        "rank": 23,
+        "retrieval_rank": 23,
+        "doc_id": "Karabatan_MDL_classified_DOC_2267_2267"
+      },
+      {
+        "rank": 24,
+        "retrieval_rank": 24,
+        "doc_id": "Ukudu_MDL_classified_DOC_924_924"
+      },
+      {
+        "rank": 25,
+        "retrieval_rank": 25,
+        "doc_id": "Karabatan_MDL_classified_DOC_634_634"
+      },
+      {
+        "rank": 26,
+        "retrieval_rank": 26,
+        "doc_id": "Karabatan_MDL_classified_DOC_1278_1278"
+      },
+      {
+        "rank": 27,
+        "retrieval_rank": 27,
+        "doc_id": "Karabatan_MDL_classified_DOC_2397_2397"
+      },
+      {
+        "rank": 28,
+        "retrieval_rank": 28,
+        "doc_id": "Karabatan_MDL_classified_T14211-7361-HV-617-0002_638"
+      },
+      {
+        "rank": 29,
+        "retrieval_rank": 29,
+        "doc_id": "Karabatan_MDL_classified_DOC_2349_2349"
+      },
+      {
+        "rank": 30,
+        "retrieval_rank": 30,
+        "doc_id": "Karabatan_MDL_classified_DOC_687_687"
+      },
+      {
+        "rank": 31,
+        "retrieval_rank": 31,
+        "doc_id": "Karabatan_MDL_classified_T14211-7361-HV-617-0003_639"
+      },
+      {
+        "rank": 32,
+        "retrieval_rank": 32,
+        "doc_id": "Karabatan_MDL_classified_T14211-7300-HV-670-0001_1279"
+      },
+      {
+        "rank": 33,
+        "retrieval_rank": 33,
+        "doc_id": "Ukudu_MDL_classified_DOC_925_925"
+      },
+      {
+        "rank": 34,
+        "retrieval_rank": 34,
+        "doc_id": "Karabatan_MDL_classified_DOC_672_672"
+      },
+      {
+        "rank": 35,
+        "retrieval_rank": 35,
+        "doc_id": "Fadhili_MDL_classified_T16182-XW03-P0SAE-135403_875"
+      },
+      {
+        "rank": 36,
+        "retrieval_rank": 36,
+        "doc_id": "Karabatan_MDL_classified_T14211-7359-HV-660-0001_647"
+      },
+      {
+        "rank": 37,
+        "retrieval_rank": 37,
+        "doc_id": "Karabatan_MDL_classified_T14211-7358-HV-660-0001_646"
+      },
+      {
+        "rank": 38,
+        "retrieval_rank": 38,
+        "doc_id": "Karabatan_MDL_classified_DOC_2368_2368"
+      },
+      {
+        "rank": 39,
+        "retrieval_rank": 39,
+        "doc_id": "Karabatan_MDL_classified_DOC_2269_2269"
+      },
+      {
+        "rank": 40,
+        "retrieval_rank": 40,
+        "doc_id": "Karabatan_MDL_classified_DOC_2325_2325"
+      },
+      {
+        "rank": 41,
+        "retrieval_rank": 41,
+        "doc_id": "Karabatan_MDL_classified_T14211-7348-HV-660-0001_641"
+      },
+      {
+        "rank": 42,
+        "retrieval_rank": 42,
+        "doc_id": "Karabatan_MDL_classified_DOC_696_696"
+      },
+      {
+        "rank": 43,
+        "retrieval_rank": 43,
+        "doc_id": "Karabatan_MDL_classified_DOC_2337_2337"
+      },
+      {
+        "rank": 44,
+        "retrieval_rank": 44,
+        "doc_id": "Karabatan_MDL_classified_DOC_636_636"
+      },
+      {
+        "rank": 45,
+        "retrieval_rank": 45,
+        "doc_id": "Karabatan_MDL_classified_T14211-7354-HV-660-0001_645"
+      },
+      {
+        "rank": 46,
+        "retrieval_rank": 46,
+        "doc_id": "Karabatan_MDL_classified_DOC_681_681"
+      },
+      {
+        "rank": 47,
+        "retrieval_rank": 47,
+        "doc_id": "Ukudu_MDL_classified_DOC_962_962"
+      },
+      {
+        "rank": 48,
+        "retrieval_rank": 48,
+        "doc_id": "Karabatan_MDL_classified_DOC_658_658"
+      },
+      {
+        "rank": 49,
+        "retrieval_rank": 49,
+        "doc_id": "Karabatan_MDL_classified_T14211-7359-HV-621-0002_670"
+      },
+      {
+        "rank": 50,
+        "retrieval_rank": 50,
+        "doc_id": "Ukudu_MDL_classified_DOC_974_974"
+      },
+      {
+        "rank": 51,
+        "retrieval_rank": 51,
+        "doc_id": "Fadhili_MDL_classified_T16182-XW03-P0SAE-135303_871"
+      },
+      {
+        "rank": 52,
+        "retrieval_rank": 52,
+        "doc_id": "Karabatan_MDL_classified_T14211-7361-HV-REQ-0001_1810"
+      },
+      {
+        "rank": 53,
+        "retrieval_rank": 53,
+        "doc_id": "Fadhili_MDL_classified_T16182-YL01-P0SAY-163402_1772"
+      },
+      {
+        "rank": 54,
+        "retrieval_rank": 54,
+        "doc_id": "Ukudu_MDL_classified_DOC_977_977"
+      },
+      {
+        "rank": 55,
+        "retrieval_rank": 55,
+        "doc_id": "Ukudu_MDL_classified_DOC_965_965"
+      },
+      {
+        "rank": 56,
+        "retrieval_rank": 56,
+        "doc_id": "Karabatan_MDL_classified_T14211-7359-HV-624-0001_679"
+      },
+      {
+        "rank": 57,
+        "retrieval_rank": 57,
+        "doc_id": "Karabatan_MDL_classified_T14211-7358-HV-623-0001_2395"
+      },
+      {
+        "rank": 58,
+        "retrieval_rank": 58,
+        "doc_id": "Karabatan_MDL_classified_T14211-7359-HV-628-0001_686"
+      },
+      {
+        "rank": 59,
+        "retrieval_rank": 59,
+        "doc_id": "Karabatan_MDL_classified_T14211-7354-HV-623-0001_2392"
+      },
+      {
+        "rank": 60,
+        "retrieval_rank": 60,
+        "doc_id": "Karabatan_MDL_classified_T14211-7358-HV-618-0001_655"
+      },
+      {
+        "rank": 61,
+        "retrieval_rank": 61,
+        "doc_id": "Karabatan_MDL_classified_T14211-7359-HV-622-0001_694"
+      },
+      {
+        "rank": 62,
+        "retrieval_rank": 62,
+        "doc_id": "Karabatan_MDL_classified_T14211-7349-HV-660-0001_642"
+      },
+      {
+        "rank": 63,
+        "retrieval_rank": 63,
+        "doc_id": "Karabatan_MDL_classified_T14211-7354-HV-618-0001_654"
+      },
+      {
+        "rank": 64,
+        "retrieval_rank": 64,
+        "doc_id": "Karabatan_MDL_classified_T14211-7348-HV-618-0001_650"
+      },
+      {
+        "rank": 65,
+        "retrieval_rank": 65,
+        "doc_id": "Karabatan_MDL_classified_T14211-7359-HV-618-0001_656"
+      },
+      {
+        "rank": 66,
+        "retrieval_rank": 66,
+        "doc_id": "Karabatan_MDL_classified_T14211-7359-HV-623-0001_2396"
+      },
+      {
+        "rank": 67,
+        "retrieval_rank": 67,
+        "doc_id": "Karabatan_MDL_classified_T14211-7353-HV-660-0001_2279"
+      },
+      {
+        "rank": 68,
+        "retrieval_rank": 68,
+        "doc_id": "Karabatan_MDL_classified_T14211-7359-HV-621-0001_669"
+      },
+      {
+        "rank": 69,
+        "retrieval_rank": 69,
+        "doc_id": "Fadhili_MDL_classified_T16182-XH02-P0SAB-134804_852"
+      },
+      {
+        "rank": 70,
+        "retrieval_rank": 70,
+        "doc_id": "Karabatan_MDL_classified_T14211-7354-HV-621-0002_666"
+      },
+      {
+        "rank": 71,
+        "retrieval_rank": 71,
+        "doc_id": "Karabatan_MDL_classified_T14211-7359-HV-627-0001_701"
+      },
+      {
+        "rank": 72,
+        "retrieval_rank": 72,
+        "doc_id": "Ukudu_MDL_classified_DOC_966_966"
+      },
+      {
+        "rank": 73,
+        "retrieval_rank": 73,
+        "doc_id": "Karabatan_MDL_classified_T14211-7358-HV-621-0002_668"
+      },
+      {
+        "rank": 74,
+        "retrieval_rank": 74,
+        "doc_id": "Ukudu_MDL_classified_DOC_963_963"
+      },
+      {
+        "rank": 75,
+        "retrieval_rank": 75,
+        "doc_id": "Ukudu_MDL_classified_DOC_507_507"
+      },
+      {
+        "rank": 76,
+        "retrieval_rank": 76,
+        "doc_id": "Karabatan_MDL_classified_T14211-7348-HV-621-0002_660"
+      },
+      {
+        "rank": 77,
+        "retrieval_rank": 77,
+        "doc_id": "Ukudu_MDL_classified_DOC_975_975"
+      },
+      {
+        "rank": 78,
+        "retrieval_rank": 78,
+        "doc_id": "Karabatan_MDL_classified_T14211-7300-IA-314-0015_1138"
+      },
+      {
+        "rank": 79,
+        "retrieval_rank": 79,
+        "doc_id": "Fadhili_MDL_classified_T16182-YF00-P0SAY-163405_1775"
+      },
+      {
+        "rank": 80,
+        "retrieval_rank": 80,
+        "doc_id": "Fadhili_MDL_classified_T16182-YL16-P0SAY-163406_1776"
+      },
+      {
+        "rank": 81,
+        "retrieval_rank": 81,
+        "doc_id": "Fadhili_MDL_classified_T16182-YK00-P0SAY-163404_1774"
+      },
+      {
+        "rank": 82,
+        "retrieval_rank": 82,
+        "doc_id": "Fadhili_MDL_classified_T16182-YF02-P0SAY-163401_1771"
+      }
+    ],
     "candidates": [
       {
         "rank": 1,
@@ -2863,6 +4942,7 @@
     "cross_encoder_candidate_count": 0,
     "keywords": "emissions control system, IFC guidelines, World Bank guidelines, Equator Principles III (2013), Saudi Arabia requirements, gaseous emissions limits, OTS Part A section 4.1.9, Royal Commission requirements, compliance calculations, design data submission",
     "search_query": "Emissions control system, gaseous emissions limits, IFC guidelines, World Bank, Equator Principles III (2013), OTS Part A 4.1.9, Royal Commission requirements, Saudi Arabia requirements",
+    "retrieval_candidates": [],
     "candidates": []
   },
   {
@@ -2894,6 +4974,7 @@
     "cross_encoder_candidate_count": 0,
     "keywords": "applicable environmental laws and standards, permits for plant construction, Environmental Impact Assessment (EIA), Preliminary Environmental Assessment (PEA), Environmental and Social Impact Assessment (ESIA), international lenders requirements, Equator Principles III (2013), IFC Performance Standards (2012), Environmental Permit, Waste Management Plan (construction), Hazardous Area Classification drawings, ANSI/API RP-505, Company Standard SAES-B-068, hazardous locations classification, plot plans, process schedule of hazardous materials, ventilation system failure, area classification documentation, equipment uniquely identified in classified areas",
     "search_query": "Emissions and environmental requirements, Environmental Impact Assessment EIA, Environmental Permit, Equator Principles III 2013, IFC Performance Standards 2012, Waste Management Plan construction, Hazardous Area Classification drawings, ANSI/API RP-505, SAES-B-068, hazardous locations, plot plans, hazardous materials schedule",
+    "retrieval_candidates": [],
     "candidates": []
   },
   {
@@ -2925,6 +5006,7 @@
     "cross_encoder_candidate_count": 0,
     "keywords": "Saudi Arabia national environmental laws and regulations, most stringent source emission control parameters, emissions compliance, environmental compliance, project design compliance",
     "search_query": "Emissions and Environmental Requirements, Saudi Arabia environmental laws and regulations, most stringent source emission control parameters, emissions compliance",
+    "retrieval_candidates": [],
     "candidates": []
   },
   {
@@ -2956,6 +5038,7 @@
     "cross_encoder_candidate_count": 0,
     "keywords": "source emission control parameters, maximum permissible air emission levels, minimum stable load ~30% plant load, maximum continuous rating (MCR), gas turbine emissions, NOx (as NO2) 18 mg/Nm3 (dry, 15% O2), CO 50 mg/Nm3 (dry, 15% O2), SO2 according to sulphur content in fuel, smoke density 2 Bacharach, reference O2 15 vol-%, backup fuel emissions limits",
     "search_query": "Air pollution emissions limits, gas turbine, minimum stable load 30% plant load, MCR, NOx (as NO2) 18 mg/Nm3 dry 15% O2, CO 50 mg/Nm3 dry 15% O2, SO2 sulphur content, smoke density 2 Bacharach, reference O2 15 vol-%",
+    "retrieval_candidates": [],
     "candidates": []
   },
   {
@@ -2987,6 +5070,7 @@
     "cross_encoder_candidate_count": 0,
     "keywords": "NOx emission (back-up fuel), fuel bound nitrogen 0.015% wt, 18 mg/Nm3 (9 ppmv) combined cycle operation, open cycle NOx up to 50 mg/Nm3 (authority approval), open cycle NOx up to 150 mg/Nm3 (authority approval), daily average emission guarantees, steady state operation, dry flue (exhaust) gas reference conditions, 0 °C and 1013 mbar reference, IFC guidelines, World Bank, Equator Principles III (2013), Royal Commission requirements, ESIA study report, SCR design basis emission guarantee, natural gas firing load range 60% to 100% (>15°C), natural gas firing load range 80% to 100% (<15°C), back-up fuel firing load range 60% to 100% (>15°C), back-up fuel firing load range 75% to 100% (<15°C)",
     "search_query": "Air pollution, NOx emission limits, 18 mg/Nm3 9 ppmv combined cycle, open cycle 50 mg/Nm3 150 mg/Nm3, fuel bound nitrogen 0.015 wt%, dry flue gas 0°C 1013 mbar, IFC guidelines World Bank Equator Principles III 2013 Royal Commission, ESIA, SCR design basis, gas turbine load range ambient temperature 15°C",
+    "retrieval_candidates": [],
     "candidates": []
   },
   {
@@ -3018,6 +5102,13 @@
     "cross_encoder_candidate_count": 1,
     "keywords": "undue vibration, least practicable noise, noise standards and guidelines, OTS Part A Section 4.1.9.5, noise levels measured according to ISO standards, noise attenuation features, permissible noise limits, silencers, lagging, acoustic enclosures",
     "search_query": "Noise levels, undue vibration, OTS Part A 4.1.9.5, ISO noise measurement, noise attenuation features, silencers, lagging, acoustic enclosures, permissible noise limits",
+    "retrieval_candidates": [
+      {
+        "rank": 1,
+        "retrieval_rank": 1,
+        "doc_id": "Muara Tawar_MDL_classified_MRT-YD00-P3MKA-220005_1452"
+      }
+    ],
     "candidates": [
       {
         "rank": 1,
@@ -3074,6 +5165,7 @@
     "cross_encoder_candidate_count": 0,
     "keywords": "wastewater re-use and discharge, effluent discharge limits, EIA recommendations, aqueous discharges into soil, pH 6–8.4, total suspended solids (TSS) 35 mg/l, turbidity max 5 NTU, biochemical oxygen demand (BOD) 25 mg/l, chemical oxygen demand (COD) 150 mg/l, total organic carbon (TOC) 50 mg/l, total Kjeldahl nitrogen (TKN) 5 mg/l, phenols 0.002 mg/l",
     "search_query": "Water pollution, wastewater re-use and discharge, effluent discharge limits, aqueous discharge to soil, EIA recommendations, pH 6–8.4, TSS 35 mg/l, turbidity 5 NTU, BOD 25 mg/l, COD 150 mg/l, TOC 50 mg/l, TKN 5 mg/l, phenols 0.002 mg/l",
+    "retrieval_candidates": [],
     "candidates": []
   },
   {
@@ -3105,6 +5197,7 @@
     "cross_encoder_candidate_count": 0,
     "keywords": "aqueous discharge emission limits, permissible effluent limits, chlorine residual 0.5 mg/l, chromium total (Cr) 0.1 mg/l, copper (Cu) 0.4 mg/l, cyanide 0.05 mg/l, lead (Pb) 0.1 mg/l, mercury (Hg) 0.001 mg/l, nickel (Ni) 0.2 mg/l, phosphate total as phosphorus 1.0 mg/l, zinc (Zn) 4.0 mg/l, total coliform 2000 MPN per 100 ml (30-day average)",
     "search_query": "Water pollution, aqueous discharge emission limits, permissible effluent limits, chlorine residual 0.5 mg/l, mercury 0.001 mg/l, total coliform 2000 MPN/100 ml, wastewater treatment systems, oil drain, chemical drain, sewage treatment plant",
+    "retrieval_candidates": [],
     "candidates": []
   },
   {
@@ -3137,6 +5230,7 @@
     "cross_encoder_candidate_count": 0,
     "keywords": "sewage treatment plant, domestic and sanitary wastewater, industrial wastewater treated separately, wastewater collection and segregation, backwash water, rinse water, chemical and acid cleaning wastes, blow-down water, sewers or pipes (customary proven materials), pumping stations (geodetic constraints), cesspools intermediate storage, oil separators (oil contaminated water)",
     "search_query": "Water pollution, sewage treatment plant, domestic sanitary wastewater, industrial wastewater separate treatment, activated sludge basins, screening primary sedimentation, effluent disinfection, sewers pipes pumping stations, cesspools vacuum loader, oil separators",
+    "retrieval_candidates": [],
     "candidates": []
   },
   {
@@ -3168,6 +5262,13 @@
     "cross_encoder_candidate_count": 1,
     "keywords": "chemical polluted wastewater, storage areas wastewater, chemical cleaning wastewater, acid cleaning wastewater, neutralization, detoxification",
     "search_query": "Water pollution, chemical polluted wastewater, acid cleaning, chemical cleaning, storage areas, neutralization, detoxification",
+    "retrieval_candidates": [
+      {
+        "rank": 1,
+        "retrieval_rank": 1,
+        "doc_id": "Grati_MDL_classified_GRT-DC01-P0LDR-125820_1062"
+      }
+    ],
     "candidates": [
       {
         "rank": 1,
@@ -3224,6 +5325,7 @@
     "cross_encoder_candidate_count": 0,
     "keywords": "WBG requirements, local solid waste management guidelines, liquid effluents from thermal power plants, IFC Thermal Power Guidelines 2008, pH 6-9, TSS 50 mg/L, oil and grease 10 mg/L, total residual chlorine 0.2 mg/L, heavy metals effluent limits (Cr, Cu, Pb, Cd, Hg, As, Zn, Fe), soil contamination prevention, oil and chemical spillage, terrestrial ecosystem impact prevention",
     "search_query": "Solid and liquid waste management, thermal power plant liquid effluent limits, IFC Thermal Power Guidelines 2008, WBG requirements, pH 6-9, TSS 50 mg/L, oil and grease 10 mg/L, total residual chlorine 0.2 mg/L, Cd 0.1 mg/L, Hg 0.005 mg/L, soil contamination prevention",
+    "retrieval_candidates": [],
     "candidates": []
   },
   {
@@ -3255,6 +5357,18 @@
     "cross_encoder_candidate_count": 2,
     "keywords": "plant design and configuration, equipment sizing, equipment quantity, reliable supply of power, reliability, availability, maintainability (RAM)",
     "search_query": "RAM, reliability availability maintainability, plant design configuration, equipment sizing and quantity, reliable power supply",
+    "retrieval_candidates": [
+      {
+        "rank": 1,
+        "retrieval_rank": 1,
+        "doc_id": "Fadhili_MDL_classified_T16182-DN05-P0ZEN-860013_2669"
+      },
+      {
+        "rank": 2,
+        "retrieval_rank": 2,
+        "doc_id": "Grati_MDL_classified_GRT-DN02-P1ZEN-830026_622"
+      }
+    ],
     "candidates": [
       {
         "rank": 1,
@@ -3335,6 +5449,7 @@
     "cross_encoder_candidate_count": 0,
     "keywords": "RAM modelling, Reliability Availability Maintainability (RAM), Owner technical specification, plant equipment and systems, RAM models, process decisions validation, equipment selection support",
     "search_query": "RAM modelling, Reliability Availability Maintainability (RAM), Owner technical specification, plant equipment and systems, RAM models, process decisions validation, equipment selection",
+    "retrieval_candidates": [],
     "candidates": []
   },
   {
@@ -3366,6 +5481,7 @@
     "cross_encoder_candidate_count": 0,
     "keywords": "RAM modelling objectives, capacity assumptions validation, unit and plant level, generation losses contributors, design inherent reliability, electrical power continuity of supply reliability, final plant design basis, sensitivity analysis, input parameters effect on reliability output, conditions/assumptions to maintain representative reliability, plant operation reliability, Operation & Maintenance stage impacts",
     "search_query": "RAM modelling objectives, capacity assumptions validation, generation losses contributors, design inherent reliability, electrical power continuity of supply reliability, sensitivity analysis, O&M stage impacts",
+    "retrieval_candidates": [],
     "candidates": []
   },
   {
@@ -3397,6 +5513,7 @@
     "cross_encoder_candidate_count": 0,
     "keywords": "RAM assessment scope, generating units, utilities and ancillary systems, packages and sub-systems, equipment associated with generating units, unit and facility level assessment, overall plant reliability, systems affecting electrical generation",
     "search_query": "RAM assessment scope, generating units, utilities ancillary systems, packages sub-systems equipment, unit and facility assessment, overall plant reliability, systems affecting electrical generation",
+    "retrieval_candidates": [],
     "candidates": []
   },
   {
@@ -3428,6 +5545,7 @@
     "cross_encoder_candidate_count": 0,
     "keywords": "unit model work process, overall scope definition, study execution plan, equipment configurations, production basis, overall generation basis, level of detail by phase, sensitivity cases, base model comparison",
     "search_query": "RAM study execution, unit model work process, study execution plan, equipment configurations, production basis, sensitivity cases, base model",
+    "retrieval_candidates": [],
     "candidates": []
   },
   {
@@ -3459,6 +5577,7 @@
     "cross_encoder_candidate_count": 0,
     "keywords": "RAM assessment, Monte Carlo methodology, Isograph, EN 60812, Base Case Model, equipment reliability data, Reliability Block Diagrams (RBDs), system failure logic, redundancy modeling, failure modes and consequences, MTTF, MTTR, plant availability and reliability",
     "search_query": "RAM assessment, Monte Carlo methodology, Isograph, EN 60812, Base Case Model, Reliability Block Diagrams RBD, redundancy modeling, failure modes, MTTF MTTR, plant availability reliability",
+    "retrieval_candidates": [],
     "candidates": []
   },
   {
@@ -3490,6 +5609,7 @@
     "cross_encoder_candidate_count": 0,
     "keywords": "RAM facilitator, qualified facilitator, model operator, reliability certificate, CRE (Certified Reliability Engineer), ASQ, power plant operation and maintenance experience, simulation solution platform, hands-on simulation experience",
     "search_query": "RAM study, facilitator qualifications, model operator, CRE certified reliability engineer, ASQ, simulation solution platform, power plant O&M experience",
+    "retrieval_candidates": [],
     "candidates": []
   },
   {
@@ -3521,6 +5641,7 @@
     "cross_encoder_candidate_count": 0,
     "keywords": "Design Stage model files retention, model files made available to Owner, RAM study report with attachments, cases run and results obtained, RAM recommendations, reliability assumptions and conditions, plant operation reliability, Operation & Maintenance stage considerations, installed equipment information templates, Schedule E Equipment Data Templates",
     "search_query": "RAM study deliverable, Design Stage model files, RAM report attachments, cases run results recommendations, reliability assumptions conditions, Operation & Maintenance considerations, Schedule E Equipment Data Templates, installed equipment information",
+    "retrieval_candidates": [],
     "candidates": []
   },
   {
@@ -3552,6 +5673,68 @@
     "cross_encoder_candidate_count": 12,
     "keywords": "auxiliary systems redundancy, no single auxiliary equipment failure or trip, no reduction of power capacity, critical auxiliary equipment N+1 configuration, station (common) auxiliaries redundancy, instantaneous start of redundant backup equipment, main equipment definition, GTs, HRSGs, STs, GRMS, condensers, generators, main transformers, aux transformers, major electrical equipment, cables, pre-treatment",
     "search_query": "Redundancy concept, auxiliary systems, N+1 configuration, no single failure, station common auxiliaries, instantaneous backup start, GT HRSG ST GRMS condensers generators main transformers aux transformers",
+    "retrieval_candidates": [
+      {
+        "rank": 1,
+        "retrieval_rank": 1,
+        "doc_id": "Ukudu_MDL_classified_DOC_898_898"
+      },
+      {
+        "rank": 2,
+        "retrieval_rank": 2,
+        "doc_id": "Turkistan_MDL_classified_CCP-PW-B000-EL-354-0001_329"
+      },
+      {
+        "rank": 3,
+        "retrieval_rank": 3,
+        "doc_id": "Turkistan_MDL_classified_CCP-PW-B000-EL-354-0002_330"
+      },
+      {
+        "rank": 4,
+        "retrieval_rank": 4,
+        "doc_id": "Fadhili_MDL_classified_T16182-YR02-P0ZEN-152801_1622"
+      },
+      {
+        "rank": 5,
+        "retrieval_rank": 5,
+        "doc_id": "Fadhili_MDL_classified_T16182-YD16-P0SCA-127546_625"
+      },
+      {
+        "rank": 6,
+        "retrieval_rank": 6,
+        "doc_id": "Grati_MDL_classified_GRT-YL16-P0ZEN-155048_673"
+      },
+      {
+        "rank": 7,
+        "retrieval_rank": 7,
+        "doc_id": "Karabatan_MDL_classified_T14211-7300-EL-372-0041_1073"
+      },
+      {
+        "rank": 8,
+        "retrieval_rank": 8,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B000-EL-353-0001_339"
+      },
+      {
+        "rank": 9,
+        "retrieval_rank": 9,
+        "doc_id": "Ukudu_MDL_classified_DOC_1847_1847"
+      },
+      {
+        "rank": 10,
+        "retrieval_rank": 10,
+        "doc_id": "Ukudu_MDL_classified_DOC_2200_2200"
+      },
+      {
+        "rank": 11,
+        "retrieval_rank": 11,
+        "doc_id": "Karabatan_MDL_classified_T14211-7324-21-EL-E10-001_906"
+      },
+      {
+        "rank": 12,
+        "retrieval_rank": 12,
+        "doc_id": "Grati_MDL_classified_GRT-YS02-P0ZEN-155075_699"
+      }
+    ],
     "candidates": [
       {
         "rank": 1,
@@ -3872,6 +6055,13 @@
     "cross_encoder_candidate_count": 1,
     "keywords": "redundant pumps and compressors, on-line switchover capability, N+1 redundancy, 2x100% lube oil pump for HP feedwater pump, 2x100% lube oil heater for HP feedwater pump, power plant jockey pumps 2x100%, cooling tower / fin fan cooler cells N+1, condensate storage tank 2x50% or 1x100%, service air receiver tank 2x100%, instrument air receiver tank 2x100%, fuel gas boosting compressors N+1 (N = number of gas turbines), drain and vent valves two in series if pressure > 4 MPa",
     "search_query": "Redundancy concept, mechanical equipment, online switchover, N+1, 2x100%, 3x50%, fuel gas boosting compressors, air compressors after coolers, CCW expansion tank, condensate storage tank, drain and vent valves >4 MPa",
+    "retrieval_candidates": [
+      {
+        "rank": 1,
+        "retrieval_rank": 1,
+        "doc_id": "Ukudu_MDL_classified_DOC_771_771"
+      }
+    ],
     "candidates": [
       {
         "rank": 1,
@@ -3928,6 +6118,203 @@
     "cross_encoder_candidate_count": 39,
     "keywords": "main and back-up power metering equipment, tariff metering at HV side of transformer, delivery point, OTS Part A requirements, GTG OEM performance metering system, main and back-up gas metering equipment",
     "search_query": "Metering system, redundancy concept, main and back-up power metering, tariff metering HV side transformer delivery point, OTS Part A, GTG OEM performance metering, main and back-up gas metering",
+    "retrieval_candidates": [
+      {
+        "rank": 1,
+        "retrieval_rank": 1,
+        "doc_id": "Karabatan_MDL_classified_T14211- 7300-IA-TBE-0008_1874"
+      },
+      {
+        "rank": 2,
+        "retrieval_rank": 2,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B000-58-IA-B16-0005_391"
+      },
+      {
+        "rank": 3,
+        "retrieval_rank": 3,
+        "doc_id": "Karabatan_MDL_classified_T14211-7300-IA-TDS-0006_197"
+      },
+      {
+        "rank": 4,
+        "retrieval_rank": 4,
+        "doc_id": "Karabatan_MDL_classified_T14211-7300-39-IA-306-002_2936"
+      },
+      {
+        "rank": 5,
+        "retrieval_rank": 5,
+        "doc_id": "Karabatan_MDL_classified_T14211-7300-39-IA-306-001_1213"
+      },
+      {
+        "rank": 6,
+        "retrieval_rank": 6,
+        "doc_id": "Karabatan_MDL_classified_T14211-7300-IA-TBE-0006_232"
+      },
+      {
+        "rank": 7,
+        "retrieval_rank": 7,
+        "doc_id": "Karabatan_MDL_classified_T14211-7300-39-IA-B27-001_269"
+      },
+      {
+        "rank": 8,
+        "retrieval_rank": 8,
+        "doc_id": "Karabatan_MDL_classified_T14211-7300-38-IA-B27-001_268"
+      },
+      {
+        "rank": 9,
+        "retrieval_rank": 9,
+        "doc_id": "Fadhili_MDL_classified_T16182-CV03-P0UCL-163203_1747"
+      },
+      {
+        "rank": 10,
+        "retrieval_rank": 10,
+        "doc_id": "Karabatan_MDL_classified_T14211- 7300-IA-TBE-0007_1873"
+      },
+      {
+        "rank": 11,
+        "retrieval_rank": 11,
+        "doc_id": "Karabatan_MDL_classified_T14211-7324-26-EL-E01-002_2635"
+      },
+      {
+        "rank": 12,
+        "retrieval_rank": 12,
+        "doc_id": "Karabatan_MDL_classified_T14211-7324-26-EL-E04-002_2634"
+      },
+      {
+        "rank": 13,
+        "retrieval_rank": 13,
+        "doc_id": "Karabatan_MDL_classified_T14211-7324-26-EL-E14-002_2633"
+      },
+      {
+        "rank": 14,
+        "retrieval_rank": 14,
+        "doc_id": "Karabatan_MDL_classified_T14211-7300-IA-TDS-0005_196"
+      },
+      {
+        "rank": 15,
+        "retrieval_rank": 15,
+        "doc_id": "Karabatan_MDL_classified_T14211-7300-38-IA-306-001_1212"
+      },
+      {
+        "rank": 16,
+        "retrieval_rank": 16,
+        "doc_id": "Karabatan_MDL_classified_T14211-7300-39-IA-306-001_2935"
+      },
+      {
+        "rank": 17,
+        "retrieval_rank": 17,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B000-58-IA-B16-0004_390"
+      },
+      {
+        "rank": 18,
+        "retrieval_rank": 18,
+        "doc_id": "Karabatan_MDL_classified_T14211-7300-IA-TDS-0006_1781"
+      },
+      {
+        "rank": 19,
+        "retrieval_rank": 19,
+        "doc_id": "Karabatan_MDL_classified_T14211- 7300-IA-REQ-0008_1820"
+      },
+      {
+        "rank": 20,
+        "retrieval_rank": 20,
+        "doc_id": "Karabatan_MDL_classified_T14211- 7300-IA-REQ-0007_1819"
+      },
+      {
+        "rank": 21,
+        "retrieval_rank": 21,
+        "doc_id": "Karabatan_MDL_classified_T14211-7300-IA-TDS-0005_1780"
+      },
+      {
+        "rank": 22,
+        "retrieval_rank": 22,
+        "doc_id": "Karabatan_MDL_classified_T14211-7300-IA-TBE-0005_231"
+      },
+      {
+        "rank": 23,
+        "retrieval_rank": 23,
+        "doc_id": "Ukudu_MDL_classified_DOC_2288_2288"
+      },
+      {
+        "rank": 24,
+        "retrieval_rank": 24,
+        "doc_id": "Fadhili_MDL_classified_T16182-CV03-P0EKU-163202_1746"
+      },
+      {
+        "rank": 25,
+        "retrieval_rank": 25,
+        "doc_id": "Grati_MDL_classified_GRT-YU01-P0ZEN-155080_704"
+      },
+      {
+        "rank": 26,
+        "retrieval_rank": 26,
+        "doc_id": "Karabatan_MDL_classified_T14211-7300-22-EL-E04-007_941"
+      },
+      {
+        "rank": 27,
+        "retrieval_rank": 27,
+        "doc_id": "Karabatan_MDL_classified_T14211-7300-22-EL-E01-007_942"
+      },
+      {
+        "rank": 28,
+        "retrieval_rank": 28,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B023-35-EL-B18-0002_314"
+      },
+      {
+        "rank": 29,
+        "retrieval_rank": 29,
+        "doc_id": "Karabatan_MDL_classified_DOC_2626_2626"
+      },
+      {
+        "rank": 30,
+        "retrieval_rank": 30,
+        "doc_id": "Karabatan_MDL_classified_DOC_933_933"
+      },
+      {
+        "rank": 31,
+        "retrieval_rank": 31,
+        "doc_id": "Ukudu_MDL_classified_DOC_2285_2285"
+      },
+      {
+        "rank": 32,
+        "retrieval_rank": 32,
+        "doc_id": "Turkistan_MDL_classified_CCP-PW-B000-EL-356-0003_327"
+      },
+      {
+        "rank": 33,
+        "retrieval_rank": 33,
+        "doc_id": "Ukudu_MDL_classified_DOC_2211_2211"
+      },
+      {
+        "rank": 34,
+        "retrieval_rank": 34,
+        "doc_id": "Ukudu_MDL_classified_DOC_1748_1748"
+      },
+      {
+        "rank": 35,
+        "retrieval_rank": 35,
+        "doc_id": "Karabatan_MDL_classified_T14211-7324-21-EL-E13-002_930"
+      },
+      {
+        "rank": 36,
+        "retrieval_rank": 36,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B000-36-EL-E09-0012_337"
+      },
+      {
+        "rank": 37,
+        "retrieval_rank": 37,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B022-35-EL-E13-0011_49"
+      },
+      {
+        "rank": 38,
+        "retrieval_rank": 38,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B000-36-EL-E09-0011_336"
+      },
+      {
+        "rank": 39,
+        "retrieval_rank": 39,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B000-36-EL-E09-0010_335"
+      }
+    ],
     "candidates": [
       {
         "rank": 1,
@@ -4440,6 +6827,253 @@
     "cross_encoder_candidate_count": 49,
     "keywords": "no single main equipment failure forced outage, no single auxiliary equipment failure forced derating, redundant auxiliary services power supply concept, redundant UATs, MV distributions redundancy, LV distributions redundancy, DC system redundancy, UPS system redundancy, protection system electronic devices redundancy, separate buses and physical segregation, automatic standby equipment activation, GT MCC double incoming CB, normal bus and essential busbar, bus-coupler",
     "search_query": "Electrical system redundancy, auxiliary services power supply, redundant UATs, MV distribution, LV distribution, DC system, UPS system, separate buses physical segregation, automatic standby activation, GT MCC double incoming CB, essential busbar bus-coupler",
+    "retrieval_candidates": [
+      {
+        "rank": 1,
+        "retrieval_rank": 1,
+        "doc_id": "Karabatan_MDL_classified_T14211-7360-EL-351-0001_1712"
+      },
+      {
+        "rank": 2,
+        "retrieval_rank": 2,
+        "doc_id": "Karabatan_MDL_classified_T14211-7360-EL-351-0001_115"
+      },
+      {
+        "rank": 3,
+        "retrieval_rank": 3,
+        "doc_id": "Fadhili_MDL_classified_T16182-YR02-P0ZEN-150001_1301"
+      },
+      {
+        "rank": 4,
+        "retrieval_rank": 4,
+        "doc_id": "Fadhili_MDL_classified_T16182-YU02-P0ZEN-150201_1303"
+      },
+      {
+        "rank": 5,
+        "retrieval_rank": 5,
+        "doc_id": "Karabatan_MDL_classified_T14211-7300-EL-386-0001_868"
+      },
+      {
+        "rank": 6,
+        "retrieval_rank": 6,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B000-IA-318-0017_401"
+      },
+      {
+        "rank": 7,
+        "retrieval_rank": 7,
+        "doc_id": "Karabatan_MDL_classified_T14211-7300-IA-318-0016_1189"
+      },
+      {
+        "rank": 8,
+        "retrieval_rank": 8,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B000-IA-315-0017_422"
+      },
+      {
+        "rank": 9,
+        "retrieval_rank": 9,
+        "doc_id": "Fadhili_MDL_classified_T16182-YF00-P0CGA-161320_1729"
+      },
+      {
+        "rank": 10,
+        "retrieval_rank": 10,
+        "doc_id": "Fadhili_MDL_classified_T16182-YF00-P0CBA-161220_1711"
+      },
+      {
+        "rank": 11,
+        "retrieval_rank": 11,
+        "doc_id": "Grati_MDL_classified_GRT-YF00-P0ZEN-165579_1098"
+      },
+      {
+        "rank": 12,
+        "retrieval_rank": 12,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B089-IA-308-0012_479"
+      },
+      {
+        "rank": 13,
+        "retrieval_rank": 13,
+        "doc_id": "Karabatan_MDL_classified_T14211- 7300-IA-308-0012_3000"
+      },
+      {
+        "rank": 14,
+        "retrieval_rank": 14,
+        "doc_id": "Karabatan_MDL_classified_T14211-7300-IA-308-0012_1271"
+      },
+      {
+        "rank": 15,
+        "retrieval_rank": 15,
+        "doc_id": "Fadhili_MDL_classified_T16182-YB03-P0ZEN-165547_1858"
+      },
+      {
+        "rank": 16,
+        "retrieval_rank": 16,
+        "doc_id": "Fadhili_MDL_classified_T16182-YL16-P0ZEN-165567_1876"
+      },
+      {
+        "rank": 17,
+        "retrieval_rank": 17,
+        "doc_id": "Grati_MDL_classified_DOC_2287_2287"
+      },
+      {
+        "rank": 18,
+        "retrieval_rank": 18,
+        "doc_id": "Grati_MDL_classified_GRT-YS00-P0ZEN-163310_378"
+      },
+      {
+        "rank": 19,
+        "retrieval_rank": 19,
+        "doc_id": "Grati_MDL_classified_DOC_1967_1967"
+      },
+      {
+        "rank": 20,
+        "retrieval_rank": 20,
+        "doc_id": "Grati_MDL_classified_GRT-YR02-P0ZEN-155051_698"
+      },
+      {
+        "rank": 21,
+        "retrieval_rank": 21,
+        "doc_id": "Grati_MDL_classified_GRT-YE00-P0ZEN-155041_667"
+      },
+      {
+        "rank": 22,
+        "retrieval_rank": 22,
+        "doc_id": "Grati_MDL_classified_GRTSCH-YS01-P0BAC-150006_1345"
+      },
+      {
+        "rank": 23,
+        "retrieval_rank": 23,
+        "doc_id": "Karabatan_MDL_classified_DOC_2559_2559"
+      },
+      {
+        "rank": 24,
+        "retrieval_rank": 24,
+        "doc_id": "Turkistan_MDL_classified_CCP-P-B089-EL-351-0001_1063"
+      },
+      {
+        "rank": 25,
+        "retrieval_rank": 25,
+        "doc_id": "Ukudu_MDL_classified_DOC_1745_1745"
+      },
+      {
+        "rank": 26,
+        "retrieval_rank": 26,
+        "doc_id": "Ukudu_MDL_classified_DOC_1744_1744"
+      },
+      {
+        "rank": 27,
+        "retrieval_rank": 27,
+        "doc_id": "Turkistan_MDL_classified_CCP-P-B089-EL-356-0001_1064"
+      },
+      {
+        "rank": 28,
+        "retrieval_rank": 28,
+        "doc_id": "Ukudu_MDL_classified_DOC_2199_2199"
+      },
+      {
+        "rank": 29,
+        "retrieval_rank": 29,
+        "doc_id": "Karabatan_MDL_classified_T14211-7315-03-ME-A07-0004_462"
+      },
+      {
+        "rank": 30,
+        "retrieval_rank": 30,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B113-03-ME-A07-0057_758"
+      },
+      {
+        "rank": 31,
+        "retrieval_rank": 31,
+        "doc_id": "Grati_MDL_classified_DOC_2621_2621"
+      },
+      {
+        "rank": 32,
+        "retrieval_rank": 32,
+        "doc_id": "Grati_MDL_classified_DOC_2130_2130"
+      },
+      {
+        "rank": 33,
+        "retrieval_rank": 33,
+        "doc_id": "Grati_MDL_classified_GRT-YK09-P0MA-200033_424"
+      },
+      {
+        "rank": 34,
+        "retrieval_rank": 34,
+        "doc_id": "Grati_MDL_classified_DOC_1694_1694"
+      },
+      {
+        "rank": 35,
+        "retrieval_rank": 35,
+        "doc_id": "Grati_MDL_classified_DOC_2548_2548"
+      },
+      {
+        "rank": 36,
+        "retrieval_rank": 36,
+        "doc_id": "Grati_MDL_classified_DOC_2547_2547"
+      },
+      {
+        "rank": 37,
+        "retrieval_rank": 37,
+        "doc_id": "Fadhili_MDL_classified_T16182-XB00-P0MAG-123023_305"
+      },
+      {
+        "rank": 38,
+        "retrieval_rank": 38,
+        "doc_id": "Karabatan_MDL_classified_T14211-7315-03-ME-E29-0001_2088"
+      },
+      {
+        "rank": 39,
+        "retrieval_rank": 39,
+        "doc_id": "Ukudu_MDL_classified_DOC_2224_2224"
+      },
+      {
+        "rank": 40,
+        "retrieval_rank": 40,
+        "doc_id": "Grati_MDL_classified_GRT-YL19-P0MA-200038_429"
+      },
+      {
+        "rank": 41,
+        "retrieval_rank": 41,
+        "doc_id": "Ukudu_MDL_classified_DOC_378_378"
+      },
+      {
+        "rank": 42,
+        "retrieval_rank": 42,
+        "doc_id": "Grati_MDL_classified_GRT-YM02-P0UCA-155411_975"
+      },
+      {
+        "rank": 43,
+        "retrieval_rank": 43,
+        "doc_id": "Grati_MDL_classified_DOC_3152_3152"
+      },
+      {
+        "rank": 44,
+        "retrieval_rank": 44,
+        "doc_id": "Grati_MDL_classified_GRT-YE00-P0ZEN-155040_666"
+      },
+      {
+        "rank": 45,
+        "retrieval_rank": 45,
+        "doc_id": "Grati_MDL_classified_GRT-YU02-P1H-300066_500"
+      },
+      {
+        "rank": 46,
+        "retrieval_rank": 46,
+        "doc_id": "Grati_MDL_classified_DOC_1706_1706"
+      },
+      {
+        "rank": 47,
+        "retrieval_rank": 47,
+        "doc_id": "Ukudu_MDL_classified_DOC_2208_2208"
+      },
+      {
+        "rank": 48,
+        "retrieval_rank": 48,
+        "doc_id": "Grati_MDL_classified_GRT-YR02-P0ZEN-155074_676"
+      },
+      {
+        "rank": 49,
+        "retrieval_rank": 49,
+        "doc_id": "Grati_MDL_classified_GRT-YF00-P0ZEN-165578_1097"
+      }
+    ],
     "candidates": [
       {
         "rank": 1,
@@ -4952,6 +7586,253 @@
     "cross_encoder_candidate_count": 49,
     "keywords": "MV and LV bus sections capacity, bus coupler load transfer on supply failure, N-1 redundancy for switchboard and MCC, transformer cooling fans redundancy, transformer oil pump redundancy, rated output within specified temperature rise, DC system 2 x 100% battery, DC system 2 x 100% battery chargers, UPS N+1 redundancy, LV switchboard two bus sections, two incomers, one bus-coupler, 1 x 100% capacity transformer per incomer, diesel generator N+1 (EDG cum BSDG), DG sizing for emergency shutdown during black start, battery starting system 1 x 100% for BSEDG, Hazard Risk Category (HRC) labeling, arc flash assessment study, NFPA 70, IEC standards, OEM standard design for GT package LV & DC distribution",
     "search_query": "Electrical system redundancy concept, N-1 switchboard MCC, MV LV bus sections bus coupler load transfer, DC system 2x100% battery and chargers, UPS N+1, LV switchboard two bus sections two incomers bus-coupler, EDG BSDG diesel generator N+1 black start, arc flash assessment HRC labeling NFPA 70 IEC",
+    "retrieval_candidates": [
+      {
+        "rank": 1,
+        "retrieval_rank": 1,
+        "doc_id": "Karabatan_MDL_classified_T14211-7360-EL-351-0001_1712"
+      },
+      {
+        "rank": 2,
+        "retrieval_rank": 2,
+        "doc_id": "Karabatan_MDL_classified_T14211-7360-EL-351-0001_115"
+      },
+      {
+        "rank": 3,
+        "retrieval_rank": 3,
+        "doc_id": "Fadhili_MDL_classified_T16182-YR02-P0ZEN-150001_1301"
+      },
+      {
+        "rank": 4,
+        "retrieval_rank": 4,
+        "doc_id": "Fadhili_MDL_classified_T16182-YU02-P0ZEN-150201_1303"
+      },
+      {
+        "rank": 5,
+        "retrieval_rank": 5,
+        "doc_id": "Karabatan_MDL_classified_T14211-7300-EL-386-0001_868"
+      },
+      {
+        "rank": 6,
+        "retrieval_rank": 6,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B000-IA-318-0017_401"
+      },
+      {
+        "rank": 7,
+        "retrieval_rank": 7,
+        "doc_id": "Karabatan_MDL_classified_T14211-7300-IA-318-0016_1189"
+      },
+      {
+        "rank": 8,
+        "retrieval_rank": 8,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B000-IA-315-0017_422"
+      },
+      {
+        "rank": 9,
+        "retrieval_rank": 9,
+        "doc_id": "Fadhili_MDL_classified_T16182-YF00-P0CGA-161320_1729"
+      },
+      {
+        "rank": 10,
+        "retrieval_rank": 10,
+        "doc_id": "Fadhili_MDL_classified_T16182-YF00-P0CBA-161220_1711"
+      },
+      {
+        "rank": 11,
+        "retrieval_rank": 11,
+        "doc_id": "Grati_MDL_classified_GRT-YF00-P0ZEN-165579_1098"
+      },
+      {
+        "rank": 12,
+        "retrieval_rank": 12,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B089-IA-308-0012_479"
+      },
+      {
+        "rank": 13,
+        "retrieval_rank": 13,
+        "doc_id": "Karabatan_MDL_classified_T14211- 7300-IA-308-0012_3000"
+      },
+      {
+        "rank": 14,
+        "retrieval_rank": 14,
+        "doc_id": "Karabatan_MDL_classified_T14211-7300-IA-308-0012_1271"
+      },
+      {
+        "rank": 15,
+        "retrieval_rank": 15,
+        "doc_id": "Fadhili_MDL_classified_T16182-YB03-P0ZEN-165547_1858"
+      },
+      {
+        "rank": 16,
+        "retrieval_rank": 16,
+        "doc_id": "Fadhili_MDL_classified_T16182-YL16-P0ZEN-165567_1876"
+      },
+      {
+        "rank": 17,
+        "retrieval_rank": 17,
+        "doc_id": "Grati_MDL_classified_DOC_2287_2287"
+      },
+      {
+        "rank": 18,
+        "retrieval_rank": 18,
+        "doc_id": "Grati_MDL_classified_GRT-YS00-P0ZEN-163310_378"
+      },
+      {
+        "rank": 19,
+        "retrieval_rank": 19,
+        "doc_id": "Grati_MDL_classified_DOC_1967_1967"
+      },
+      {
+        "rank": 20,
+        "retrieval_rank": 20,
+        "doc_id": "Grati_MDL_classified_GRT-YR02-P0ZEN-155051_698"
+      },
+      {
+        "rank": 21,
+        "retrieval_rank": 21,
+        "doc_id": "Grati_MDL_classified_GRT-YE00-P0ZEN-155041_667"
+      },
+      {
+        "rank": 22,
+        "retrieval_rank": 22,
+        "doc_id": "Grati_MDL_classified_GRTSCH-YS01-P0BAC-150006_1345"
+      },
+      {
+        "rank": 23,
+        "retrieval_rank": 23,
+        "doc_id": "Karabatan_MDL_classified_DOC_2559_2559"
+      },
+      {
+        "rank": 24,
+        "retrieval_rank": 24,
+        "doc_id": "Turkistan_MDL_classified_CCP-P-B089-EL-351-0001_1063"
+      },
+      {
+        "rank": 25,
+        "retrieval_rank": 25,
+        "doc_id": "Ukudu_MDL_classified_DOC_1745_1745"
+      },
+      {
+        "rank": 26,
+        "retrieval_rank": 26,
+        "doc_id": "Ukudu_MDL_classified_DOC_1744_1744"
+      },
+      {
+        "rank": 27,
+        "retrieval_rank": 27,
+        "doc_id": "Turkistan_MDL_classified_CCP-P-B089-EL-356-0001_1064"
+      },
+      {
+        "rank": 28,
+        "retrieval_rank": 28,
+        "doc_id": "Ukudu_MDL_classified_DOC_2199_2199"
+      },
+      {
+        "rank": 29,
+        "retrieval_rank": 29,
+        "doc_id": "Karabatan_MDL_classified_T14211-7315-03-ME-A07-0004_462"
+      },
+      {
+        "rank": 30,
+        "retrieval_rank": 30,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B113-03-ME-A07-0057_758"
+      },
+      {
+        "rank": 31,
+        "retrieval_rank": 31,
+        "doc_id": "Grati_MDL_classified_DOC_2621_2621"
+      },
+      {
+        "rank": 32,
+        "retrieval_rank": 32,
+        "doc_id": "Grati_MDL_classified_DOC_2130_2130"
+      },
+      {
+        "rank": 33,
+        "retrieval_rank": 33,
+        "doc_id": "Grati_MDL_classified_GRT-YK09-P0MA-200033_424"
+      },
+      {
+        "rank": 34,
+        "retrieval_rank": 34,
+        "doc_id": "Grati_MDL_classified_DOC_1694_1694"
+      },
+      {
+        "rank": 35,
+        "retrieval_rank": 35,
+        "doc_id": "Grati_MDL_classified_DOC_2548_2548"
+      },
+      {
+        "rank": 36,
+        "retrieval_rank": 36,
+        "doc_id": "Grati_MDL_classified_DOC_2547_2547"
+      },
+      {
+        "rank": 37,
+        "retrieval_rank": 37,
+        "doc_id": "Fadhili_MDL_classified_T16182-XB00-P0MAG-123023_305"
+      },
+      {
+        "rank": 38,
+        "retrieval_rank": 38,
+        "doc_id": "Karabatan_MDL_classified_T14211-7315-03-ME-E29-0001_2088"
+      },
+      {
+        "rank": 39,
+        "retrieval_rank": 39,
+        "doc_id": "Ukudu_MDL_classified_DOC_2224_2224"
+      },
+      {
+        "rank": 40,
+        "retrieval_rank": 40,
+        "doc_id": "Grati_MDL_classified_GRT-YL19-P0MA-200038_429"
+      },
+      {
+        "rank": 41,
+        "retrieval_rank": 41,
+        "doc_id": "Ukudu_MDL_classified_DOC_378_378"
+      },
+      {
+        "rank": 42,
+        "retrieval_rank": 42,
+        "doc_id": "Grati_MDL_classified_GRT-YM02-P0UCA-155411_975"
+      },
+      {
+        "rank": 43,
+        "retrieval_rank": 43,
+        "doc_id": "Grati_MDL_classified_DOC_3152_3152"
+      },
+      {
+        "rank": 44,
+        "retrieval_rank": 44,
+        "doc_id": "Grati_MDL_classified_GRT-YE00-P0ZEN-155040_666"
+      },
+      {
+        "rank": 45,
+        "retrieval_rank": 45,
+        "doc_id": "Grati_MDL_classified_GRT-YU02-P1H-300066_500"
+      },
+      {
+        "rank": 46,
+        "retrieval_rank": 46,
+        "doc_id": "Grati_MDL_classified_DOC_1706_1706"
+      },
+      {
+        "rank": 47,
+        "retrieval_rank": 47,
+        "doc_id": "Ukudu_MDL_classified_DOC_2208_2208"
+      },
+      {
+        "rank": 48,
+        "retrieval_rank": 48,
+        "doc_id": "Grati_MDL_classified_GRT-YR02-P0ZEN-155074_676"
+      },
+      {
+        "rank": 49,
+        "retrieval_rank": 49,
+        "doc_id": "Grati_MDL_classified_GRT-YF00-P0ZEN-165578_1097"
+      }
+    ],
     "candidates": [
       {
         "rank": 1,
@@ -5464,6 +8345,7 @@
     "cross_encoder_candidate_count": 0,
     "keywords": "control & instrumentation redundancy, redundant instrumentation hot swap capability, automatic changeover on failure, GT enclosure access restriction during operation, GT control system electronic modules not removed during operation, intrinsic safety devices preferred, explosionproof instruments in hazardous area (GT package), maintenance on one redundant equipment while others in service, GT/ST protection system fail-safe dual redundant, GT Protection Panel Tricon CX triple modular redundant safety PLC (Schneider Electric), HRSG protection fail-safe triple modular redundant for BMS, triple redundant transmitters for plant protection signals (steam drum, main steam parameters), redundant instrumentation connected to different I/O cards, SIL study for voting logic function",
     "search_query": "Control & instrumentation redundancy, hot swap, automatic changeover, intrinsic safety, explosionproof instruments hazardous area, GT/ST protection fail-safe dual redundant, Tricon CX triple modular redundant safety PLC, HRSG protection triple modular redundant BMS, triple redundant transmitters steam drum main steam, different I/O cards, SIL study voting logic",
+    "retrieval_candidates": [],
     "candidates": []
   },
   {
@@ -5495,6 +8377,313 @@
     "cross_encoder_candidate_count": 61,
     "keywords": "2oo3 voting logic, 1oo2 voting logic, 2oo2 voting logic, generator protection system, multifunction protective relays (2), SIL study, IEC 61508, IEC 61511, redundant control supplies, redundant DC source, UPS redundant AC source, DCS redundancy (processor, power supply, network, server, I/O)",
     "search_query": "Control instrumentation redundancy, 2oo3 voting logic, 1oo2, 2oo2, generator protection multifunction protective relays, SIL study IEC 61508 IEC 61511, redundant DC source, UPS redundant AC source, DCS processor power supply network server redundancy, I/O card segregation",
+    "retrieval_candidates": [
+      {
+        "rank": 1,
+        "retrieval_rank": 1,
+        "doc_id": "Fadhili_MDL_classified_T16182-YL01-P0MBA-121028_152"
+      },
+      {
+        "rank": 2,
+        "retrieval_rank": 2,
+        "doc_id": "Grati_MDL_classified_GRT-YL01-P0ZEN-161101_314"
+      },
+      {
+        "rank": 3,
+        "retrieval_rank": 3,
+        "doc_id": "Ukudu_MDL_classified_DOC_372_372"
+      },
+      {
+        "rank": 4,
+        "retrieval_rank": 4,
+        "doc_id": "Ukudu_MDL_classified_DOC_2082_2082"
+      },
+      {
+        "rank": 5,
+        "retrieval_rank": 5,
+        "doc_id": "Karabatan_MDL_classified_T14211-7300-IA-342-0002_1201"
+      },
+      {
+        "rank": 6,
+        "retrieval_rank": 6,
+        "doc_id": "Karabatan_MDL_classified_T14211-7300-IA-342-0001_1200"
+      },
+      {
+        "rank": 7,
+        "retrieval_rank": 7,
+        "doc_id": "Grati_MDL_classified_GRT-YL01-P0UGD-165334_914"
+      },
+      {
+        "rank": 8,
+        "retrieval_rank": 8,
+        "doc_id": "Grati_MDL_classified_GRT-YL01-P0UGD-165335_915"
+      },
+      {
+        "rank": 9,
+        "retrieval_rank": 9,
+        "doc_id": "Grati_MDL_classified_GRT-YL01-P0UGD-165333_913"
+      },
+      {
+        "rank": 10,
+        "retrieval_rank": 10,
+        "doc_id": "Grati_MDL_classified_GRT-YL01-P0UGD-165336_916"
+      },
+      {
+        "rank": 11,
+        "retrieval_rank": 11,
+        "doc_id": "Ukudu_MDL_classified_DOC_910_910"
+      },
+      {
+        "rank": 12,
+        "retrieval_rank": 12,
+        "doc_id": "Ukudu_MDL_classified_DOC_739_739"
+      },
+      {
+        "rank": 13,
+        "retrieval_rank": 13,
+        "doc_id": "Grati_MDL_classified_GRT-YD07-P0BYA-165655_1104"
+      },
+      {
+        "rank": 14,
+        "retrieval_rank": 14,
+        "doc_id": "Grati_MDL_classified_GRT-YD07-P0BYA-165654_1103"
+      },
+      {
+        "rank": 15,
+        "retrieval_rank": 15,
+        "doc_id": "Grati_MDL_classified_GRT-YD07-P0BYA-165652_1101"
+      },
+      {
+        "rank": 16,
+        "retrieval_rank": 16,
+        "doc_id": "Grati_MDL_classified_GRT-YD07-P0BYA-165653_1102"
+      },
+      {
+        "rank": 17,
+        "retrieval_rank": 17,
+        "doc_id": "Fadhili_MDL_classified_T16182-YL01-P0CBA-161101_1667"
+      },
+      {
+        "rank": 18,
+        "retrieval_rank": 18,
+        "doc_id": "Karabatan_MDL_classified_T14211-7300-HV-670-0002_1280"
+      },
+      {
+        "rank": 19,
+        "retrieval_rank": 19,
+        "doc_id": "Grati_MDL_classified_DOC_1609_1609"
+      },
+      {
+        "rank": 20,
+        "retrieval_rank": 20,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B022-35-EL-E28-0003_34"
+      },
+      {
+        "rank": 21,
+        "retrieval_rank": 21,
+        "doc_id": "Karabatan_MDL_classified_T14211-7300-35-IA-320-008_1118"
+      },
+      {
+        "rank": 22,
+        "retrieval_rank": 22,
+        "doc_id": "Grati_MDL_classified_GRT-YD07-P0BYA-165671_1105"
+      },
+      {
+        "rank": 23,
+        "retrieval_rank": 23,
+        "doc_id": "Karabatan_MDL_classified_DOC_1199_1199"
+      },
+      {
+        "rank": 24,
+        "retrieval_rank": 24,
+        "doc_id": "Fadhili_MDL_classified_T16182-YL01-P0SAY-163402_1772"
+      },
+      {
+        "rank": 25,
+        "retrieval_rank": 25,
+        "doc_id": "Fadhili_MDL_classified_T16182-YS00-P0MBA-121029_153"
+      },
+      {
+        "rank": 26,
+        "retrieval_rank": 26,
+        "doc_id": "Ukudu_MDL_classified_DOC_615_615"
+      },
+      {
+        "rank": 27,
+        "retrieval_rank": 27,
+        "doc_id": "Ukudu_MDL_classified_DOC_735_735"
+      },
+      {
+        "rank": 28,
+        "retrieval_rank": 28,
+        "doc_id": "Fadhili_MDL_classified_T16182-CN00-P0ZEN-110706_103"
+      },
+      {
+        "rank": 29,
+        "retrieval_rank": 29,
+        "doc_id": "Karabatan_MDL_classified_DOC_2922_2922"
+      },
+      {
+        "rank": 30,
+        "retrieval_rank": 30,
+        "doc_id": "Fadhili_MDL_classified_T16182-YT01-P0LB-122102_274"
+      },
+      {
+        "rank": 31,
+        "retrieval_rank": 31,
+        "doc_id": "Fadhili_MDL_classified_T16182-YL01-P8ZEN-125705_471"
+      },
+      {
+        "rank": 32,
+        "retrieval_rank": 32,
+        "doc_id": "Fadhili_MDL_classified_T16182-YL01-P8ZEN-125704_470"
+      },
+      {
+        "rank": 33,
+        "retrieval_rank": 33,
+        "doc_id": "Fadhili_MDL_classified_T16182-YL01-P8ZEN-125703_469"
+      },
+      {
+        "rank": 34,
+        "retrieval_rank": 34,
+        "doc_id": "Fadhili_MDL_classified_T16182-YL01-P8ZEN-125706_472"
+      },
+      {
+        "rank": 35,
+        "retrieval_rank": 35,
+        "doc_id": "Grati_MDL_classified_DOC_2054_2054"
+      },
+      {
+        "rank": 36,
+        "retrieval_rank": 36,
+        "doc_id": "Fadhili_MDL_classified_T16182-YR05-P0CWQ-161142_1689"
+      },
+      {
+        "rank": 37,
+        "retrieval_rank": 37,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B022-35-EL-E01-0006_313"
+      },
+      {
+        "rank": 38,
+        "retrieval_rank": 38,
+        "doc_id": "Muara Tawar_MDL_classified_MRT-YL01-P3CJJ-240070_1141"
+      },
+      {
+        "rank": 39,
+        "retrieval_rank": 39,
+        "doc_id": "Muara Tawar_MDL_classified_MRT-YL01-P2CJJ-240070_1140"
+      },
+      {
+        "rank": 40,
+        "retrieval_rank": 40,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B111-01-ME-E03-0004_94"
+      },
+      {
+        "rank": 41,
+        "retrieval_rank": 41,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B111-01-ME-E03-0005_98"
+      },
+      {
+        "rank": 42,
+        "retrieval_rank": 42,
+        "doc_id": "Ukudu_MDL_classified_DOC_2108_2108"
+      },
+      {
+        "rank": 43,
+        "retrieval_rank": 43,
+        "doc_id": "Ukudu_MDL_classified_DOC_2077_2077"
+      },
+      {
+        "rank": 44,
+        "retrieval_rank": 44,
+        "doc_id": "Karabatan_MDL_classified_T14211-7315-03-ME-H99-0002_2098"
+      },
+      {
+        "rank": 45,
+        "retrieval_rank": 45,
+        "doc_id": "Grati_MDL_classified_GRT-YL00-P0MA-200048_438"
+      },
+      {
+        "rank": 46,
+        "retrieval_rank": 46,
+        "doc_id": "Muara Tawar_MDL_classified_MRT-YL01-P3MAD-240179_1143"
+      },
+      {
+        "rank": 47,
+        "retrieval_rank": 47,
+        "doc_id": "Muara Tawar_MDL_classified_MRT-YL01-P2MAD-240169_1142"
+      },
+      {
+        "rank": 48,
+        "retrieval_rank": 48,
+        "doc_id": "Karabatan_MDL_classified_T14211-7300-GP-605-0031_76"
+      },
+      {
+        "rank": 49,
+        "retrieval_rank": 49,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B100-51-IA-B19-0001_369"
+      },
+      {
+        "rank": 50,
+        "retrieval_rank": 50,
+        "doc_id": "Karabatan_MDL_classified_T14211-7300-35-IA-301-002_1123"
+      },
+      {
+        "rank": 51,
+        "retrieval_rank": 51,
+        "doc_id": "Karabatan_MDL_classified_T14211-7300-35-IA-301-001_1122"
+      },
+      {
+        "rank": 52,
+        "retrieval_rank": 52,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B000-51-IA-B19-0001_380"
+      },
+      {
+        "rank": 53,
+        "retrieval_rank": 53,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B044-25-ME-K14-0001_678"
+      },
+      {
+        "rank": 54,
+        "retrieval_rank": 54,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B000-51-IA-H05-0004_376"
+      },
+      {
+        "rank": 55,
+        "retrieval_rank": 55,
+        "doc_id": "Karabatan_MDL_classified_T14211-7300-35-IA-320-004_1114"
+      },
+      {
+        "rank": 56,
+        "retrieval_rank": 56,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B113-03-ME-H99-0074_740"
+      },
+      {
+        "rank": 57,
+        "retrieval_rank": 57,
+        "doc_id": "Fadhili_MDL_classified_T16182-YU02-P0CYE-136607_888"
+      },
+      {
+        "rank": 58,
+        "retrieval_rank": 58,
+        "doc_id": "Ukudu_MDL_classified_DOC_719_719"
+      },
+      {
+        "rank": 59,
+        "retrieval_rank": 59,
+        "doc_id": "Grati_MDL_classified_DOC_3069_3069"
+      },
+      {
+        "rank": 60,
+        "retrieval_rank": 60,
+        "doc_id": "Ukudu_MDL_classified_DOC_715_715"
+      },
+      {
+        "rank": 61,
+        "retrieval_rank": 61,
+        "doc_id": "Ukudu_MDL_classified_DOC_756_756"
+      }
+    ],
     "candidates": [
       {
         "rank": 1,
@@ -6007,6 +9196,353 @@
     "cross_encoder_candidate_count": 69,
     "keywords": "Lube Oil System, lube oil pump 100% x2 (AC) + 100% x1 (DC), DC pump emergency period, lube oil cooler 100% x2, lube oil mist separator 100% x1, separator bypass line, LO vapor extractor 100% x2, Fuel Gas System, fuel gas flow meter (Coriolis type) 100% x1, fuel gas heater 100% x1 (Shell & Tube) + 100% x1 (Radiator), fuel gas last chance filter 100% x2, sweep air cooler 50% x2, ignition system 100% x1 (shutdown period), fuel gas unit 100% x1",
     "search_query": "Redundancy concept, control instrumentation system, Lube Oil System redundancy, lube oil pump 100% x2 AC + 100% x1 DC emergency, lube oil cooler 100% x2, lube oil mist separator bypass, LO vapor extractor 100% x2, Fuel Gas System, Coriolis fuel gas flow meter, fuel gas heater shell & tube and radiator type, last chance filter 100% x2, sweep air cooler 50% x2, ignition system shutdown period",
+    "retrieval_candidates": [
+      {
+        "rank": 1,
+        "retrieval_rank": 1,
+        "doc_id": "Karabatan_MDL_classified_T14211-7311-01-ME-A07-007_448"
+      },
+      {
+        "rank": 2,
+        "retrieval_rank": 2,
+        "doc_id": "Karabatan_MDL_classified_T14211-7311-01-ME-B06-007_430"
+      },
+      {
+        "rank": 3,
+        "retrieval_rank": 3,
+        "doc_id": "Ukudu_MDL_classified_DOC_509_509"
+      },
+      {
+        "rank": 4,
+        "retrieval_rank": 4,
+        "doc_id": "Ukudu_MDL_classified_DOC_530_530"
+      },
+      {
+        "rank": 5,
+        "retrieval_rank": 5,
+        "doc_id": "Ukudu_MDL_classified_DOC_489_489"
+      },
+      {
+        "rank": 6,
+        "retrieval_rank": 6,
+        "doc_id": "Ukudu_MDL_classified_DOC_451_451"
+      },
+      {
+        "rank": 7,
+        "retrieval_rank": 7,
+        "doc_id": "Karabatan_MDL_classified_T14211-7315-03-ME-B06-0003_2051"
+      },
+      {
+        "rank": 8,
+        "retrieval_rank": 8,
+        "doc_id": "Karabatan_MDL_classified_T14211-7316-03-ME-B06-0003_465"
+      },
+      {
+        "rank": 9,
+        "retrieval_rank": 9,
+        "doc_id": "Karabatan_MDL_classified_T14211-7330-PR-021-0001_105"
+      },
+      {
+        "rank": 10,
+        "retrieval_rank": 10,
+        "doc_id": "Karabatan_MDL_classified_T14211-7330-PR-003-0001_91"
+      },
+      {
+        "rank": 11,
+        "retrieval_rank": 11,
+        "doc_id": "Fadhili_MDL_classified_T16182-XW03-P0EKG-120021_120"
+      },
+      {
+        "rank": 12,
+        "retrieval_rank": 12,
+        "doc_id": "Turkistan_MDL_classified_CCP-PW-B044-CV-FGS-0003_184"
+      },
+      {
+        "rank": 13,
+        "retrieval_rank": 13,
+        "doc_id": "Turkistan_MDL_classified_CCP-PW-B044-CV-FGS-0005_203"
+      },
+      {
+        "rank": 14,
+        "retrieval_rank": 14,
+        "doc_id": "Fadhili_MDL_classified_T16182-CA06-P0UBA-186100_2495"
+      },
+      {
+        "rank": 15,
+        "retrieval_rank": 15,
+        "doc_id": "Fadhili_MDL_classified_T16182-XS00-P0EKG-120019_118"
+      },
+      {
+        "rank": 16,
+        "retrieval_rank": 16,
+        "doc_id": "Fadhili_MDL_classified_T16182-XS00-P0EKG-120020_119"
+      },
+      {
+        "rank": 17,
+        "retrieval_rank": 17,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B111-01-ME-B06-0014_79"
+      },
+      {
+        "rank": 18,
+        "retrieval_rank": 18,
+        "doc_id": "Fadhili_MDL_classified_T16182-CA00-P0UBA-186104_2498"
+      },
+      {
+        "rank": 19,
+        "retrieval_rank": 19,
+        "doc_id": "Turkistan_MDL_classified_CCP-PW-B044-CV-FGS-0004_202"
+      },
+      {
+        "rank": 20,
+        "retrieval_rank": 20,
+        "doc_id": "Fadhili_MDL_classified_T16182-YT10-P0ZEN-152234_1466"
+      },
+      {
+        "rank": 21,
+        "retrieval_rank": 21,
+        "doc_id": "Fadhili_MDL_classified_T16182-YB03-P0ZEN-165546_1857"
+      },
+      {
+        "rank": 22,
+        "retrieval_rank": 22,
+        "doc_id": "Fadhili_MDL_classified_T16182-CA00-P0UBA-186103_2497"
+      },
+      {
+        "rank": 23,
+        "retrieval_rank": 23,
+        "doc_id": "Turkistan_MDL_classified_CCP-PW-B044-CV-FGS-0006_188"
+      },
+      {
+        "rank": 24,
+        "retrieval_rank": 24,
+        "doc_id": "Fadhili_MDL_classified_T16182-CA01-P0UBA-186151_2499"
+      },
+      {
+        "rank": 25,
+        "retrieval_rank": 25,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B089-IA-308-0006_483"
+      },
+      {
+        "rank": 26,
+        "retrieval_rank": 26,
+        "doc_id": "Fadhili_MDL_classified_T16182-XG02-P0EK-120007_109"
+      },
+      {
+        "rank": 27,
+        "retrieval_rank": 27,
+        "doc_id": "Karabatan_MDL_classified_T14211-7300-PI-223-0004_795"
+      },
+      {
+        "rank": 28,
+        "retrieval_rank": 28,
+        "doc_id": "Fadhili_MDL_classified_T16182-XG07-P0EKG-120018_117"
+      },
+      {
+        "rank": 29,
+        "retrieval_rank": 29,
+        "doc_id": "Fadhili_MDL_classified_T16182-XG01-P0EKG-124001_331"
+      },
+      {
+        "rank": 30,
+        "retrieval_rank": 30,
+        "doc_id": "Fadhili_MDL_classified_T16182-XJ00-P0EKG-140118_1254"
+      },
+      {
+        "rank": 31,
+        "retrieval_rank": 31,
+        "doc_id": "Karabatan_MDL_classified_T14211-7330-PI-140-FG_852"
+      },
+      {
+        "rank": 32,
+        "retrieval_rank": 32,
+        "doc_id": "Ukudu_MDL_classified_DOC_794_794"
+      },
+      {
+        "rank": 33,
+        "retrieval_rank": 33,
+        "doc_id": "Fadhili_MDL_classified_T16182-XH01-P0LF-140417_1294"
+      },
+      {
+        "rank": 34,
+        "retrieval_rank": 34,
+        "doc_id": "Karabatan_MDL_classified_T14211-7300-IA-318-0011_2908"
+      },
+      {
+        "rank": 35,
+        "retrieval_rank": 35,
+        "doc_id": "Karabatan_MDL_classified_T14211-7300-IA-315-0011_2883"
+      },
+      {
+        "rank": 36,
+        "retrieval_rank": 36,
+        "doc_id": "Karabatan_MDL_classified_T14211-7344-08-ME-016-010_2250"
+      },
+      {
+        "rank": 37,
+        "retrieval_rank": 37,
+        "doc_id": "Fadhili_MDL_classified_T16182-CA00-P0UBA-186101_2496"
+      },
+      {
+        "rank": 38,
+        "retrieval_rank": 38,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B111-01-ME-A11-0010_42"
+      },
+      {
+        "rank": 39,
+        "retrieval_rank": 39,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B111-01-ME-B06-0019_24"
+      },
+      {
+        "rank": 40,
+        "retrieval_rank": 40,
+        "doc_id": "Fadhili_MDL_classified_T16182-YL16-P0ZEN-165566_1875"
+      },
+      {
+        "rank": 41,
+        "retrieval_rank": 41,
+        "doc_id": "Fadhili_MDL_classified_T16182-YQ01-P0ZEN-152332_1496"
+      },
+      {
+        "rank": 42,
+        "retrieval_rank": 42,
+        "doc_id": "Karabatan_MDL_classified_T14211-7344-08-ME-016-010_592"
+      },
+      {
+        "rank": 43,
+        "retrieval_rank": 43,
+        "doc_id": "Karabatan_MDL_classified_T14211- 7300-IA-308-0007_2995"
+      },
+      {
+        "rank": 44,
+        "retrieval_rank": 44,
+        "doc_id": "Karabatan_MDL_classified_T14211-7300-IA-308-0007_1266"
+      },
+      {
+        "rank": 45,
+        "retrieval_rank": 45,
+        "doc_id": "Fadhili_MDL_classified_T16182-XG02-P8ZEN-125587_439"
+      },
+      {
+        "rank": 46,
+        "retrieval_rank": 46,
+        "doc_id": "Ukudu_MDL_classified_DOC_473_473"
+      },
+      {
+        "rank": 47,
+        "retrieval_rank": 47,
+        "doc_id": "Karabatan_MDL_classified_T14211-7300-CV-WWD-0006_1408"
+      },
+      {
+        "rank": 48,
+        "retrieval_rank": 48,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B113-03-ME-B06-0006_696"
+      },
+      {
+        "rank": 49,
+        "retrieval_rank": 49,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B111-01-ME-B06-0015_58"
+      },
+      {
+        "rank": 50,
+        "retrieval_rank": 50,
+        "doc_id": "Fadhili_MDL_classified_T16182-YQ01-P0ZEN-152307_1473"
+      },
+      {
+        "rank": 51,
+        "retrieval_rank": 51,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B111-01-ME-A11-0005_92"
+      },
+      {
+        "rank": 52,
+        "retrieval_rank": 52,
+        "doc_id": "Karabatan_MDL_classified_T14211-7300-CV-WWD-0007_1409"
+      },
+      {
+        "rank": 53,
+        "retrieval_rank": 53,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B111-01-ME-E07-0005_823"
+      },
+      {
+        "rank": 54,
+        "retrieval_rank": 54,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B111-01-ME-B06-0016_101"
+      },
+      {
+        "rank": 55,
+        "retrieval_rank": 55,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B111-01-ME-E07-0002_806"
+      },
+      {
+        "rank": 56,
+        "retrieval_rank": 56,
+        "doc_id": "Grati_MDL_classified_GRT-CA01-P0UMA-175255 (2 OF 2)_1430"
+      },
+      {
+        "rank": 57,
+        "retrieval_rank": 57,
+        "doc_id": "Fadhili_MDL_classified_T16182-XG02-P0SGC-138102_1017"
+      },
+      {
+        "rank": 58,
+        "retrieval_rank": 58,
+        "doc_id": "Fadhili_MDL_classified_T16182-XH01-P0SGC-138112_1019"
+      },
+      {
+        "rank": 59,
+        "retrieval_rank": 59,
+        "doc_id": "Fadhili_MDL_classified_T16182-YT01-P0LAC-126066_543"
+      },
+      {
+        "rank": 60,
+        "retrieval_rank": 60,
+        "doc_id": "Fadhili_MDL_classified_T16182-YE00-P0ZEN-152708_1571"
+      },
+      {
+        "rank": 61,
+        "retrieval_rank": 61,
+        "doc_id": "Fadhili_MDL_classified_T16182-YT10-P0SGC-138122_1021"
+      },
+      {
+        "rank": 62,
+        "retrieval_rank": 62,
+        "doc_id": "Fadhili_MDL_classified_T16182-CA01-P0UBA-186154_2501"
+      },
+      {
+        "rank": 63,
+        "retrieval_rank": 63,
+        "doc_id": "Fadhili_MDL_classified_T16182-YQ08-P0CY-154037_1642"
+      },
+      {
+        "rank": 64,
+        "retrieval_rank": 64,
+        "doc_id": "Fadhili_MDL_classified_T16182-CA01-P0UBA-186152_2500"
+      },
+      {
+        "rank": 65,
+        "retrieval_rank": 65,
+        "doc_id": "Fadhili_MDL_classified_T16182-YE03-P0BAU-152511_1526"
+      },
+      {
+        "rank": 66,
+        "retrieval_rank": 66,
+        "doc_id": "Fadhili_MDL_classified_T16182-CA02-P0UBA-186156_2503"
+      },
+      {
+        "rank": 67,
+        "retrieval_rank": 67,
+        "doc_id": "Fadhili_MDL_classified_T16182-CA02-P0UBA-186155_2502"
+      },
+      {
+        "rank": 68,
+        "retrieval_rank": 68,
+        "doc_id": "Fadhili_MDL_classified_T16182-XJ00-P0EKG-124077_367"
+      },
+      {
+        "rank": 69,
+        "retrieval_rank": 69,
+        "doc_id": "Fadhili_MDL_classified_T16182-UB01-P0EKG-124075_366"
+      }
+    ],
     "candidates": [
       {
         "rank": 1,
@@ -6519,6 +10055,98 @@
     "cross_encoder_candidate_count": 18,
     "keywords": "Fuel Oil System, Main Fuel Oil Pump, Fuel Oil Drain Tank & Pump, Fuel Oil Unit, Flow Divider Unit, Water Injection System, Water Injection Pump, Purge Air System, Purge Air Compressor, Purge Air Receiver, Purge Air Cooler, GT Cooling Air Cooler",
     "search_query": "Redundancy concept, control instrumentation system, Fuel Oil System, Main Fuel Oil Pump, Fuel Oil Drain Tank & Pump, Fuel Oil Unit, Flow Divider Unit, Water Injection Pump, Purge Air Compressor, Purge Air Receiver, Purge Air Cooler, GT Cooling Air Cooler, 100%x1, 50%x2",
+    "retrieval_candidates": [
+      {
+        "rank": 1,
+        "retrieval_rank": 1,
+        "doc_id": "Ukudu_MDL_classified_DOC_491_491"
+      },
+      {
+        "rank": 2,
+        "retrieval_rank": 2,
+        "doc_id": "Ukudu_MDL_classified_DOC_537_537"
+      },
+      {
+        "rank": 3,
+        "retrieval_rank": 3,
+        "doc_id": "Ukudu_MDL_classified_DOC_453_453"
+      },
+      {
+        "rank": 4,
+        "retrieval_rank": 4,
+        "doc_id": "Ukudu_MDL_classified_DOC_500_500"
+      },
+      {
+        "rank": 5,
+        "retrieval_rank": 5,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B111-01-ME-B06-0024_791"
+      },
+      {
+        "rank": 6,
+        "retrieval_rank": 6,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B000-IA-315-0012_420"
+      },
+      {
+        "rank": 7,
+        "retrieval_rank": 7,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B000-IA-318-0012_413"
+      },
+      {
+        "rank": 8,
+        "retrieval_rank": 8,
+        "doc_id": "Ukudu_MDL_classified_DOC_811_811"
+      },
+      {
+        "rank": 9,
+        "retrieval_rank": 9,
+        "doc_id": "Ukudu_MDL_classified_DOC_793_793"
+      },
+      {
+        "rank": 10,
+        "retrieval_rank": 10,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B089-IA-308-0007_474"
+      },
+      {
+        "rank": 11,
+        "retrieval_rank": 11,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B111-01-ME-A11-0011_796"
+      },
+      {
+        "rank": 12,
+        "retrieval_rank": 12,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B111-01-ME-B06-0020_790"
+      },
+      {
+        "rank": 13,
+        "retrieval_rank": 13,
+        "doc_id": "Ukudu_MDL_classified_DOC_2050_2050"
+      },
+      {
+        "rank": 14,
+        "retrieval_rank": 14,
+        "doc_id": "Ukudu_MDL_classified_DOC_2042_2042"
+      },
+      {
+        "rank": 15,
+        "retrieval_rank": 15,
+        "doc_id": "Turkistan_MDL_classified_CCP-PW-B046-PR-005-0001_1032"
+      },
+      {
+        "rank": 16,
+        "retrieval_rank": 16,
+        "doc_id": "Turkistan_MDL_classified_CCP-P-B046-PR-049-0001_1091"
+      },
+      {
+        "rank": 17,
+        "retrieval_rank": 17,
+        "doc_id": "Turkistan_MDL_classified_CCP-P-B046-PR-003-0001_1088"
+      },
+      {
+        "rank": 18,
+        "retrieval_rank": 18,
+        "doc_id": "Turkistan_MDL_classified_CCP-P-B046-PR-003-0002_1085"
+      }
+    ],
     "candidates": [
       {
         "rank": 1,
@@ -6983,6 +10611,18 @@
     "cross_encoder_candidate_count": 2,
     "keywords": "Air& Flue gas system, equipment failure does not cause loss of power production, Shell & Tube type, Radiator type, if one fan stops, GT runs back, Fuel Gas Calorie Meter & Pressure Reduction Unit, GT Cooling Air Filter, 2C Cooler, 4S Cooler, 4S Cooling Air Filter, GT Casing Cooling Air system, GT package ventilation fan",
     "search_query": "Redundancy concept, control instrumentation system, Air and Flue Gas System, Shell & Tube type, Radiator type, GT runs back, Fuel Gas Calorie Meter & Pressure Reduction Unit, GT Cooling Air Filter, 2C Cooler, 4S Cooler, GT casing cooling air system, GT package ventilation fan",
+    "retrieval_candidates": [
+      {
+        "rank": 1,
+        "retrieval_rank": 1,
+        "doc_id": "Fadhili_MDL_classified_T16182-XG02-P8ZEN-125586_438"
+      },
+      {
+        "rank": 2,
+        "retrieval_rank": 2,
+        "doc_id": "Fadhili_MDL_classified_T16182-XJ00-P8ZEN-125544_425"
+      }
+    ],
     "candidates": [
       {
         "rank": 1,
@@ -7063,6 +10703,13 @@
     "cross_encoder_candidate_count": 1,
     "keywords": "GT Protection System, GT Air Intake System, air intake filter, multiple filter elements, Evaporative Cooler System, Wet Compression System, Enhanced Cooling Air System, Enhanced Cooling Air Compressor, Enhanced Cooling Air Filter, Drain Mist Separator, 100%x1, 100%x2",
     "search_query": "Redundancy Concept, control instrumentation system, GT Air Intake System, GT Protection System, air intake filter multiple filter elements, Evaporative Cooler System, Wet Compression System, Enhanced Cooling Air System, Enhanced Cooling Air Compressor, Drain Mist Separator, 100%x1, 100%x2",
+    "retrieval_candidates": [
+      {
+        "rank": 1,
+        "retrieval_rank": 1,
+        "doc_id": "Karabatan_MDL_classified_T14211-7344-08-ME-016-001_2241"
+      }
+    ],
     "candidates": [
       {
         "rank": 1,
@@ -7119,6 +10766,353 @@
     "cross_encoder_candidate_count": 69,
     "keywords": "Fuel Gas Calorie Meter & Pressure Reduction Unit, Clean Agent FF system, 100% x 1 to 100% x 2 (including online reserve), instruments redundancy 100% x 2 or 3 (control or interlock), detection-use instruments 100% x 1, Y type strainer (emergency dust filter), Drain Mist Separator (major filtering function), valves, pipings and others 100% x 1, AC Distribution System for GT Auxiliary, GT MCC, GT AC DB, Normal Bus 100% x 1 / Essential Bus 100% x 1, tie CB between Normal Bus and Essential Bus",
     "search_query": "Control instrumentation system redundancy, Fuel Gas Calorie Meter & Pressure Reduction Unit, Clean Agent Fire Fighting system, instruments 100% x 2 or 3, detection-use 100% x 1, GT auxiliary AC distribution, Normal Bus Essential Bus, tie circuit breaker, GT MCC, GT AC DB",
+    "retrieval_candidates": [
+      {
+        "rank": 1,
+        "retrieval_rank": 1,
+        "doc_id": "Karabatan_MDL_classified_DOC_2226_2226"
+      },
+      {
+        "rank": 2,
+        "retrieval_rank": 2,
+        "doc_id": "Karabatan_MDL_classified_DOC_569_569"
+      },
+      {
+        "rank": 3,
+        "retrieval_rank": 3,
+        "doc_id": "Karabatan_MDL_classified_T14211-7315-03-ME-P06-0001_2060"
+      },
+      {
+        "rank": 4,
+        "retrieval_rank": 4,
+        "doc_id": "Ukudu_MDL_classified_DOC_656_656"
+      },
+      {
+        "rank": 5,
+        "retrieval_rank": 5,
+        "doc_id": "Grati_MDL_classified_DOC_1871_1871"
+      },
+      {
+        "rank": 6,
+        "retrieval_rank": 6,
+        "doc_id": "Grati_MDL_classified_DOC_2528_2528"
+      },
+      {
+        "rank": 7,
+        "retrieval_rank": 7,
+        "doc_id": "Grati_MDL_classified_DOC_1713_1713"
+      },
+      {
+        "rank": 8,
+        "retrieval_rank": 8,
+        "doc_id": "Grati_MDL_classified_GRT-XN00-P0MA-200011_408"
+      },
+      {
+        "rank": 9,
+        "retrieval_rank": 9,
+        "doc_id": "Ukudu_MDL_classified_DOC_579_579"
+      },
+      {
+        "rank": 10,
+        "retrieval_rank": 10,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B114-02-ME-P05-0079_916"
+      },
+      {
+        "rank": 11,
+        "retrieval_rank": 11,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B114-02-ME-P05-0080_917"
+      },
+      {
+        "rank": 12,
+        "retrieval_rank": 12,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B114-02-ME-P05-0081_843"
+      },
+      {
+        "rank": 13,
+        "retrieval_rank": 13,
+        "doc_id": "Ukudu_MDL_classified_DOC_578_578"
+      },
+      {
+        "rank": 14,
+        "retrieval_rank": 14,
+        "doc_id": "Karabatan_MDL_classified_T14211-7300-20-ME-025-002_575"
+      },
+      {
+        "rank": 15,
+        "retrieval_rank": 15,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B000-18-ME-B16-0001_616"
+      },
+      {
+        "rank": 16,
+        "retrieval_rank": 16,
+        "doc_id": "Karabatan_MDL_classified_T14211-7332-10-ME-016-002_578"
+      },
+      {
+        "rank": 17,
+        "retrieval_rank": 17,
+        "doc_id": "Fadhili_MDL_classified_T16182-YL01-P0PCA-126527_571"
+      },
+      {
+        "rank": 18,
+        "retrieval_rank": 18,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B114-02-ME-P10-1013_868"
+      },
+      {
+        "rank": 19,
+        "retrieval_rank": 19,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B000-07-ME-B16-0001_614"
+      },
+      {
+        "rank": 20,
+        "retrieval_rank": 20,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B114-02-ME-P05-0032_889"
+      },
+      {
+        "rank": 21,
+        "retrieval_rank": 21,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B114-02-ME-P05-0027_887"
+      },
+      {
+        "rank": 22,
+        "retrieval_rank": 22,
+        "doc_id": "Ukudu_MDL_classified_DOC_580_580"
+      },
+      {
+        "rank": 23,
+        "retrieval_rank": 23,
+        "doc_id": "Karabatan_MDL_classified_T14211-7332-10-ME-016-001_577"
+      },
+      {
+        "rank": 24,
+        "retrieval_rank": 24,
+        "doc_id": "Karabatan_MDL_classified_T14211-7300-20-ME-025-001_574"
+      },
+      {
+        "rank": 25,
+        "retrieval_rank": 25,
+        "doc_id": "Muara Tawar_MDL_classified_MRT-CQ02-P3LBA-220084_1294"
+      },
+      {
+        "rank": 26,
+        "retrieval_rank": 26,
+        "doc_id": "Muara Tawar_MDL_classified_MRT-CQ02-P2LBS-220088_1293"
+      },
+      {
+        "rank": 27,
+        "retrieval_rank": 27,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B000-IA-334-0012_432"
+      },
+      {
+        "rank": 28,
+        "retrieval_rank": 28,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B114-02-ME-P05-0077_915"
+      },
+      {
+        "rank": 29,
+        "retrieval_rank": 29,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B114-02-ME-P05-0076_914"
+      },
+      {
+        "rank": 30,
+        "retrieval_rank": 30,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B114-02-ME-P05-0078_842"
+      },
+      {
+        "rank": 31,
+        "retrieval_rank": 31,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B114-02-ME-P05-0074_95"
+      },
+      {
+        "rank": 32,
+        "retrieval_rank": 32,
+        "doc_id": "Karabatan_MDL_classified_T14211-7300-20-ME-025-003_576"
+      },
+      {
+        "rank": 33,
+        "retrieval_rank": 33,
+        "doc_id": "Muara Tawar_MDL_classified_MRT-XN00-P3MAV-220039_1082"
+      },
+      {
+        "rank": 34,
+        "retrieval_rank": 34,
+        "doc_id": "Muara Tawar_MDL_classified_MRT-XN00-P2MAV-220039_1081"
+      },
+      {
+        "rank": 35,
+        "retrieval_rank": 35,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B044-25-ME-B05-0001_636"
+      },
+      {
+        "rank": 36,
+        "retrieval_rank": 36,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B114-02-ME-P05-0072_862"
+      },
+      {
+        "rank": 37,
+        "retrieval_rank": 37,
+        "doc_id": "Karabatan_MDL_classified_T14211-7318-02-ME-B16-230_405"
+      },
+      {
+        "rank": 38,
+        "retrieval_rank": 38,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B044-25-ME-P10-0001_635"
+      },
+      {
+        "rank": 39,
+        "retrieval_rank": 39,
+        "doc_id": "Fadhili_MDL_classified_T16182-YK00-P0ZEN-165322_1814"
+      },
+      {
+        "rank": 40,
+        "retrieval_rank": 40,
+        "doc_id": "Karabatan_MDL_classified_T14211-7300-IA-334-0012_1257"
+      },
+      {
+        "rank": 41,
+        "retrieval_rank": 41,
+        "doc_id": "Muara Tawar_MDL_classified_MRT-DM02-P2MAW-220108_1237"
+      },
+      {
+        "rank": 42,
+        "retrieval_rank": 42,
+        "doc_id": "Muara Tawar_MDL_classified_MRT-DM02-P3MAW-220100_1238"
+      },
+      {
+        "rank": 43,
+        "retrieval_rank": 43,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B114-02-ME-P05-0073_863"
+      },
+      {
+        "rank": 44,
+        "retrieval_rank": 44,
+        "doc_id": "Grati_MDL_classified_GRT-CV03-P0ZEN-163704_383"
+      },
+      {
+        "rank": 45,
+        "retrieval_rank": 45,
+        "doc_id": "Grati_MDL_classified_DOC_2658_2658"
+      },
+      {
+        "rank": 46,
+        "retrieval_rank": 46,
+        "doc_id": "Grati_MDL_classified_DOC_2087_2087"
+      },
+      {
+        "rank": 47,
+        "retrieval_rank": 47,
+        "doc_id": "Grati_MDL_classified_DOC_3079_3079"
+      },
+      {
+        "rank": 48,
+        "retrieval_rank": 48,
+        "doc_id": "Muara Tawar_MDL_classified_MRT-CQ02-P2MAW-220109_1295"
+      },
+      {
+        "rank": 49,
+        "retrieval_rank": 49,
+        "doc_id": "Muara Tawar_MDL_classified_MRT-CQ02-P3MAW-220101_1296"
+      },
+      {
+        "rank": 50,
+        "retrieval_rank": 50,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B000-07-ME-B01-0001_613"
+      },
+      {
+        "rank": 51,
+        "retrieval_rank": 51,
+        "doc_id": "Ukudu_MDL_classified_DOC_661_661"
+      },
+      {
+        "rank": 52,
+        "retrieval_rank": 52,
+        "doc_id": "Ukudu_MDL_classified_DOC_705_705"
+      },
+      {
+        "rank": 53,
+        "retrieval_rank": 53,
+        "doc_id": "Ukudu_MDL_classified_DOC_654_654"
+      },
+      {
+        "rank": 54,
+        "retrieval_rank": 54,
+        "doc_id": "Muara Tawar_MDL_classified_MRT-DM02-P3MAA-220130_1233"
+      },
+      {
+        "rank": 55,
+        "retrieval_rank": 55,
+        "doc_id": "Muara Tawar_MDL_classified_MRT-DM02-P2MAA-220131_1232"
+      },
+      {
+        "rank": 56,
+        "retrieval_rank": 56,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B000-18-ME-B01-0001_615"
+      },
+      {
+        "rank": 57,
+        "retrieval_rank": 57,
+        "doc_id": "Muara Tawar_MDL_classified_MRT-CQ02-P3MAA-220131_1298"
+      },
+      {
+        "rank": 58,
+        "retrieval_rank": 58,
+        "doc_id": "Muara Tawar_MDL_classified_MRT-CQ02-P2MAA-220132_1297"
+      },
+      {
+        "rank": 59,
+        "retrieval_rank": 59,
+        "doc_id": "Muara Tawar_MDL_classified_MRT-XN00-P3MAA-220038_1084"
+      },
+      {
+        "rank": 60,
+        "retrieval_rank": 60,
+        "doc_id": "Muara Tawar_MDL_classified_MRT-XN00-P2MAA-220038_1083"
+      },
+      {
+        "rank": 61,
+        "retrieval_rank": 61,
+        "doc_id": "Ukudu_MDL_classified_DOC_704_704"
+      },
+      {
+        "rank": 62,
+        "retrieval_rank": 62,
+        "doc_id": "Karabatan_MDL_classified_T14211- 7300-IA-334-0017_2983"
+      },
+      {
+        "rank": 63,
+        "retrieval_rank": 63,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B114-02-ME-P10-0061_857"
+      },
+      {
+        "rank": 64,
+        "retrieval_rank": 64,
+        "doc_id": "Karabatan_MDL_classified_T14211- 7300-IA-334-0018_2984"
+      },
+      {
+        "rank": 65,
+        "retrieval_rank": 65,
+        "doc_id": "Muara Tawar_MDL_classified_MRT-CV03-P2ZEN-165201_806"
+      },
+      {
+        "rank": 66,
+        "retrieval_rank": 66,
+        "doc_id": "Ukudu_MDL_classified_DOC_703_703"
+      },
+      {
+        "rank": 67,
+        "retrieval_rank": 67,
+        "doc_id": "Muara Tawar_MDL_classified_MRT-CV03-P3ZEN-165201_807"
+      },
+      {
+        "rank": 68,
+        "retrieval_rank": 68,
+        "doc_id": "Ukudu_MDL_classified_DOC_2180_2180"
+      },
+      {
+        "rank": 69,
+        "retrieval_rank": 69,
+        "doc_id": "Ukudu_MDL_classified_DOC_702_702"
+      }
+    ],
     "candidates": [
       {
         "rank": 1,
@@ -7631,6 +11625,28 @@
     "cross_encoder_candidate_count": 4,
     "keywords": "DC Distribution System for GT Auxiliary, battery and charger, 100% x2, DC DB, busbar, MCBs, DC motor starter panel, 100% x1, emergency period, high reliability",
     "search_query": "Redundancy Concept, Control instrumentation system, DC Distribution System for GT Auxiliary, battery charger, DC DB, busbar, MCBs, DC motor starter panel, 100% x2, emergency period",
+    "retrieval_candidates": [
+      {
+        "rank": 1,
+        "retrieval_rank": 1,
+        "doc_id": "Fadhili_MDL_classified_T16182-YS01-P0MKY-290011_2612"
+      },
+      {
+        "rank": 2,
+        "retrieval_rank": 2,
+        "doc_id": "Muara Tawar_MDL_classified_MRT-YS01-P3MKC-230017_1515"
+      },
+      {
+        "rank": 3,
+        "retrieval_rank": 3,
+        "doc_id": "Fadhili_MDL_classified_T16182-DD09-P0ZEN-755001_2634"
+      },
+      {
+        "rank": 4,
+        "retrieval_rank": 4,
+        "doc_id": "Grati_MDL_classified_GRT-XW03-P0ZEN-156212_1390"
+      }
+    ],
     "candidates": [
       {
         "rank": 1,
@@ -7759,6 +11775,28 @@
     "cross_encoder_candidate_count": 4,
     "keywords": "GTG (Gas Turbine Generator), H2 & CO2 gas system, seal oil system, generator H2 gas dryer blower, seal oil pump, 2x AC seal oil pumps + DC emergency backup, DC emergency seal oil pump auto start, seal oil vacuum pump (vacuum treatment type), generator vapor extractor, 100% x1, 100% x2, online replacement while generator running",
     "search_query": "Redundancy concept, control instrumentation system, GTG H2 CO2 gas and seal oil system, H2 gas dryer blower, seal oil pump 100% x2 AC + DC emergency backup, seal oil vacuum pump, generator vapor extractor",
+    "retrieval_candidates": [
+      {
+        "rank": 1,
+        "retrieval_rank": 1,
+        "doc_id": "Fadhili_MDL_classified_T16182-CY03-P0MKW-260031_2596"
+      },
+      {
+        "rank": 2,
+        "retrieval_rank": 2,
+        "doc_id": "Fadhili_MDL_classified_T16182-YV02-P0MKW-260021_2594"
+      },
+      {
+        "rank": 3,
+        "retrieval_rank": 3,
+        "doc_id": "Muara Tawar_MDL_classified_MRT-XG02-P3MKW-210001_1415"
+      },
+      {
+        "rank": 4,
+        "retrieval_rank": 4,
+        "doc_id": "Muara Tawar_MDL_classified_MRT-XS00-P3MKW-210001_1413"
+      }
+    ],
     "candidates": [
       {
         "rank": 1,
@@ -7885,6 +11923,7 @@
     "cross_encoder_candidate_count": 0,
     "keywords": "Plant Performance and Schedule",
     "search_query": "Plant Performance and Schedule",
+    "retrieval_candidates": [],
     "candidates": []
   },
   {
@@ -7916,6 +11955,173 @@
     "cross_encoder_candidate_count": 33,
     "keywords": "performance correction curves, reference conditions, measured performance data correction, primary and backup fuel, Gas Turbine standard correction curves, generator capability curve (GT, ST), combined cycle start-up and shutdown curves, net capacity and net heat rate corrections, ambient temperature, humidity, barometric pressure, fuel gas LHV and C:H ratio, evaporative cooler ON/OFF, wet compression ON, duct firing ON, power output vs gas pressure, grid frequency and power factor, natural gas pressure and temperature at terminal point, degradation with GT fired hours, outage modes, outage duration and outage frequency (GT, HRSG, ST), H&M balance drawings, LTSA assumptions",
     "search_query": "Plant performance, performance correction curves, reference conditions, net capacity net heat rate corrections, ambient temperature humidity barometric pressure, fuel gas LHV C:H ratio, evaporative cooler wet compression duct firing, power output vs gas pressure, outage modes duration frequency GT HRSG ST, H&M balance drawings",
+    "retrieval_candidates": [
+      {
+        "rank": 1,
+        "retrieval_rank": 1,
+        "doc_id": "Karabatan_MDL_classified_T14211-7318-02-ME-E29-001_1966"
+      },
+      {
+        "rank": 2,
+        "retrieval_rank": 2,
+        "doc_id": "Ukudu_MDL_classified_DOC_1182_1182"
+      },
+      {
+        "rank": 3,
+        "retrieval_rank": 3,
+        "doc_id": "Karabatan_MDL_classified_T14211-7318-02-ME-F99-002_1962"
+      },
+      {
+        "rank": 4,
+        "retrieval_rank": 4,
+        "doc_id": "Ukudu_MDL_classified_DOC_1184_1184"
+      },
+      {
+        "rank": 5,
+        "retrieval_rank": 5,
+        "doc_id": "Ukudu_MDL_classified_DOC_1183_1183"
+      },
+      {
+        "rank": 6,
+        "retrieval_rank": 6,
+        "doc_id": "Grati_MDL_classified_DOC_3197_3197"
+      },
+      {
+        "rank": 7,
+        "retrieval_rank": 7,
+        "doc_id": "Karabatan_MDL_classified_T14211-7300-IA-330-0015_1232"
+      },
+      {
+        "rank": 8,
+        "retrieval_rank": 8,
+        "doc_id": "Karabatan_MDL_classified_T14211-7300-IA-330-0016_1233"
+      },
+      {
+        "rank": 9,
+        "retrieval_rank": 9,
+        "doc_id": "Karabatan_MDL_classified_T14211-7300-IA-330-0014_1231"
+      },
+      {
+        "rank": 10,
+        "retrieval_rank": 10,
+        "doc_id": "Karabatan_MDL_classified_T14211-7300-IA-330-0013_1230"
+      },
+      {
+        "rank": 11,
+        "retrieval_rank": 11,
+        "doc_id": "Fadhili_MDL_classified_T16182-YU03-P0BFA-150951_1386"
+      },
+      {
+        "rank": 12,
+        "retrieval_rank": 12,
+        "doc_id": "Grati_MDL_classified_DOC_2259_2259"
+      },
+      {
+        "rank": 13,
+        "retrieval_rank": 13,
+        "doc_id": "Grati_MDL_classified_DOC_2258_2258"
+      },
+      {
+        "rank": 14,
+        "retrieval_rank": 14,
+        "doc_id": "Ukudu_MDL_classified_DOC_830_830"
+      },
+      {
+        "rank": 15,
+        "retrieval_rank": 15,
+        "doc_id": "Karabatan_MDL_classified_T14211-7318-02-ME-F02-002_307"
+      },
+      {
+        "rank": 16,
+        "retrieval_rank": 16,
+        "doc_id": "Grati_MDL_classified_DOC_2498_2498"
+      },
+      {
+        "rank": 17,
+        "retrieval_rank": 17,
+        "doc_id": "Grati_MDL_classified_DOC_2496_2496"
+      },
+      {
+        "rank": 18,
+        "retrieval_rank": 18,
+        "doc_id": "Grati_MDL_classified_DOC_2530_2530"
+      },
+      {
+        "rank": 19,
+        "retrieval_rank": 19,
+        "doc_id": "Grati_MDL_classified_DOC_2494_2494"
+      },
+      {
+        "rank": 20,
+        "retrieval_rank": 20,
+        "doc_id": "Grati_MDL_classified_DOC_2499_2499"
+      },
+      {
+        "rank": 21,
+        "retrieval_rank": 21,
+        "doc_id": "Grati_MDL_classified_DOC_2497_2497"
+      },
+      {
+        "rank": 22,
+        "retrieval_rank": 22,
+        "doc_id": "Grati_MDL_classified_DOC_2495_2495"
+      },
+      {
+        "rank": 23,
+        "retrieval_rank": 23,
+        "doc_id": "Ukudu_MDL_classified_DOC_780_780"
+      },
+      {
+        "rank": 24,
+        "retrieval_rank": 24,
+        "doc_id": "Turkistan_MDL_classified_CCP-PW-B061-AC-553-0001_163"
+      },
+      {
+        "rank": 25,
+        "retrieval_rank": 25,
+        "doc_id": "Turkistan_MDL_classified_CCP-PW-B061-AC-554-0001_164"
+      },
+      {
+        "rank": 26,
+        "retrieval_rank": 26,
+        "doc_id": "Fadhili_MDL_classified_T16182-XS00-P0LB-122036_209"
+      },
+      {
+        "rank": 27,
+        "retrieval_rank": 27,
+        "doc_id": "Grati_MDL_classified_DOC_2081_2081"
+      },
+      {
+        "rank": 28,
+        "retrieval_rank": 28,
+        "doc_id": "Grati_MDL_classified_DOC_2080_2080"
+      },
+      {
+        "rank": 29,
+        "retrieval_rank": 29,
+        "doc_id": "Karabatan_MDL_classified_T14211-7318-02-ME-F02-001_306"
+      },
+      {
+        "rank": 30,
+        "retrieval_rank": 30,
+        "doc_id": "Ukudu_MDL_classified_DOC_354_354"
+      },
+      {
+        "rank": 31,
+        "retrieval_rank": 31,
+        "doc_id": "Grati_MDL_classified_DOC_2263_2263"
+      },
+      {
+        "rank": 32,
+        "retrieval_rank": 32,
+        "doc_id": "Grati_MDL_classified_DOC_2261_2261"
+      },
+      {
+        "rank": 33,
+        "retrieval_rank": 33,
+        "doc_id": "Grati_MDL_classified_DOC_2531_2531"
+      }
+    ],
     "candidates": [
       {
         "rank": 1,
@@ -8428,6 +12634,193 @@
     "cross_encoder_candidate_count": 37,
     "keywords": "reference operating points, Rumah 1 IPP, Rumah 2 IPP, group dispatch, RSC, OP1 OP2 OP3 OP4 OP5, fuel gas, air temperature dry bulb 48°C 40°C 35°C 25°C 15°C, relative humidity 20% 30% 60% 70%, atmospheric pressure 955 mbar, net dependable capacity export 100% 90% 75% 60% 30%, annual operation hours 100 3400 3300 1150 810 h/year",
     "search_query": "Plant performance, operating points, RSC, OP1 OP2 OP3 OP4 OP5, gas fuel, dry bulb air temperature 48/40/35/25/15°C, relative humidity 20/30/60/70%, atmospheric pressure 955 mbar, net dependable capacity export 100/90/75/60/30%, annual operating hours 100/3400/3300/1150/810",
+    "retrieval_candidates": [
+      {
+        "rank": 1,
+        "retrieval_rank": 1,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B111-01-ME-E07-0022_818"
+      },
+      {
+        "rank": 2,
+        "retrieval_rank": 2,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B044-25-ME-B01-0005_671"
+      },
+      {
+        "rank": 3,
+        "retrieval_rank": 3,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B044-25-ME-B01-0006_672"
+      },
+      {
+        "rank": 4,
+        "retrieval_rank": 4,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B044-25-ME-B16-0001_680"
+      },
+      {
+        "rank": 5,
+        "retrieval_rank": 5,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B044-25-ME-B01-0001_688"
+      },
+      {
+        "rank": 6,
+        "retrieval_rank": 6,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B044-25-ME-B16-0005_684"
+      },
+      {
+        "rank": 7,
+        "retrieval_rank": 7,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B044-25-ME-B16-0007_686"
+      },
+      {
+        "rank": 8,
+        "retrieval_rank": 8,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B044-25-ME-B16-0006_685"
+      },
+      {
+        "rank": 9,
+        "retrieval_rank": 9,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B111-01-ME-A11-0015_7"
+      },
+      {
+        "rank": 10,
+        "retrieval_rank": 10,
+        "doc_id": "Karabatan_MDL_classified_T14211-7330-PR-003-0001_91"
+      },
+      {
+        "rank": 11,
+        "retrieval_rank": 11,
+        "doc_id": "Karabatan_MDL_classified_T14211-7330-PR-021-0001_105"
+      },
+      {
+        "rank": 12,
+        "retrieval_rank": 12,
+        "doc_id": "Fadhili_MDL_classified_T16182-XW03-P0EKG-120021_120"
+      },
+      {
+        "rank": 13,
+        "retrieval_rank": 13,
+        "doc_id": "Turkistan_MDL_classified_CCP-PW-B044-CV-FGS-0005_203"
+      },
+      {
+        "rank": 14,
+        "retrieval_rank": 14,
+        "doc_id": "Turkistan_MDL_classified_CCP-PW-B044-CV-FGS-0003_184"
+      },
+      {
+        "rank": 15,
+        "retrieval_rank": 15,
+        "doc_id": "Fadhili_MDL_classified_T16182-XS00-P0EKG-120020_119"
+      },
+      {
+        "rank": 16,
+        "retrieval_rank": 16,
+        "doc_id": "Fadhili_MDL_classified_T16182-XS00-P0EKG-120019_118"
+      },
+      {
+        "rank": 17,
+        "retrieval_rank": 17,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B111-01-ME-B06-0014_79"
+      },
+      {
+        "rank": 18,
+        "retrieval_rank": 18,
+        "doc_id": "Karabatan_MDL_classified_T14211-7330-PR-007-0001_131"
+      },
+      {
+        "rank": 19,
+        "retrieval_rank": 19,
+        "doc_id": "Karabatan_MDL_classified_T14211-7330-06-ME-B05-001_536"
+      },
+      {
+        "rank": 20,
+        "retrieval_rank": 20,
+        "doc_id": "Fadhili_MDL_classified_T16182-YT10-P0ZEN-152234_1466"
+      },
+      {
+        "rank": 21,
+        "retrieval_rank": 21,
+        "doc_id": "Turkistan_MDL_classified_CCP-PW-B044-CV-FGS-0004_202"
+      },
+      {
+        "rank": 22,
+        "retrieval_rank": 22,
+        "doc_id": "Turkistan_MDL_classified_CCP-PW-B044-CV-FGS-0006_188"
+      },
+      {
+        "rank": 23,
+        "retrieval_rank": 23,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B089-IA-308-0006_483"
+      },
+      {
+        "rank": 24,
+        "retrieval_rank": 24,
+        "doc_id": "Fadhili_MDL_classified_T16182-XG02-P0EK-120007_109"
+      },
+      {
+        "rank": 25,
+        "retrieval_rank": 25,
+        "doc_id": "Karabatan_MDL_classified_T14211-7300-PI-223-0004_795"
+      },
+      {
+        "rank": 26,
+        "retrieval_rank": 26,
+        "doc_id": "Fadhili_MDL_classified_T16182-XG07-P0EKG-120018_117"
+      },
+      {
+        "rank": 27,
+        "retrieval_rank": 27,
+        "doc_id": "Karabatan_MDL_classified_T14211-7330-PR-006-0001_53"
+      },
+      {
+        "rank": 28,
+        "retrieval_rank": 28,
+        "doc_id": "Turkistan_MDL_classified_CCP-W-B044-IA-329-0001_495"
+      },
+      {
+        "rank": 29,
+        "retrieval_rank": 29,
+        "doc_id": "Fadhili_MDL_classified_T16182-XJ00-P0EKG-140118_1254"
+      },
+      {
+        "rank": 30,
+        "retrieval_rank": 30,
+        "doc_id": "Karabatan_MDL_classified_T14211-7330-PI-140-FG_852"
+      },
+      {
+        "rank": 31,
+        "retrieval_rank": 31,
+        "doc_id": "Fadhili_MDL_classified_T16182-XG01-P0EKG-124001_331"
+      },
+      {
+        "rank": 32,
+        "retrieval_rank": 32,
+        "doc_id": "Karabatan_MDL_classified_T14211-7330-06-ME-E13-001_537"
+      },
+      {
+        "rank": 33,
+        "retrieval_rank": 33,
+        "doc_id": "Karabatan_MDL_classified_T14211-7330-06-ME-B16-001_535"
+      },
+      {
+        "rank": 34,
+        "retrieval_rank": 34,
+        "doc_id": "Ukudu_MDL_classified_DOC_794_794"
+      },
+      {
+        "rank": 35,
+        "retrieval_rank": 35,
+        "doc_id": "Karabatan_MDL_classified_T14211-7330-06-ME-B06-001_538"
+      },
+      {
+        "rank": 36,
+        "retrieval_rank": 36,
+        "doc_id": "Karabatan_MDL_classified_T14211- 7300-IA-330-0023_2961"
+      },
+      {
+        "rank": 37,
+        "retrieval_rank": 37,
+        "doc_id": "Ukudu_MDL_classified_DOC_550_550"
+      }
+    ],
     "candidates": [
       {
         "rank": 1,
@@ -8940,6 +13333,7 @@
     "cross_encoder_candidate_count": 0,
     "keywords": "Fuel: Gas (OP1–OP5), Reference Site Condition (RSC), Air temperature (dry bulb) °C: 48/40/35/25/15 (OP1–OP5), Relative humidity %: 30/30/60/70/70 (OP1–OP5), Atmospheric pressure mbar: 1005 (RSC, OP1–OP5), Net Dependable Capacity (Export) %: 100/90/75/60/30 (OP1–OP5), Annual operation hours h/year: 100/3400/3300/1150/810 (OP1–OP5)",
     "search_query": "Plant performance operating points, RSC reference site condition, fuel gas, dry bulb air temperature 48 40 35 25 15 C, relative humidity 30 60 70 %, atmospheric pressure 1005 mbar, net dependable capacity export 100 90 75 60 30 %, annual operation hours 3400 3300 1150 810",
+    "retrieval_candidates": [],
     "candidates": []
   }
 ]
