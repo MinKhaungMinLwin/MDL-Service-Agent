@@ -52,6 +52,18 @@ class MatchingServiceTest(unittest.TestCase):
             ["GTG cooling air", "TARGET", "Gas Turbine Generator cooling air"],
         )
 
+    def test_full_chunk_cross_encoder_query_keeps_structured_context(self) -> None:
+        query = build_cross_encoder_query(
+            ["Building Services", "HVAC"],
+            ["Fresh Air Intake"],
+            chunk_text="Contractor shall submit fresh air intake layout.",
+            mode="full_chunk",
+        )
+
+        self.assertTrue(query.startswith("Chunk Text:\nContractor shall submit fresh air intake layout."))
+        self.assertIn("Depth:\nBuilding Services > HVAC", query)
+        self.assertIn("Keywords:\nFresh Air Intake", query)
+
     def test_retrieval_modes_search_with_depth_and_keyword_queries(self) -> None:
         repository = _RetrievalRepository()
         for mode, expected_doc_id in (("keyword", "KW"), ("semantic", "SEM"), ("hybrid", "SEM")):
@@ -170,7 +182,7 @@ class MatchingServiceTest(unittest.TestCase):
         service = MatchingService(
             repository=_BulkRepository(),
             cross_encoder_reranker=reranker,
-            config=MatchingConfig(retrieval_mode="keyword"),
+            config=MatchingConfig(retrieval_mode="keyword", cross_encoder_query_mode="structured"),
         )
 
         with tempfile.TemporaryDirectory() as directory:
@@ -206,6 +218,28 @@ class MatchingServiceTest(unittest.TestCase):
             {"rank": 1, "retrieval_rank": 1, "doc_id": "1"},
         )
         self.assertEqual(len(json_output[0]["candidates"]), 20)
+
+    def test_service_can_rerank_with_full_chunk_text(self) -> None:
+        reranker = _RecordingReranker()
+        service = MatchingService(
+            repository=_BulkRepository(),
+            cross_encoder_reranker=reranker,
+            config=MatchingConfig(retrieval_mode="keyword", cross_encoder_query_mode="full_chunk"),
+        )
+
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "input.csv"
+            output = Path(directory) / "output.csv"
+            pd.DataFrame([{**_source_row(), "Chunk Text": "Full ITB requirement text."}]).to_csv(source, index=False)
+
+            service.match_file(source, output)
+
+            csv_output = pd.read_csv(output)
+            json_output = json.loads(output.with_suffix(".json").read_text(encoding="utf-8"))
+
+        self.assertTrue(reranker.calls[0][0].startswith("Chunk Text:\nFull ITB requirement text."))
+        self.assertEqual(csv_output.loc[0, "Cross_Encoder_Query_Mode"], "full_chunk")
+        self.assertEqual(json_output[0]["cross_encoder_query_mode"], "full_chunk")
 
     def test_schedule_candidate_parser_accepts_cross_encoder_score(self) -> None:
         candidate = _parse_matched_doc(

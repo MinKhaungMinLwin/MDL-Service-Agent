@@ -71,7 +71,12 @@ class MatchingService:
                 semantic_query,
                 semantic_embedding,
             )
-            cross_encoder_query = build_cross_encoder_query(depth_terms, keyword_terms)
+            cross_encoder_query = build_cross_encoder_query(
+                depth_terms,
+                keyword_terms,
+                chunk_text=source_row.get("Chunk Text", ""),
+                mode=self.config.cross_encoder_query_mode,
+            )
             cross_encoder_candidates = retrieval.candidates[: self.config.retrieval_candidate_limit]
             top_matches = self.cross_encoder_reranker.rerank(
                 cross_encoder_query,
@@ -105,6 +110,7 @@ class MatchingService:
                     retrieval.candidates,
                     len(retrieval.keyword_candidates),
                     len(retrieval.semantic_candidates),
+                    self.config.cross_encoder_query_mode,
                     cross_encoder_query,
                     len(cross_encoder_candidates),
                     top_matches,
@@ -153,6 +159,7 @@ class MatchingService:
         row["Retrieval_Candidate_Count"] = len(retrieval.candidates)
         row["Keyword_Candidate_Count"] = len(retrieval.keyword_candidates)
         row["Semantic_Candidate_Count"] = len(retrieval.semantic_candidates)
+        row["Cross_Encoder_Query_Mode"] = self.config.cross_encoder_query_mode
         row["Cross_Encoder_Query"] = cross_encoder_query
         row["Cross_Encoder_Candidate_Count"] = len(cross_encoder_candidates)
         row["Search_Queries"] = depth_filter_query

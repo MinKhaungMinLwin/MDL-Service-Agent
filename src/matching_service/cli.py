@@ -35,6 +35,12 @@ def match(argv: list[str] | None = None) -> None:
     parser.add_argument("--retrieval-candidates", type=int, default=int(os.getenv("ITB_RETRIEVAL_CANDIDATES", "100")))
     parser.add_argument("--output-limit", type=int, default=int(os.getenv("ITB_OUTPUT_LIMIT", "20")))
     parser.add_argument(
+        "--cross-encoder-query-mode",
+        choices=["structured", "full_chunk"],
+        default=os.getenv("ITB_CROSS_ENCODER_QUERY_MODE", "full_chunk").strip().lower(),
+        help="Use structured depth/keyword context or prepend full ITB chunk text for cross-encoder reranking.",
+    )
+    parser.add_argument(
         "--source-file",
         action="append",
         dest="source_files",
@@ -56,6 +62,7 @@ def match(argv: list[str] | None = None) -> None:
         retrieval_mode=args.retrieval_mode,
         retrieval_candidate_limit=args.retrieval_candidates,
         output_limit=args.output_limit,
+        cross_encoder_query_mode=args.cross_encoder_query_mode,
         source_files=tuple(args.source_files or ()),
     )
     output_dir = _scoped_output_dir(args.output_dir, config.source_files) / args.retrieval_mode
