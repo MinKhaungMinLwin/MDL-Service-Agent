@@ -8,14 +8,19 @@ from typing import Annotated
 from fastapi import APIRouter, HTTPException, Query
 from loguru import logger
 
-from schedule_service.activity_mapper import map_file
-from schedule_service.candidate_extractor import extract_candidates
-from schedule_service.schedule_generator import generate_schedule_file
-from schedule_service.schedule_loader import DEFAULT_SCHEDULE_PATH, load_schedule_activities
+from schedule_service.candidate.candidate_extractor import extract_candidates
+from schedule_service.generate.activity_matching.ccpp_schedule_loader import (
+    DEFAULT_SCHEDULE_PATH,
+    load_schedule_activities,
+)
+from schedule_service.generate.schedule_generator import generate_schedule_file
 
 router = APIRouter(prefix="/schedule", tags=["schedule"])
 
-SCHEDULE_OUTPUT_DIR = Path("output") / "schedule_service"
+_OUTPUT_BASE = Path("output/schedule_service")
+CACHE_DIR = _OUTPUT_BASE / "cache"
+CANDIDATES_DIR = _OUTPUT_BASE / "candidates"
+GENERATE_DIR = _OUTPUT_BASE / "generate"
 ScheduleLimit = Annotated[
     int,
     Query(
@@ -24,59 +29,6 @@ ScheduleLimit = Annotated[
     ),
 ]
 
-
-@router.post(
-    "/map",
-    summary="Map ITB requirements to schedule activities",
-    description=(
-        "Reads an ITB matching CSV, searches the cleaned CCPP guide schedule, "
-        "reranks candidates, optionally lets the LLM select one activity, and writes "
-        "schedule mapping JSON/XLSX files under output/schedule_service."
-    ),
-)
-def schedule_map(
-    input_csv: Annotated[
-        str,
-        Query(
-            min_length=1,
-            description="Path to an ITB matching CSV file inside the running app/container.",
-            examples=["output/current_test_env/output_match_all_projects_section6.csv"],
-        ),
-    ],
-    retrieve_k: Annotated[
-        int,
-        Query(gt=0, description="Number of candidates to retrieve from each search method before reranking."),
-    ] = 50,
-    top_k: Annotated[
-        int,
-        Query(gt=0, description="Number of reranked candidates passed to the LLM/final output."),
-    ] = 10,
-    use_semantic: Annotated[
-        bool,
-        Query(description="Use Azure OpenAI embeddings for semantic schedule search."),
-    ] = True,
-    use_llm: Annotated[
-        bool,
-        Query(description="Use the LLM to select one final activity from the reranked candidates."),
-    ] = True,
-    limit: ScheduleLimit = 0,
-) -> dict[str, object]:
-    """Map an ITB match CSV output to CCPP guide schedule activities."""
-    input_path = _existing_path(input_csv)
-    logger.info("Mapping schedule activities from CSV: {}", input_path)
-
-    schedule_activities = load_schedule_activities(DEFAULT_SCHEDULE_PATH)
-    xlsx_path, json_path = map_file(
-        input_csv=input_path,
-        schedule_activities=schedule_activities,
-        output_dir=SCHEDULE_OUTPUT_DIR,
-        retrieve_k=retrieve_k,
-        top_k=top_k,
-        use_semantic=use_semantic,
-        use_llm=use_llm,
-        limit=limit,
-    )
-    return _file_response("schedule_mapping", input_path, xlsx_path, json_path)
 
 
 @router.post(
@@ -114,9 +66,9 @@ def schedule_generate(
         Query(
             description=(
                 "Optional path to a custom validation rule CSV. "
-                "Defaults to data/schedule_sources/rules/validation_rule.csv when omitted."
+                "Defaults to data/schedule_service/raw/validation_rule.csv when omitted."
             ),
-            examples=["data/schedule_sources/rules/mock_validation_rule.csv"],
+            examples=["data/schedule_service/raw/mock_validation_rule.csv"],
         ),
     ] = "",
     use_semantic_rules: Annotated[
@@ -149,22 +101,23 @@ def schedule_generate(
     if ntp_date:
         logger.info("NTP date: {}", ntp_date)
 
-    from schedule_service.rule_loader import DEFAULT_RULE_PATH
+    from schedule_service.generate.rule_matching.rule_loader import DEFAULT_RULE_PATH
     rule_path = _existing_path(rule_csv) if rule_csv else DEFAULT_RULE_PATH
     if rule_csv:
         logger.info("Using custom rule file: {}", rule_path)
 
     schedule_activities = load_schedule_activities(DEFAULT_SCHEDULE_PATH)
-    semantic_cache_dir = SCHEDULE_OUTPUT_DIR / "rule_semantic_cache" if use_semantic_rules else None
+    semantic_cache_dir = CACHE_DIR / "rule_semantic_cache" if use_semantic_rules else None
     xlsx_path, json_path = generate_schedule_file(
         input_csv=input_path,
         schedule_activities=schedule_activities,
-        output_dir=SCHEDULE_OUTPUT_DIR,
+        output_dir=GENERATE_DIR,
         rule_path=rule_path,
         limit=limit,
         ntp_date=ntp_date,
         semantic_cache_dir=semantic_cache_dir,
         use_semantic_activities=use_semantic_activities,
+        activity_cache_dir=CACHE_DIR / "activity_semantic_cache",
     )
     return _file_response("generated_schedule", input_path, xlsx_path, json_path)
 
@@ -218,7 +171,7 @@ def schedule_candidates(
 
     csv_path, timing = extract_candidates(
         input_csv=input_path,
-        output_dir=SCHEDULE_OUTPUT_DIR,
+        output_dir=CANDIDATES_DIR,
         score_threshold=score_threshold,
         top_n=top_n,
         limit=limit,

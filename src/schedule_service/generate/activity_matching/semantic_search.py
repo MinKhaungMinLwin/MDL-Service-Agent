@@ -93,11 +93,6 @@ def _normalize_vector(vector: list[float]) -> list[float]:
     return [value / norm for value in vector]
 
 
-def _dot(left: list[float], right: list[float]) -> float:
-    """Return the dot product of two equal-length vectors."""
-    return sum(a * b for a, b in zip(left, right, strict=True))
-
-
 def _hash_texts(texts: list[str]) -> str:
     combined = "\n".join(texts).encode("utf-8")
     return hashlib.sha256(combined).hexdigest()[:16]
