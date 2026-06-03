@@ -10,7 +10,7 @@ from pathlib import Path
 import pandas as pd
 
 from common.text_normalizer import expand_abbreviation_terms
-from matching_service.cli import _files_to_process
+from matching_service.cli import _files_to_process, _scoped_output_dir
 from matching_service.models import MatchingConfig
 from matching_service.query import (
     build_cross_encoder_query,
@@ -98,6 +98,41 @@ class MatchingServiceTest(unittest.TestCase):
         self.assertIn("DROP INDEX test_mdl_document_fulltext_idx", conn.calls[1][0])
         self.assertIn("CREATE FULLTEXT INDEX test_mdl_document_fulltext_idx", conn.calls[2][0])
 
+    def test_repository_searches_all_sources_by_default(self) -> None:
+        conn = _SearchConnection()
+        config = MatchingConfig(
+            retrieval_candidate_limit=5,
+            output_limit=5,
+        )
+
+        MDLSearchRepository(conn, config).search_keyword("pump")
+
+        query, parameters = conn.calls[0]
+        self.assertIn("size($source_files) = 0 OR node.source_file IN $source_files", query)
+        self.assertEqual(parameters["source_files"], [])
+        self.assertEqual(parameters["search_limit"], 5)
+
+    def test_repository_can_restrict_search_to_source_files(self) -> None:
+        conn = _SearchConnection()
+        config = MatchingConfig(
+            retrieval_candidate_limit=5,
+            output_limit=5,
+            source_files=("R&N_MDL.xlsx",),
+        )
+
+        repository = MDLSearchRepository(conn, config)
+        repository.search_keyword("pump")
+        repository.search_semantic([0.1, 0.2], "pump")
+
+        keyword_query, keyword_parameters = conn.calls[0]
+        semantic_query, semantic_parameters = conn.calls[1]
+        self.assertIn("node.source_file IN $source_files", keyword_query)
+        self.assertIn("node.source_file IN $source_files", semantic_query)
+        self.assertEqual(keyword_parameters["source_files"], ["R&N_MDL.xlsx"])
+        self.assertEqual(semantic_parameters["source_files"], ["R&N_MDL.xlsx"])
+        self.assertEqual(keyword_parameters["search_limit"], 100)
+        self.assertEqual(semantic_parameters["search_limit"], 100)
+
     def test_default_matching_paths_read_itb_extract_and_write_mode_output(self) -> None:
         files = _files_to_process(
             inputs=None,
@@ -118,6 +153,16 @@ class MatchingServiceTest(unittest.TestCase):
                     Path("output/current_test_env/matching/hybrid/output_match_all_projects_section7.csv"),
                 ),
             ],
+        )
+
+    def test_project_scoped_matching_writes_to_source_specific_output_dir(self) -> None:
+        self.assertEqual(
+            _scoped_output_dir(Path("output/current_test_env/matching"), ()),
+            Path("output/current_test_env/matching"),
+        )
+        self.assertEqual(
+            _scoped_output_dir(Path("output/current_test_env/matching"), ("R&N_MDL.xlsx",)),
+            Path("output/current_test_env/matching/R_N_MDL"),
         )
 
     def test_service_reranks_top_100_and_outputs_top_20(self) -> None:
@@ -155,6 +200,11 @@ class MatchingServiceTest(unittest.TestCase):
         self.assertIn("[Sample] 1 - Doc 1", csv_output.loc[0, "Matched_Doc_1"])
         self.assertEqual(json_output[0]["retrieval_candidate_count"], 100)
         self.assertEqual(json_output[0]["cross_encoder_candidate_count"], 100)
+        self.assertEqual(len(json_output[0]["retrieval_candidates"]), 100)
+        self.assertEqual(
+            json_output[0]["retrieval_candidates"][0],
+            {"rank": 1, "retrieval_rank": 1, "doc_id": "1"},
+        )
         self.assertEqual(len(json_output[0]["candidates"]), 20)
 
     def test_schedule_candidate_parser_accepts_cross_encoder_score(self) -> None:
@@ -306,6 +356,29 @@ class _RecordingResult:
 
     def single(self):
         return {"properties": self.index_properties} if self.index_properties is not None else None
+
+
+class _SearchConnection:
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, dict]] = []
+
+    def session(self):
+        return _SearchSession(self.calls)
+
+
+class _SearchSession:
+    def __init__(self, calls: list[tuple[str, dict]]) -> None:
+        self.calls = calls
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+        pass
+
+    def run(self, query: str, **parameters):
+        self.calls.append((query, parameters))
+        return []
 
 
 def _source_row() -> dict[str, str]:

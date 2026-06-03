@@ -35,6 +35,13 @@ def match(argv: list[str] | None = None) -> None:
     parser.add_argument("--retrieval-candidates", type=int, default=int(os.getenv("ITB_RETRIEVAL_CANDIDATES", "100")))
     parser.add_argument("--output-limit", type=int, default=int(os.getenv("ITB_OUTPUT_LIMIT", "20")))
     parser.add_argument(
+        "--source-file",
+        action="append",
+        dest="source_files",
+        default=None,
+        help="Restrict MDL search to one source_file/project, e.g. R&N_MDL.xlsx. Repeat for multiple files.",
+    )
+    parser.add_argument(
         "--cross-encoder-model",
         default=os.getenv("ITB_CROSS_ENCODER_MODEL", DEFAULT_CROSS_ENCODER_MODEL),
     )
@@ -45,13 +52,14 @@ def match(argv: list[str] | None = None) -> None:
     )
     args = parser.parse_args(argv)
 
-    output_dir = args.output_dir / args.retrieval_mode
-    files_to_process = _files_to_process(args.inputs, args.outputs, DEFAULT_INPUT_DIR, output_dir)
     config = MatchingConfig(
         retrieval_mode=args.retrieval_mode,
         retrieval_candidate_limit=args.retrieval_candidates,
         output_limit=args.output_limit,
+        source_files=tuple(args.source_files or ()),
     )
+    output_dir = _scoped_output_dir(args.output_dir, config.source_files) / args.retrieval_mode
+    files_to_process = _files_to_process(args.inputs, args.outputs, DEFAULT_INPUT_DIR, output_dir)
     embedding_service = AzureEmbeddingService() if config.retrieval_mode in {"semantic", "hybrid"} else None
     cross_encoder_reranker = CrossEncoderReranker(
         args.cross_encoder_model,
@@ -98,6 +106,17 @@ def _files_to_process(
             output_dir / "output_match_all_projects_section7.csv",
         ),
     ]
+
+
+def _scoped_output_dir(output_dir: Path, source_files: tuple[str, ...]) -> Path:
+    if not source_files:
+        return output_dir
+    scope = "_".join(_safe_scope_name(Path(source_file).stem) for source_file in source_files)
+    return output_dir / scope
+
+
+def _safe_scope_name(value: str) -> str:
+    return "".join(character if character.isalnum() else "_" for character in value).strip("_") or "project"
 
 
 if __name__ == "__main__":

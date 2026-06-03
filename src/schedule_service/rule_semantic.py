@@ -15,7 +15,7 @@ from __future__ import annotations
 import hashlib
 import json
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -33,6 +33,14 @@ class RuleSemanticIndex:
 
     embeddings: list[list[float]]   # one embedding per rule, normalized
     rule_texts: list[str]           # what was embedded (for diagnostics)
+    _matrix: object = field(default=None, init=False, repr=False, compare=False)  # np.ndarray, lazy
+
+    def _get_matrix(self):
+        """Return (n_rules, dims) numpy float32 matrix, built once on first access."""
+        if self._matrix is None:
+            import numpy as np
+            object.__setattr__(self, "_matrix", np.array(self.embeddings, dtype=np.float32))
+        return self._matrix
 
     # ------------------------------------------------------------------ build
 
@@ -85,6 +93,16 @@ class RuleSemanticIndex:
     def score_batch(self, query_embeddings: list[list[float]]) -> list[list[float]]:
         """Return similarity lists for multiple query embeddings."""
         return [self.score(qe) for qe in query_embeddings]
+
+    def score_matrix(self, query_matrix) -> object:
+        """Bulk cosine similarity: (n_queries, dims) @ (dims, n_rules) → (n_queries, n_rules).
+
+        query_matrix must be a numpy float32 array with rows already L2-normalised.
+        Returns a numpy (n_queries, n_rules) float32 array.
+        """
+        import numpy as np
+        rule_mat = self._get_matrix()  # (n_rules, dims)
+        return np.matmul(query_matrix, rule_mat.T)  # (n_queries, n_rules)
 
 
 # ---------------------------------------------------------------------------

@@ -7,6 +7,9 @@ from datetime import date, timedelta
 
 _FC_DEFAULT_AFTER_FA_DAYS = 60
 _FC_DEFAULT_WINDOW_DAYS = 30
+# Minimum days between fa_recommended and fc_earliest (guards chained VT formulas
+# like "start+2W<=FA<=FC<=start+12W" which the parser assigns identical windows to both)
+_MIN_FA_FC_GAP_DAYS = 21
 
 
 @dataclass
@@ -27,6 +30,7 @@ def compute_date_range(
     anchor_date: date | None,
     sub_type: str,
     priority: int,
+    ntp_floor: date | None = None,
 ) -> DateRange:
     """Compute FA/FC date ranges from a parsed VT formula and anchor date.
 
@@ -71,6 +75,25 @@ def compute_date_range(
         result.fc_recommended = fc_center
 
     result.confidence = {1: 0.9, 2: 0.6, 3: 0.3}.get(priority, 0.2)
+
+    # Enforce minimum FA→FC gap: guards chained VT formulas with identical windows
+    if result.fa_recommended is not None and result.fc_earliest is not None:
+        min_fc_start = result.fa_recommended + timedelta(days=_MIN_FA_FC_GAP_DAYS)
+        if result.fc_earliest < min_fc_start:
+            shift = (min_fc_start - result.fc_earliest).days
+            result.fc_earliest = result.fc_earliest + timedelta(days=shift)
+            if result.fc_recommended is not None:
+                result.fc_recommended = result.fc_recommended + timedelta(days=shift)
+            if result.fc_latest is not None:
+                result.fc_latest = result.fc_latest + timedelta(days=shift)
+
+    if ntp_floor is not None:
+        for field in ("fa_earliest", "fa_recommended", "fa_latest",
+                      "fc_earliest", "fc_recommended", "fc_latest"):
+            val = getattr(result, field)
+            if val is not None and val < ntp_floor:
+                setattr(result, field, ntp_floor)
+
     return result
 
 
