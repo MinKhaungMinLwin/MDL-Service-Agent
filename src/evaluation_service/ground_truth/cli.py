@@ -64,7 +64,6 @@ def build_ground_truth(argv: list[str] | None = None) -> None:
     parser.add_argument("--matching-dir", type=Path, default=DEFAULT_MATCHING_DIR)
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
     parser.add_argument("--pool-top-k", type=int, default=int(os.getenv("ITB_EVAL_POOL_TOP_K", "20")))
-    parser.add_argument("--batch-size", type=int, default=int(os.getenv("ITB_EVAL_BATCH_SIZE", "5")))
     parser.add_argument("--llm-retries", type=int, default=int(os.getenv("ITB_EVAL_LLM_RETRIES", "2")))
     parser.add_argument("--max-concurrency", type=int, default=int(os.getenv("ITB_EVAL_MAX_CONCURRENCY", "1")))
     parser.add_argument(
@@ -93,7 +92,6 @@ def build_ground_truth(argv: list[str] | None = None) -> None:
         "sections": sections,
         "modes": tuple(args.modes),
         "pool_top_k": args.pool_top_k,
-        "batch_size": args.batch_size,
         "llm_retries": args.llm_retries,
         "max_concurrency": args.max_concurrency,
         "max_itb_chunks": args.max_itb_chunks,

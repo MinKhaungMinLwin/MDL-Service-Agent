@@ -70,6 +70,17 @@ MDL_CANDIDATE_FIELDS = (
     "text_content",
 )
 POOL_CANDIDATE_FIELDS = MDL_CANDIDATE_FIELDS
+LLM_MDL_FIELDS = (
+    "document_no",
+    "title",
+    "equipment",
+    "building",
+    "system",
+    "study_survey",
+    "others",
+    "deliverable",
+    "text_content",
+)
 
 
 @dataclass(frozen=True)
@@ -80,7 +91,6 @@ class EvaluationConfig:
     sections: tuple[str, ...] = ("6", "7")
     modes: tuple[str, ...] = ("keyword", "semantic", "hybrid")
     pool_top_k: int = 20
-    batch_size: int = 5
     llm_retries: int = 2
     max_concurrency: int = 1
     max_itb_chunks: int = 0
@@ -98,8 +108,6 @@ class EvaluationConfig:
             raise ValueError("modes must contain only keyword, semantic, or hybrid")
         if self.pool_top_k <= 0:
             raise ValueError("pool_top_k must be positive")
-        if self.batch_size <= 0:
-            raise ValueError("batch_size must be positive")
         if self.llm_retries < 0:
             raise ValueError("llm_retries cannot be negative")
         if self.max_concurrency <= 0:
@@ -128,8 +136,8 @@ class _JudgeTask:
 @dataclass(frozen=True)
 class _VerifyTask:
     order: int
-    batch_index: int
-    batch_count: int
+    pool_index: int
+    pool_count: int
     payloads: list[dict[str, Any]]
 
 
@@ -291,6 +299,7 @@ class GroundTruthService:
         verifications: list[dict[str, Any]],
         resume_state_path: Path | None,
     ) -> list[dict[str, Any]]:
+        completed_pool_keys = read_completed_pool_keys(resume_state_path) if resume_state_path else None
         pair_by_id = {pair["judgment_id"]: pair for pair in pairs}
         completed_ids = {row.get("judgment_id") for row in verifications}
         payloads = [
@@ -298,9 +307,11 @@ class GroundTruthService:
             for judgment in judgments
             if judgment["judgment_id"] in pair_by_id and judgment["judgment_id"] not in completed_ids
         ]
-        batches = _chunked(payloads, self.config.batch_size)
+        payload_groups = list(_group_payloads_by_pool(payloads).values())
         logger.info(
-            "Ground truth verification will process {} judgments ({} already completed, concurrency {})",
+            "Ground truth verification will process {} ITB pools with {} judgments "
+            "({} already completed, concurrency {})",
+            len(payload_groups),
             len(payloads),
             len(completed_ids),
             self.config.max_concurrency,
@@ -308,18 +319,23 @@ class GroundTruthService:
         tasks = [
             _VerifyTask(
                 order=index,
-                batch_index=index,
-                batch_count=len(batches),
-                payloads=batch,
+                pool_index=index,
+                pool_count=len(payload_groups),
+                payloads=payload_group,
             )
-            for index, batch in enumerate(batches, start=1)
+            for index, payload_group in enumerate(payload_groups, start=1)
         ]
         judgment_order = _judgment_order(judgments)
         for _order, resolved in self._run_verify_tasks(tasks):
             verifications.extend(resolved)
             verifications.sort(key=lambda row: judgment_order.get(row.get("judgment_id"), len(judgment_order)))
             if resume_state_path is not None:
-                write_resume_state(resume_state_path, judgments, verifications)
+                write_resume_state(
+                    resume_state_path,
+                    judgments,
+                    verifications,
+                    completed_pools=completed_pool_keys,
+                )
             self.sleep(self.config.batch_delay_seconds)
         logger.info("Completed {} relevance verifications", len(verifications))
         return verifications
@@ -343,21 +359,24 @@ class GroundTruthService:
 
     def _run_verify_task(self, task: _VerifyTask) -> list[dict[str, Any]]:
         logger.info(
-            "Verifying batch {}/{} ({} judgment{})",
-            task.batch_index,
-            task.batch_count,
+            "Verifying pool {}/{}: section {}, chunk {} ({} positive judgment{})",
+            task.pool_index,
+            task.pool_count,
+            task.payloads[0]["section"] if task.payloads else "",
+            task.payloads[0]["chunk_id"] if task.payloads else "",
             len(task.payloads),
             _plural(task.payloads),
         )
+        payload = _build_verify_pool_payload(task.payloads)
         return _run_with_retries(
             lambda: _resolve_verifications(
                 task.payloads,
-                _run_llm_batch(self.client, self.config.model, self.verify_prompt, "judgments", task.payloads),
+                _run_llm_batch(self.client, self.config.model, self.verify_prompt, "verification_pools", [payload]),
             ),
             retries=self.config.llm_retries,
             sleep=self.sleep,
             delay_seconds=self.config.batch_delay_seconds,
-            description=f"verify batch {task.batch_index}/{task.batch_count}",
+            description=f"verify section {payload.get('section', '')} chunk {payload.get('chunk_id', '')}",
         )
 
 
@@ -644,7 +663,7 @@ def build_audit_payloads(
                 "chunk_id": chunk_id,
                 "mdl_doc_id": doc_id,
                 "itb": _build_audit_itb(section, chunk_id, itb),
-                "mdl": {field: mdl.get(field, "") for field in MDL_CANDIDATE_FIELDS},
+                "mdl": _build_llm_mdl(mdl),
                 "current_label": {
                     "relevance": row.get("relevance", ""),
                     "final_relevance": row.get("final_relevance", ""),
@@ -693,7 +712,7 @@ def iter_judge_pairs(pools: list[dict[str, Any]]) -> list[dict[str, Any]]:
                     "judgment_id": f"{pool['section']}:{pool['chunk_id']}:{candidate['doc_id']}",
                     "section": pool["section"],
                     "chunk_id": pool["chunk_id"],
-                    "itb": pool["itb"],
+                    "itb": _build_llm_itb(pool["itb"]),
                     "mdl": {
                         field: candidate.get(field, "")
                         for field in MDL_CANDIDATE_FIELDS
@@ -707,13 +726,32 @@ def _build_judge_pool_payload(pool: dict[str, Any], pairs: list[dict[str, Any]])
     return {
         "section": pool["section"],
         "chunk_id": pool["chunk_id"],
-        "itb": pool["itb"],
+        "itb": _build_llm_itb(pool["itb"]),
         "candidates": [
             {
                 "judgment_id": pair["judgment_id"],
-                "mdl": pair["mdl"],
+                "mdl": _build_llm_mdl(pair["mdl"]),
             }
             for pair in pairs
+        ],
+    }
+
+
+def _build_verify_pool_payload(payloads: list[dict[str, Any]]) -> dict[str, Any]:
+    if not payloads:
+        return {"positive_candidates": []}
+    first = payloads[0]
+    return {
+        "section": first["section"],
+        "chunk_id": first["chunk_id"],
+        "itb": _build_llm_itb(first["itb"]),
+        "positive_candidates": [
+            {
+                "judgment_id": payload["judgment_id"],
+                "mdl": _build_llm_mdl(payload["mdl"]),
+                "proposed_judgment": payload["proposed_judgment"],
+            }
+            for payload in payloads
         ],
     }
 
@@ -912,7 +950,10 @@ def _normalize_audit_row(payload: dict[str, Any], result: dict[str, Any]) -> dic
 
 
 def _max_completion_tokens(payloads: list[dict[str, Any]]) -> int:
-    result_count = sum(len(payload.get("candidates", [])) or 1 for payload in payloads)
+    result_count = sum(
+        len(payload.get("candidates", [])) or len(payload.get("positive_candidates", [])) or 1
+        for payload in payloads
+    )
     return min(8192, 1024 * result_count)
 
 
@@ -933,16 +974,40 @@ def _ground_truth_doc_ids(rows: list[dict[str, Any]]) -> list[str]:
 
 def _build_audit_itb(section: str, chunk_id: str, itb_row: dict[str, Any]) -> dict[str, Any]:
     text = itb_row.get("Chunk Text", "")
+    return _compact_context(
+        {
+            "chunk_id": chunk_id,
+            "section": itb_row.get("Section", section),
+            "hierarchy_context": itb_row.get("Hierarchy Context", ""),
+            "depths": _build_itb_depths(itb_row, {}),
+            "keywords": itb_row.get("Keywords", ""),
+            "chunk_text": text,
+        }
+    )
+
+
+def _build_llm_itb(itb: dict[str, Any]) -> dict[str, Any]:
+    return _compact_context(
+        {
+            "section": itb.get("section", ""),
+            "chunk_id": itb.get("chunk_id", ""),
+            "hierarchy_context": itb.get("hierarchy_context", ""),
+            "depths": itb.get("depths", {}),
+            "keywords": itb.get("keywords", ""),
+            "chunk_text": itb.get("chunk_text", ""),
+        }
+    )
+
+
+def _build_llm_mdl(mdl: dict[str, Any]) -> dict[str, Any]:
+    return _compact_context({field: mdl.get(field, "") for field in LLM_MDL_FIELDS})
+
+
+def _compact_context(row: dict[str, Any]) -> dict[str, Any]:
     return {
-        "document": itb_row.get("Document", ""),
-        "chunk_id": chunk_id,
-        "page": itb_row.get("Page", ""),
-        "section": itb_row.get("Section", section),
-        "hierarchy_context": itb_row.get("Hierarchy Context", ""),
-        "depths": _build_itb_depths(itb_row, {}),
-        "keywords": itb_row.get("Keywords", ""),
-        "text": text,
-        "chunk_text": text,
+        key: value
+        for key, value in row.items()
+        if value not in ("", None, {}) and value != []
     }
 
 
@@ -1165,6 +1230,13 @@ def _group_pairs_by_pool(pairs: list[dict[str, Any]]) -> dict[tuple[str, str], l
     for pair in pairs:
         pairs_by_pool.setdefault(_pool_key(pair), []).append(pair)
     return pairs_by_pool
+
+
+def _group_payloads_by_pool(payloads: list[dict[str, Any]]) -> dict[tuple[str, str], list[dict[str, Any]]]:
+    payloads_by_pool: dict[tuple[str, str], list[dict[str, Any]]] = {}
+    for payload in payloads:
+        payloads_by_pool.setdefault(_pool_key(payload), []).append(payload)
+    return payloads_by_pool
 
 
 def _pool_key(row: dict[str, Any]) -> tuple[str, str]:

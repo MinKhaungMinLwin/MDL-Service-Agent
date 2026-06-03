@@ -149,11 +149,24 @@ class EvaluationServiceTest(unittest.TestCase):
             verified_rows = build_verified_positive_ground_truth_rows(judgments, verifications)
 
         self.assertEqual(len(client.calls), 2)
+        judge_payload = json.loads(client.calls[0]["messages"][1]["content"])
+        judge_mdl = judge_payload["pools"][0]["candidates"][0]["mdl"]
+        self.assertIn("title", judge_mdl)
+        self.assertIn("deliverable", judge_mdl)
+        self.assertNotIn("doc_id", judge_mdl)
+        self.assertNotIn("source_file", judge_mdl)
+        self.assertNotIn("document", judge_payload["pools"][0]["itb"])
+        self.assertNotIn("page", judge_payload["pools"][0]["itb"])
         verify_payload = json.loads(client.calls[1]["messages"][1]["content"])
-        self.assertEqual(len(verify_payload["judgments"]), 1)
-        self.assertEqual(verify_payload["judgments"][0]["judgment_id"], pair_by_doc["A"]["judgment_id"])
+        self.assertEqual(len(verify_payload["verification_pools"]), 1)
+        verify_pool = verify_payload["verification_pools"][0]
+        self.assertEqual(verify_pool["chunk_id"], "chunk-1")
+        self.assertEqual(len(verify_pool["positive_candidates"]), 1)
+        self.assertEqual(verify_pool["positive_candidates"][0]["judgment_id"], pair_by_doc["A"]["judgment_id"])
+        self.assertNotIn("doc_id", verify_pool["positive_candidates"][0]["mdl"])
         self.assertEqual(len(resume_state["judgments"]), 1)
         self.assertEqual(len(resume_state["verifications"]), 1)
+        self.assertEqual(resume_state["completed_pools"], [{"section": "7", "chunk_id": "chunk-1"}])
         self.assertEqual(len(verified_rows), 1)
         self.assertEqual(verified_rows[0]["mdl_doc_id"], pair_by_doc["A"]["mdl"]["doc_id"])
 
@@ -259,7 +272,7 @@ class EvaluationServiceTest(unittest.TestCase):
         self.assertEqual(len(payloads), 1)
         self.assertEqual(len(unresolved), 1)
         self.assertEqual(payloads[0]["judgment_id"], "7:chunk-1:A")
-        self.assertEqual(payloads[0]["itb"]["text"], "Cooling water layout requirement")
+        self.assertEqual(payloads[0]["itb"]["chunk_text"], "Cooling water layout requirement")
         self.assertEqual(payloads[0]["mdl"]["title"], "Cooling Layout")
 
     def test_audited_ground_truth_keeps_ok_and_splits_suspicious_for_review(self) -> None:
@@ -435,7 +448,6 @@ class EvaluationServiceTest(unittest.TestCase):
             EvaluationConfig(
                 model="deployment",
                 modes=("hybrid",),
-                batch_size=1,
                 max_concurrency=2,
                 batch_delay_seconds=0,
             ),
@@ -606,6 +618,15 @@ class _EchoCompletions:
                     "agrees": True,
                 }
             )
+        for pool in payload.get("verification_pools", []):
+            for candidate in pool.get("positive_candidates", []):
+                results.append(
+                    {
+                        "judgment_id": candidate["judgment_id"],
+                        "relevance": candidate["proposed_judgment"]["relevance"],
+                        "agrees": True,
+                    }
+                )
         message = type("Message", (), {"content": json.dumps({"results": results})})()
         choice = type("Choice", (), {"message": message})()
         return type("Response", (), {"choices": [choice]})()

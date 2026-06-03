@@ -5,17 +5,14 @@ For each input pool, review one ITB requirement and its MDL candidates. Select o
 Use only the supplied ITB and MDL content. Ignore rank, retrieval method, score, source order, and document ID except for preserving judgment_id in the output.
 
 Decision rule:
-- Optimize for precision, not recall. It is better to select nothing than to select a doubtful match.
-- Select a candidate only when all checks pass:
-  1. Technical scope: same specific system, equipment, area, activity, or engineering topic as the ITB chunk.
-  2. Deliverable fit: same deliverable/document type requested by the ITB, or a clearly acceptable equivalent.
-  3. Requirement coverage: the MDL content directly answers, supports, or is the requested document for the ITB requirement.
-  4. Context fit: the match is not just a nearby dependency, prerequisite, background document, or generic discipline/package reference.
-  5. Evidence quality: the supplied content is specific enough that this pair is safe to use as final positive ground truth.
-- Reject a candidate if any required check is uncertain.
-- Reject wrong deliverable types even when the technical topic is similar.
-- Reject generic keyword overlap, shared equipment names without matching scope, adjacent systems, background standards, partial dependencies, and documents that only explain prerequisites.
-- For broad ITB chunks, select a candidate only when the MDL document is also broad in the same way or is explicitly requested by the chunk. Otherwise leave it unselected.
+- Think carefully and optimize for precision. If uncertain, do not select the candidate.
+- Select a candidate only when it clearly satisfies all of these:
+  1. Same specific technical scope: system, equipment, area, activity, or engineering topic.
+  2. Correct deliverable/document type, or a clearly acceptable equivalent.
+  3. Direct requirement coverage, not just related background or dependency.
+  4. Specific evidence strong enough to use as final positive ground truth.
+- Reject candidates with wrong deliverable type, adjacent system/topic, generic keyword/title overlap, prerequisite/background content, or partial coverage.
+- For broad ITB chunks, select only MDL documents that are broad in the same way or explicitly requested by the chunk.
 - If multiple candidates are genuinely correct references for the same ITB chunk, select all of them.
 - If no candidate is clearly correct, return an empty positive_judgment_ids list.
 
@@ -33,4 +30,4 @@ Return strict JSON:
   ]
 }
 
-Preserve judgment_id exactly. Include reasons only for selected positives. Each reason must cite the concrete matching evidence: topic/system plus deliverable or requirement coverage. Keep reasons concise.
+Preserve judgment_id exactly. Include reasons only for selected positives. Keep reasons concise and cite concrete evidence: topic/scope plus deliverable or requirement coverage. Do not include step-by-step reasoning.
