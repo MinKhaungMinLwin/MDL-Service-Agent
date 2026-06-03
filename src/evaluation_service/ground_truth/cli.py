@@ -12,7 +12,6 @@ from common.openai_client import build_azure_openai_client
 from common.prompts import load_prompt
 from evaluation_service.ground_truth.service import (
     DEFAULT_AUDIT_PROMPT_PATH,
-    DEFAULT_JUDGE_PROMPT_PATH,
     DEFAULT_POSITIVE_JUDGE_PROMPT_PATH,
     DEFAULT_VERIFY_PROMPT_PATH,
     AuditConfig,
@@ -65,12 +64,6 @@ def build_ground_truth(argv: list[str] | None = None) -> None:
     parser.add_argument("--matching-dir", type=Path, default=DEFAULT_MATCHING_DIR)
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
     parser.add_argument("--pool-top-k", type=int, default=int(os.getenv("ITB_EVAL_POOL_TOP_K", "20")))
-    parser.add_argument("--batch-size", type=int, default=int(os.getenv("ITB_EVAL_BATCH_SIZE", "5")))
-    parser.add_argument(
-        "--judge-candidates-per-call",
-        type=int,
-        default=int(os.getenv("ITB_EVAL_JUDGE_CANDIDATES_PER_CALL", "25")),
-    )
     parser.add_argument("--llm-retries", type=int, default=int(os.getenv("ITB_EVAL_LLM_RETRIES", "2")))
     parser.add_argument("--max-concurrency", type=int, default=int(os.getenv("ITB_EVAL_MAX_CONCURRENCY", "1")))
     parser.add_argument(
@@ -79,36 +72,8 @@ def build_ground_truth(argv: list[str] | None = None) -> None:
         default=int(os.getenv("ITB_EVAL_MAX_ITB_CHUNKS", "0")),
         help="Limit the number of ITB chunks for quick test runs. Use 0 to process all chunks.",
     )
-    verify_group = parser.add_mutually_exclusive_group()
-    verify_group.add_argument(
-        "--verify",
-        dest="verify",
-        action="store_true",
-        default=True,
-        help="Verify LLM judgments and write the verified ground-truth file. Enabled by default.",
-    )
-    verify_group.add_argument(
-        "--no-verify",
-        dest="verify",
-        action="store_false",
-        help="Skip verification and write the unverified silver ground-truth file.",
-    )
     parser.add_argument("--resume", action="store_true")
-    judge_mode_group = parser.add_mutually_exclusive_group()
-    judge_mode_group.add_argument(
-        "--positive-only",
-        dest="positive_only",
-        action="store_true",
-        default=True,
-        help="Ask the judge to return only direct positive matches. Enabled by default.",
-    )
-    judge_mode_group.add_argument(
-        "--full-judgment",
-        dest="positive_only",
-        action="store_false",
-        help="Judge every candidate with a 0-3 relevance score.",
-    )
-    parser.add_argument("--judge-prompt-file", type=Path)
+    parser.add_argument("--judge-prompt-file", type=Path, default=DEFAULT_POSITIVE_JUDGE_PROMPT_PATH)
     parser.add_argument("--verify-prompt-file", type=Path, default=DEFAULT_VERIFY_PROMPT_PATH)
     parser.add_argument(
         "--final-ground-truth",
@@ -127,18 +92,11 @@ def build_ground_truth(argv: list[str] | None = None) -> None:
         "sections": sections,
         "modes": tuple(args.modes),
         "pool_top_k": args.pool_top_k,
-        "batch_size": args.batch_size,
-        "judge_candidates_per_call": args.judge_candidates_per_call,
         "llm_retries": args.llm_retries,
         "max_concurrency": args.max_concurrency,
         "max_itb_chunks": args.max_itb_chunks,
-        "verify": args.verify,
-        "positive_only": args.positive_only,
         "resume": args.resume,
     }
-    judge_prompt_path = args.judge_prompt_file or (
-        DEFAULT_POSITIVE_JUDGE_PROMPT_PATH if args.positive_only else DEFAULT_JUDGE_PROMPT_PATH
-    )
 
     config = EvaluationConfig(model=required_env("AZURE_OPENAI_CHAT_DEPLOYMENT"), **config_options)
     service = GroundTruthService(
@@ -147,19 +105,18 @@ def build_ground_truth(argv: list[str] | None = None) -> None:
             api_version_env="AZURE_OPENAI_CHAT_API_VERSION",
             default_api_version="2024-12-01-preview",
         ),
-        judge_prompt=load_prompt(judge_prompt_path),
-        verify_prompt=load_prompt(args.verify_prompt_file) if args.verify else "",
+        judge_prompt=load_prompt(args.judge_prompt_file),
+        verify_prompt=load_prompt(args.verify_prompt_file),
     )
     pools = service.build_pool(args.extract_dir, args.matching_dir)
     judgments, verifications = service.judge(
         pools=pools,
         resume_state_path=args.output_dir / f"{stem}_ground_truth_resume_state.json" if args.resume else None,
     )
-    if args.verify:
-        final_path = args.final_ground_truth or args.output_dir / f"{stem}_ground_truth_final.csv"
-        positive_rows = build_verified_positive_ground_truth_rows(judgments, verifications)
-        count = merge_positive_ground_truth(final_path, positive_rows)
-        print(f"Saved {count} final positive ground-truth rows: {final_path}")
+    final_path = args.final_ground_truth or args.output_dir / f"{stem}_ground_truth_final.csv"
+    positive_rows = build_verified_positive_ground_truth_rows(judgments, verifications)
+    count = merge_positive_ground_truth(final_path, positive_rows)
+    print(f"Saved {count} final positive ground-truth rows: {final_path}")
 
 
 def merge_positive_ground_truth(final_path: Path, rows: list[dict]) -> int:
