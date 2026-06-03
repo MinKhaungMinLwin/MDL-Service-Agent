@@ -47,6 +47,15 @@ _ACTIVITY_KW_BOOST: dict[str, str] = {
     "commissioning": "commissioning test",
 }
 
+# Phase terms injected by deliverable type — takes priority over rule's activity_keywords
+# boost so that a wrong rule match cannot pull activity selection to the wrong project phase.
+_DELIVERABLE_PHASE_BOOST: dict[str, str] = {
+    "DESIGN CRITERIA":    "Design Criteria engineering",
+    "SYSTEM DESCRIPTION": "System Description P&ID",
+    "LAYOUT":             "Layout Arrangement Drawing",
+    "OVERVIEW":           "System Description overview",
+}
+
 # Map MDL Deliverable values to terms used in validation_rule.csv keywords
 _DELIVERABLE_NORM: dict[str, str] = {
     "P&I DIAGRAM": "P&ID",
@@ -192,17 +201,23 @@ def _match_rules_semantic(
     unique_queries = list(dict.fromkeys(all_queries))
     _log(f"Semantic rule matching: embedding {len(unique_queries)} unique queries for {len(rows)} rows")
 
-    service = AzureEmbeddingService()
-    embeddings = service.embed_texts(unique_queries)
-    query_emb: dict[str, list[float]] = dict(zip(unique_queries, embeddings, strict=True))
+    import numpy as np
 
-    # Cache rule similarity vectors to avoid recomputing for duplicate queries
-    rule_sims_cache: dict[str, list[float]] = {}
+    service = AzureEmbeddingService()
+    raw_embeddings = service.embed_texts(unique_queries)
+
+    # Bulk matmul: (n_unique, dims) @ (dims, n_rules) → (n_unique, n_rules)
+    # L2-normalise query matrix rows so dot-product == cosine similarity
+    query_matrix = np.array(raw_embeddings, dtype=np.float32)
+    norms = np.linalg.norm(query_matrix, axis=1, keepdims=True)
+    norms[norms == 0] = 1.0
+    query_matrix /= norms
+    all_sims = semantic_index.score_matrix(query_matrix)  # (n_unique, n_rules)
+
+    query_to_idx = {q: i for i, q in enumerate(unique_queries)}
 
     def _get_sims(query: str) -> list[float]:
-        if query not in rule_sims_cache:
-            rule_sims_cache[query] = semantic_index.score(query_emb[query])
-        return rule_sims_cache[query]
+        return all_sims[query_to_idx[query]].tolist()
 
     results: list[ValidationRule | None] = []
     for rule_query, title in query_pairs:
@@ -223,7 +238,14 @@ def _build_activity_query(row: dict[str, str], rule: ValidationRule | None) -> s
     title = row.get("Title", "").strip()
     norm_del = _normalize_deliverable(row.get("Deliverable", "").strip())
     query = " ".join(p for p in [equipment, system, norm_del, title] if p)
-    if rule:
+
+    # Deliverable-type phase boost takes priority: prevents a wrong rule match from
+    # injecting incorrect phase terms (e.g. "P.O Procurement" for Design Criteria docs).
+    del_upper = row.get("Deliverable", "").strip().upper()
+    deliverable_boost = _DELIVERABLE_PHASE_BOOST.get(del_upper, "")
+    if deliverable_boost:
+        query = f"{query} {deliverable_boost}"
+    elif rule:
         boost = _phase_boost(rule.activity_keywords)
         if boost:
             query = f"{query} {boost}"
