@@ -12,6 +12,7 @@ from evaluation_service.ground_truth.service import (
     EvaluationConfig,
     GroundTruthService,
     _resolve_judgments,
+    _resolve_positive_judgments,
     _resolve_verifications,
     build_candidate_pool,
     iter_judge_pairs,
@@ -33,6 +34,10 @@ class EvaluationServiceTest(unittest.TestCase):
     def test_max_itb_chunks_cannot_be_negative(self) -> None:
         with self.assertRaisesRegex(ValueError, "max_itb_chunks cannot be negative"):
             EvaluationConfig(model="deployment", max_itb_chunks=-1)
+
+    def test_evaluation_config_defaults_to_verification(self) -> None:
+        self.assertTrue(EvaluationConfig(model="deployment").verify)
+        self.assertTrue(EvaluationConfig(model="deployment").positive_only)
 
     def test_limit_itb_rows_keeps_first_rows_in_section_chunk_order(self) -> None:
         rows = {
@@ -125,7 +130,13 @@ class EvaluationServiceTest(unittest.TestCase):
             ]
         )
         service = GroundTruthService(
-            EvaluationConfig(model="deployment", modes=("hybrid",), verify=True, batch_delay_seconds=0),
+            EvaluationConfig(
+                model="deployment",
+                modes=("hybrid",),
+                verify=True,
+                positive_only=False,
+                batch_delay_seconds=0,
+            ),
             client,
             "judge prompt",
             "verify prompt",
@@ -180,7 +191,13 @@ class EvaluationServiceTest(unittest.TestCase):
             ]
         )
         service = GroundTruthService(
-            EvaluationConfig(model="deployment", modes=("hybrid",), verify=True, batch_delay_seconds=0),
+            EvaluationConfig(
+                model="deployment",
+                modes=("hybrid",),
+                verify=True,
+                positive_only=False,
+                batch_delay_seconds=0,
+            ),
             client,
             "judge prompt",
             "verify prompt",
@@ -208,6 +225,114 @@ class EvaluationServiceTest(unittest.TestCase):
             self.assertFalse((base / "resume_state.json").exists())
             self.assertFalse((base / "ground_truth.csv").exists())
 
+    def test_positive_only_service_selects_and_verifies_only_positive_rows(self) -> None:
+        pools = build_candidate_pool(
+            itb_rows={"7:chunk-1": {"Chunk Text": "Cooling water requirement"}},
+            records_by_source={
+                ("7", "hybrid"): [_matching_record("chunk-1", [_candidate("A", 1.0), _candidate("B", 0.5)])],
+            },
+            top_k=2,
+        )
+        pair_by_doc = {pair["mdl"]["doc_id"]: pair for pair in iter_judge_pairs(pools)}
+        client = _ChatClient(
+            [
+                {
+                    "results": [
+                        {
+                            "section": "7",
+                            "chunk_id": "chunk-1",
+                            "positive_judgment_ids": [pair_by_doc["A"]["judgment_id"]],
+                            "reasons": {pair_by_doc["A"]["judgment_id"]: "Direct cooling water reference."},
+                        }
+                    ]
+                },
+                {
+                    "results": [
+                        {
+                            "judgment_id": pair_by_doc["A"]["judgment_id"],
+                            "relevance": 3,
+                            "agrees": True,
+                        }
+                    ]
+                },
+            ]
+        )
+        service = GroundTruthService(
+            EvaluationConfig(model="deployment", modes=("hybrid",), verify=True, batch_delay_seconds=0),
+            client,
+            "positive judge prompt",
+            "verify prompt",
+            sleep=lambda _: None,
+        )
+
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            positive_path = base / "ground_truth_positive.csv"
+            negative_path = base / "ground_truth_negative.csv"
+            verified_path = base / "ground_truth_verified.csv"
+            service.judge_to_files(
+                pools,
+                resume_state_path=base / "resume_state.json",
+                ground_truth_path=None,
+                positive_path=positive_path,
+                negative_path=negative_path,
+                verified_path=verified_path,
+            )
+            resume_state = json.loads((base / "resume_state.json").read_text(encoding="utf-8"))
+            verified_rows = verified_path.read_text(encoding="utf-8-sig").splitlines()
+
+        self.assertEqual(len(client.calls), 2)
+        verify_payload = json.loads(client.calls[1]["messages"][1]["content"])
+        self.assertEqual(len(verify_payload["judgments"]), 1)
+        self.assertEqual(verify_payload["judgments"][0]["judgment_id"], pair_by_doc["A"]["judgment_id"])
+        self.assertEqual(len(resume_state["judgments"]), 1)
+        self.assertEqual(len(resume_state["verifications"]), 1)
+        self.assertEqual(len(verified_rows), 2)
+        self.assertIn(pair_by_doc["A"]["mdl"]["doc_id"], verified_rows[1])
+
+    def test_positive_only_resume_remembers_pools_with_no_positive_rows(self) -> None:
+        pools = build_candidate_pool(
+            itb_rows={"7:chunk-1": {"Chunk Text": "Cooling water requirement"}},
+            records_by_source={("7", "hybrid"): [_matching_record("chunk-1", [_candidate("A", 1.0)])]},
+            top_k=1,
+        )
+        client = _ChatClient(
+            [
+                {
+                    "results": [
+                        {
+                            "section": "7",
+                            "chunk_id": "chunk-1",
+                            "positive_judgment_ids": [],
+                        }
+                    ]
+                },
+            ]
+        )
+        service = GroundTruthService(
+            EvaluationConfig(
+                model="deployment",
+                modes=("hybrid",),
+                verify=False,
+                resume=True,
+                batch_delay_seconds=0,
+            ),
+            client,
+            "positive judge prompt",
+            sleep=lambda _: None,
+        )
+
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            resume_state_path = base / "resume_state.json"
+            service.judge_to_files(pools, resume_state_path, base / "ground_truth.csv")
+            service.judge_to_files(pools, resume_state_path, base / "ground_truth.csv")
+            resume_state = json.loads(resume_state_path.read_text(encoding="utf-8"))
+
+        self.assertEqual(len(client.calls), 1)
+        self.assertEqual(resume_state["judgments"], [])
+        self.assertEqual(resume_state["positive_only_completed_pools"], [{"section": "7", "chunk_id": "chunk-1"}])
+
     def test_service_can_resume_existing_judgments(self) -> None:
         pools = build_candidate_pool(
             itb_rows={"6:chunk-1": {"Chunk Text": "Steam turbine foundation requirement"}},
@@ -224,7 +349,14 @@ class EvaluationServiceTest(unittest.TestCase):
             ]
         )
         service = GroundTruthService(
-            EvaluationConfig(model="deployment", modes=("hybrid",), resume=True, batch_delay_seconds=0),
+            EvaluationConfig(
+                model="deployment",
+                modes=("hybrid",),
+                verify=False,
+                positive_only=False,
+                resume=True,
+                batch_delay_seconds=0,
+            ),
             client,
             "judge prompt",
             sleep=lambda _: None,
@@ -282,6 +414,8 @@ class EvaluationServiceTest(unittest.TestCase):
             EvaluationConfig(
                 model="deployment",
                 modes=("hybrid",),
+                verify=False,
+                positive_only=False,
                 judge_candidates_per_call=25,
                 batch_delay_seconds=0,
             ),
@@ -326,7 +460,14 @@ class EvaluationServiceTest(unittest.TestCase):
             ]
         )
         service = GroundTruthService(
-            EvaluationConfig(model="deployment", modes=("hybrid",), llm_retries=1, batch_delay_seconds=0),
+            EvaluationConfig(
+                model="deployment",
+                modes=("hybrid",),
+                verify=False,
+                positive_only=False,
+                llm_retries=1,
+                batch_delay_seconds=0,
+            ),
             client,
             "judge prompt",
             sleep=lambda _: None,
@@ -358,6 +499,7 @@ class EvaluationServiceTest(unittest.TestCase):
                 model="deployment",
                 modes=("hybrid",),
                 verify=True,
+                positive_only=False,
                 batch_size=1,
                 judge_candidates_per_call=1,
                 max_concurrency=2,
@@ -455,6 +597,28 @@ class EvaluationServiceTest(unittest.TestCase):
         self.assertEqual(result["relevance"], 3)
         self.assertEqual(result["topic_match"], 0)
         self.assertNotIn("confidence", result)
+
+    def test_resolved_positive_judgments_keep_only_selected_known_ids(self) -> None:
+        pair = {
+            "judgment_id": "6:chunk-1:A",
+            "section": "6",
+            "chunk_id": "chunk-1",
+            "mdl": {"doc_id": "A"},
+        }
+
+        result = _resolve_positive_judgments(
+            [pair],
+            [
+                {
+                    "positive_judgment_ids": [pair["judgment_id"], pair["judgment_id"]],
+                    "reasons": {pair["judgment_id"]: "Direct match."},
+                }
+            ],
+        )
+
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["relevance"], 3)
+        self.assertEqual(result[0]["reason"], "Direct match.")
 
     def test_resolved_verifications_clamp_scores_and_require_boolean_agreement(self) -> None:
         result = _resolve_verifications(

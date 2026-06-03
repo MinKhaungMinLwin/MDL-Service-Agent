@@ -20,6 +20,7 @@ from common.llm_json import parse_json_output
 
 PROMPTS_DIR = Path(__file__).resolve().parent / "prompts"
 DEFAULT_JUDGE_PROMPT_PATH = PROMPTS_DIR / "matching_relevance_judge.md"
+DEFAULT_POSITIVE_JUDGE_PROMPT_PATH = PROMPTS_DIR / "matching_positive_judge.md"
 DEFAULT_VERIFY_PROMPT_PATH = PROMPTS_DIR / "matching_relevance_verify.md"
 GROUND_TRUTH_HEADER = [
     "section",
@@ -68,7 +69,8 @@ class EvaluationConfig:
     llm_retries: int = 2
     max_concurrency: int = 1
     max_itb_chunks: int = 0
-    verify: bool = False
+    verify: bool = True
+    positive_only: bool = True
     resume: bool = False
     batch_delay_seconds: float = 0.5
 
@@ -164,7 +166,7 @@ class GroundTruthService:
         negative_path: Path | None = None,
         verified_path: Path | None = None,
     ) -> None:
-        """Generate judgments, optionally verify all rows, and write ground truth."""
+        """Generate judgments, optionally verify rows, and write ground truth."""
         pairs = iter_judge_pairs(pools)
         pair_ids = {pair["judgment_id"] for pair in pairs}
         if self.config.resume:
@@ -174,7 +176,10 @@ class GroundTruthService:
         else:
             judgments = []
             verifications = []
-        judgments = self._judge_pools(pools, pairs, judgments, verifications, resume_state_path)
+        if self.config.positive_only:
+            judgments = self._select_positive_pools(pools, pairs, judgments, verifications, resume_state_path)
+        else:
+            judgments = self._judge_pools(pools, pairs, judgments, verifications, resume_state_path)
         if self.config.verify:
             verifications = self._verify_judgments(pairs, judgments, verifications, resume_state_path)
         if ground_truth_path is not None:
@@ -239,6 +244,99 @@ class GroundTruthService:
             self.sleep(self.config.batch_delay_seconds)
         logger.info("Completed {} relevance judgments", len(judgments))
         return judgments
+
+    def _select_positive_pools(
+        self,
+        pools: list[dict[str, Any]],
+        pairs: list[dict[str, Any]],
+        judgments: list[dict[str, Any]],
+        verifications: list[dict[str, Any]],
+        resume_state_path: Path | None,
+    ) -> list[dict[str, Any]]:
+        completed_pool_keys = {_judgment_pool_key(row) for row in judgments}
+        if resume_state_path is not None:
+            completed_pool_keys.update(read_positive_completed_pool_keys(resume_state_path))
+        pairs_by_pool = _group_pairs_by_pool(pairs)
+        pools_to_judge = [
+            (pool, pairs_by_pool.get(_pool_key(pool), []))
+            for pool in pools
+            if _pool_key(pool) not in completed_pool_keys
+        ]
+        logger.info(
+            "Positive-only ground truth judge will process {} ITB pools ({} already completed, concurrency {})",
+            len(pools_to_judge),
+            len(completed_pool_keys),
+            self.config.max_concurrency,
+        )
+        tasks = [
+            _JudgeTask(
+                order=index,
+                pool_index=index,
+                pool_count=len(pools_to_judge),
+                chunk_index=1,
+                chunk_count=1,
+                pool=pool,
+                pairs=pool_pairs,
+            )
+            for index, (pool, pool_pairs) in enumerate(pools_to_judge, start=1)
+        ]
+        task_pool_keys = {task.order: _pool_key(task.pool) for task in tasks}
+        pair_order = _judgment_order(pairs)
+        for _order, resolved in self._run_positive_tasks(tasks):
+            judgments.extend(resolved)
+            completed_pool_keys.add(task_pool_keys[_order])
+            judgments.sort(key=lambda row: pair_order.get(row.get("judgment_id"), len(pair_order)))
+            if resume_state_path is not None:
+                write_resume_state(
+                    resume_state_path,
+                    judgments,
+                    verifications,
+                    positive_only_completed_pools=completed_pool_keys,
+                )
+            self.sleep(self.config.batch_delay_seconds)
+        logger.info("Completed {} positive relevance judgments", len(judgments))
+        return judgments
+
+    def _run_positive_tasks(self, tasks: list[_JudgeTask]) -> Iterator[tuple[int, list[dict[str, Any]]]]:
+        if self.config.max_concurrency == 1:
+            for task in tasks:
+                yield task.order, self._run_positive_task(task)
+            return
+
+        completed: dict[int, list[dict[str, Any]]] = {}
+        next_order = 1
+        with ThreadPoolExecutor(max_workers=self.config.max_concurrency) as executor:
+            futures = {executor.submit(self._run_positive_task, task): task for task in tasks}
+            for future in as_completed(futures):
+                task = futures[future]
+                completed[task.order] = future.result()
+                while next_order in completed:
+                    yield next_order, completed.pop(next_order)
+                    next_order += 1
+
+    def _run_positive_task(self, task: _JudgeTask) -> list[dict[str, Any]]:
+        pool = task.pool
+        logger.info(
+            "Selecting positives for pool {}/{}: section {}, chunk {}, page {} ({} candidate{})",
+            task.pool_index,
+            task.pool_count,
+            pool["section"],
+            pool["chunk_id"],
+            pool["itb"].get("page", ""),
+            len(task.pairs),
+            _plural(task.pairs),
+        )
+        payload = _build_judge_pool_payload(pool, task.pairs)
+        return _run_with_retries(
+            lambda: _resolve_positive_judgments(
+                task.pairs,
+                _run_llm_batch(self.client, self.config.model, self.judge_prompt, "pools", [payload]),
+            ),
+            retries=self.config.llm_retries,
+            sleep=self.sleep,
+            delay_seconds=self.config.batch_delay_seconds,
+            description=f"positive judge section {pool['section']} chunk {pool['chunk_id']}",
+        )
 
     def _run_judge_tasks(self, tasks: list[_JudgeTask]) -> Iterator[tuple[int, list[dict[str, Any]]]]:
         if self.config.max_concurrency == 1:
@@ -503,22 +601,37 @@ def read_resume_state(resume_state_path: Path, pair_ids: set[str]) -> tuple[list
     return judgments, verifications
 
 
+def read_positive_completed_pool_keys(resume_state_path: Path) -> set[tuple[str, str]]:
+    if not resume_state_path.exists():
+        return set()
+    state = read_json(resume_state_path)
+    return {
+        (str(row.get("section")), str(row.get("chunk_id")))
+        for row in state.get("positive_only_completed_pools", [])
+        if row.get("section") and row.get("chunk_id")
+    }
+
+
 def write_resume_state(
     resume_state_path: Path,
     judgments: list[dict[str, Any]],
     verifications: list[dict[str, Any]],
+    positive_only_completed_pools: set[tuple[str, str]] | None = None,
 ) -> None:
-    write_json(
-        resume_state_path,
-        {
-            "summary": {
-                "judgment_count": len(judgments),
-                "verification_count": len(verifications),
-            },
-            "judgments": judgments,
-            "verifications": verifications,
+    state = {
+        "summary": {
+            "judgment_count": len(judgments),
+            "verification_count": len(verifications),
         },
-    )
+        "judgments": judgments,
+        "verifications": verifications,
+    }
+    if positive_only_completed_pools is not None:
+        state["positive_only_completed_pools"] = [
+            {"section": section, "chunk_id": chunk_id}
+            for section, chunk_id in sorted(positive_only_completed_pools)
+        ]
+    write_json(resume_state_path, state)
 
 
 def write_high_precision_ground_truth(
@@ -704,6 +817,50 @@ def _resolve_judgments(
     return resolved
 
 
+def _resolve_positive_judgments(
+    pairs: list[dict[str, Any]],
+    results: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    if not results:
+        raise LLMResponseError("LLM response must include a positive selection result")
+    pairs_by_id = {pair["judgment_id"]: pair for pair in pairs}
+    positive_ids = []
+    reasons = {}
+    for result in results:
+        raw_ids = result.get("positive_judgment_ids", [])
+        if not isinstance(raw_ids, list):
+            raise LLMResponseError("positive_judgment_ids must be a list")
+        positive_ids.extend(str(judgment_id) for judgment_id in raw_ids)
+        raw_reasons = result.get("reasons", {})
+        if isinstance(raw_reasons, dict):
+            reasons.update({str(key): str(value) for key, value in raw_reasons.items()})
+    unknown_ids = [judgment_id for judgment_id in positive_ids if judgment_id not in pairs_by_id]
+    if unknown_ids:
+        raise LLMResponseError(f"LLM response returned unknown positives: {_format_missing_ids(unknown_ids)}")
+    resolved = []
+    seen = set()
+    for judgment_id in positive_ids:
+        if judgment_id in seen:
+            continue
+        seen.add(judgment_id)
+        pair = pairs_by_id[judgment_id]
+        resolved.append(
+            {
+                "judgment_id": judgment_id,
+                "section": pair["section"],
+                "chunk_id": pair["chunk_id"],
+                "mdl_doc_id": pair["mdl"]["doc_id"],
+                "topic_match": 3,
+                "deliverable_match": 3,
+                "requirement_coverage": 3,
+                "context_fit": 3,
+                "relevance": 3,
+                "reason": reasons.get(judgment_id, "Selected as a direct positive match."),
+            }
+        )
+    return resolved
+
+
 def _resolve_verifications(
     payloads: list[dict[str, Any]],
     results: list[dict[str, Any]],
@@ -763,6 +920,10 @@ def _group_pairs_by_pool(pairs: list[dict[str, Any]]) -> dict[tuple[str, str], l
 
 def _pool_key(row: dict[str, Any]) -> tuple[str, str]:
     return (str(row["section"]), str(row["chunk_id"]))
+
+
+def _judgment_pool_key(row: dict[str, Any]) -> tuple[str, str]:
+    return (str(row.get("section", "")), str(row.get("chunk_id", "")))
 
 
 def _normalize_judgment(judgment: dict[str, Any]) -> dict[str, Any]:

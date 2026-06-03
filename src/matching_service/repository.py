@@ -59,8 +59,9 @@ class MDLSearchRepository:
             return []
 
         query = """
-        CALL db.index.fulltext.queryNodes($index_name, $search_query, {limit: $limit})
+        CALL db.index.fulltext.queryNodes($index_name, $search_query, {limit: $search_limit})
         YIELD node, score
+        WHERE size($source_files) = 0 OR node.source_file IN $source_files
         RETURN node.doc_id AS doc_id,
                node.source_file AS source_file,
                node.document_no AS document_no,
@@ -81,7 +82,9 @@ class MDLSearchRepository:
             query,
             index_name=self.config.fulltext_index_name,
             search_query=fulltext_query,
+            search_limit=self._search_limit(),
             limit=self.config.retrieval_candidate_limit,
+            source_files=list(self.config.source_files),
         )
         for rank, candidate in enumerate(candidates, start=1):
             candidate["bm25_rank"] = rank
@@ -94,8 +97,9 @@ class MDLSearchRepository:
             return []
 
         query = f"""
-        CALL db.index.vector.queryNodes("{self.config.vector_index_name}", $limit, $embedding)
+        CALL db.index.vector.queryNodes("{self.config.vector_index_name}", $search_limit, $embedding)
         YIELD node, score
+        WHERE size($source_files) = 0 OR node.source_file IN $source_files
         RETURN node.doc_id AS doc_id,
                node.source_file AS source_file,
                node.document_no AS document_no,
@@ -113,7 +117,9 @@ class MDLSearchRepository:
         candidates = self._run(
             query,
             embedding=query_embedding,
+            search_limit=self._search_limit(),
             limit=self.config.retrieval_candidate_limit,
+            source_files=list(self.config.source_files),
         )
         for rank, candidate in enumerate(candidates, start=1):
             candidate["semantic_rank"] = rank
@@ -124,3 +130,8 @@ class MDLSearchRepository:
     def _run(self, query: str, **parameters: Any) -> list[Candidate]:
         with self.conn.session() as session:
             return [dict(record) for record in session.run(query, **parameters)]
+
+    def _search_limit(self) -> int:
+        if not self.config.source_files:
+            return self.config.retrieval_candidate_limit
+        return self.config.retrieval_candidate_limit * 20

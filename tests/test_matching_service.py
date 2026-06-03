@@ -10,7 +10,7 @@ from pathlib import Path
 import pandas as pd
 
 from common.text_normalizer import expand_abbreviation_terms
-from matching_service.cli import _files_to_process
+from matching_service.cli import _files_to_process, _scoped_output_dir
 from matching_service.models import MatchingConfig
 from matching_service.query import (
     build_cross_encoder_query,
@@ -98,7 +98,7 @@ class MatchingServiceTest(unittest.TestCase):
         self.assertIn("DROP INDEX test_mdl_document_fulltext_idx", conn.calls[1][0])
         self.assertIn("CREATE FULLTEXT INDEX test_mdl_document_fulltext_idx", conn.calls[2][0])
 
-    def test_repository_searches_all_sources_without_source_filters(self) -> None:
+    def test_repository_searches_all_sources_by_default(self) -> None:
         conn = _SearchConnection()
         config = MatchingConfig(
             retrieval_candidate_limit=5,
@@ -108,10 +108,30 @@ class MatchingServiceTest(unittest.TestCase):
         MDLSearchRepository(conn, config).search_keyword("pump")
 
         query, parameters = conn.calls[0]
-        self.assertNotIn("included_source_text", query)
-        self.assertNotIn("excluded_source_text", query)
-        self.assertNotIn("included_source_text", parameters)
-        self.assertNotIn("excluded_source_text", parameters)
+        self.assertIn("size($source_files) = 0 OR node.source_file IN $source_files", query)
+        self.assertEqual(parameters["source_files"], [])
+        self.assertEqual(parameters["search_limit"], 5)
+
+    def test_repository_can_restrict_search_to_source_files(self) -> None:
+        conn = _SearchConnection()
+        config = MatchingConfig(
+            retrieval_candidate_limit=5,
+            output_limit=5,
+            source_files=("R&N_MDL.xlsx",),
+        )
+
+        repository = MDLSearchRepository(conn, config)
+        repository.search_keyword("pump")
+        repository.search_semantic([0.1, 0.2], "pump")
+
+        keyword_query, keyword_parameters = conn.calls[0]
+        semantic_query, semantic_parameters = conn.calls[1]
+        self.assertIn("node.source_file IN $source_files", keyword_query)
+        self.assertIn("node.source_file IN $source_files", semantic_query)
+        self.assertEqual(keyword_parameters["source_files"], ["R&N_MDL.xlsx"])
+        self.assertEqual(semantic_parameters["source_files"], ["R&N_MDL.xlsx"])
+        self.assertEqual(keyword_parameters["search_limit"], 100)
+        self.assertEqual(semantic_parameters["search_limit"], 100)
 
     def test_default_matching_paths_read_itb_extract_and_write_mode_output(self) -> None:
         files = _files_to_process(
@@ -133,6 +153,16 @@ class MatchingServiceTest(unittest.TestCase):
                     Path("output/current_test_env/matching/hybrid/output_match_all_projects_section7.csv"),
                 ),
             ],
+        )
+
+    def test_project_scoped_matching_writes_to_source_specific_output_dir(self) -> None:
+        self.assertEqual(
+            _scoped_output_dir(Path("output/current_test_env/matching"), ()),
+            Path("output/current_test_env/matching"),
+        )
+        self.assertEqual(
+            _scoped_output_dir(Path("output/current_test_env/matching"), ("R&N_MDL.xlsx",)),
+            Path("output/current_test_env/matching/R_N_MDL"),
         )
 
     def test_service_reranks_top_100_and_outputs_top_20(self) -> None:

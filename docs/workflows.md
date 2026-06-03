@@ -47,12 +47,14 @@ uv run itb-match
 Defaults:
 
 - input extraction CSV files: `output/current_test_env/itb_extract/output_itb_section*_focused.csv`
-- output matching CSV/JSON files: `output/current_test_env/matching/<retrieval-mode>`
+- global output matching CSV/JSON files: `output/current_test_env/matching/<retrieval-mode>`
+- project-scoped output matching CSV/JSON files: `output/current_test_env/matching/<source-file-stem>/<retrieval-mode>`
 - retrieval mode: `keyword`, `semantic`, or `hybrid`
 - keyword mode merges aggregated depth and keyword full-text searches
 - semantic mode embeds one comma-separated depth-and-keyword query per ITB chunk
 - hybrid mode merges keyword and semantic rankings with reciprocal rank fusion
-- all matching modes search every MDL document available in Neo4j
+- by default, all matching modes search every MDL document available in Neo4j
+- pass `--source-file <MDL workbook name>` to restrict matching to one project/source file
 - all modes preserve detected abbreviations and append canonical expansions from `src/common/normalization_rules/abbreviations.json`
 - retrieved MDL candidates passed to the cross-encoder: `100`
 - final cross-encoder matches written per ITB chunk: `20`
@@ -63,22 +65,20 @@ Examples:
 uv run itb-match --retrieval-mode keyword
 uv run itb-match --retrieval-mode semantic
 uv run itb-match --retrieval-mode hybrid
+uv run itb-match --retrieval-mode hybrid --source-file R&N_MDL.xlsx
 ```
+
+The default commands search all MDL documents in Neo4j. The `--source-file` example searches only MDL rows whose
+Neo4j `source_file` is `R&N_MDL.xlsx` and writes under `output/current_test_env/matching/R_N_MDL/hybrid`.
 
 Use `--help` on any command to see path and runtime overrides.
 
 ## ITB To MDL Ground Truth
 
-Build a blind candidate pool from the top matching results for sections 6 and 7:
+Generate resumable LLM-assisted ground truth with full LLM verification:
 
 ```powershell
-uv run itb-eval-build-ground-truth --pool-only
-```
-
-Generate resumable LLM-assisted silver ground truth with full LLM verification:
-
-```powershell
-uv run itb-eval-build-ground-truth --verify
+uv run itb-eval-build-ground-truth
 ```
 
 Defaults:
@@ -88,7 +88,27 @@ Defaults:
 - output ground-truth files: `output/current_test_env/evaluation/ground_truth`
 - verified evaluation input: `output/current_test_env/evaluation/ground_truth/itb_mdl_matching_ground_truth_verified.csv`
 - LLM judge payloads do not expose retrieval mode, rank, or score
-- verification runs for every LLM judgment
+- positive-only judging is enabled by default; the judge selects direct positive MDL matches instead of scoring every candidate
+- verification runs only for selected positive judgments by default
+
+For the current R&N-only benchmark:
+
+```powershell
+uv run itb-match --retrieval-mode hybrid --source-file R&N_MDL.xlsx
+uv run itb-eval-build-ground-truth --sections 6 7 --modes hybrid --matching-dir output/current_test_env/matching/R_N_MDL --resume
+```
+
+Use full 0-3 candidate judging only when negative labels are needed:
+
+```powershell
+uv run itb-eval-build-ground-truth --full-judgment
+```
+
+To skip verification for a quick silver-label run:
+
+```powershell
+uv run itb-eval-build-ground-truth --no-verify
+```
 
 ## ITB To MDL Matching Evaluation
 

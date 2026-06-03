@@ -11,6 +11,7 @@ from common.openai_client import build_azure_openai_client
 from common.prompts import load_prompt
 from evaluation_service.ground_truth.service import (
     DEFAULT_JUDGE_PROMPT_PATH,
+    DEFAULT_POSITIVE_JUDGE_PROMPT_PATH,
     DEFAULT_VERIFY_PROMPT_PATH,
     EvaluationConfig,
     GroundTruthService,
@@ -39,7 +40,7 @@ def _section_sort_key(section: str) -> tuple[int, int | str]:
 
 
 def build_ground_truth(argv: list[str] | None = None) -> None:
-    """Build blind pools and optionally generate LLM-assisted silver ground truth."""
+    """Build LLM-assisted matching ground truth from matching outputs."""
     parser = argparse.ArgumentParser(
         description="Build ITB-to-MDL matching ground truth from global matching outputs."
     )
@@ -68,10 +69,36 @@ def build_ground_truth(argv: list[str] | None = None) -> None:
         default=int(os.getenv("ITB_EVAL_MAX_ITB_CHUNKS", "0")),
         help="Limit the number of ITB chunks for quick test runs. Use 0 to process all chunks.",
     )
-    parser.add_argument("--verify", action="store_true")
+    verify_group = parser.add_mutually_exclusive_group()
+    verify_group.add_argument(
+        "--verify",
+        dest="verify",
+        action="store_true",
+        default=True,
+        help="Verify LLM judgments and write the verified ground-truth file. Enabled by default.",
+    )
+    verify_group.add_argument(
+        "--no-verify",
+        dest="verify",
+        action="store_false",
+        help="Skip verification and write the unverified silver ground-truth file.",
+    )
     parser.add_argument("--resume", action="store_true")
-    parser.add_argument("--pool-only", action="store_true")
-    parser.add_argument("--judge-prompt-file", type=Path, default=DEFAULT_JUDGE_PROMPT_PATH)
+    judge_mode_group = parser.add_mutually_exclusive_group()
+    judge_mode_group.add_argument(
+        "--positive-only",
+        dest="positive_only",
+        action="store_true",
+        default=True,
+        help="Ask the judge to return only direct positive matches. Enabled by default.",
+    )
+    judge_mode_group.add_argument(
+        "--full-judgment",
+        dest="positive_only",
+        action="store_false",
+        help="Judge every candidate with a 0-3 relevance score.",
+    )
+    parser.add_argument("--judge-prompt-file", type=Path)
     parser.add_argument("--verify-prompt-file", type=Path, default=DEFAULT_VERIFY_PROMPT_PATH)
     args = parser.parse_args(argv)
 
@@ -80,7 +107,6 @@ def build_ground_truth(argv: list[str] | None = None) -> None:
         parser.error(f"No ITB extract files found in {args.extract_dir}")
 
     stem = DEFAULT_OUTPUT_STEM
-    pool_path = args.output_dir / f"{stem}_candidate_pool.json" if args.pool_only else None
     config_options = {
         "sections": sections,
         "modes": tuple(args.modes),
@@ -91,17 +117,12 @@ def build_ground_truth(argv: list[str] | None = None) -> None:
         "max_concurrency": args.max_concurrency,
         "max_itb_chunks": args.max_itb_chunks,
         "verify": args.verify,
+        "positive_only": args.positive_only,
         "resume": args.resume,
     }
-    if args.pool_only:
-        config = EvaluationConfig(model="pool-only", **config_options)
-        service = GroundTruthService(
-            config,
-            client=None,
-            judge_prompt="",
-        )
-        service.build_pool(args.extract_dir, args.matching_dir, pool_path)
-        return
+    judge_prompt_path = args.judge_prompt_file or (
+        DEFAULT_POSITIVE_JUDGE_PROMPT_PATH if args.positive_only else DEFAULT_JUDGE_PROMPT_PATH
+    )
 
     config = EvaluationConfig(model=required_env("AZURE_OPENAI_CHAT_DEPLOYMENT"), **config_options)
     service = GroundTruthService(
@@ -110,10 +131,10 @@ def build_ground_truth(argv: list[str] | None = None) -> None:
             api_version_env="AZURE_OPENAI_CHAT_API_VERSION",
             default_api_version="2024-12-01-preview",
         ),
-        judge_prompt=load_prompt(args.judge_prompt_file),
+        judge_prompt=load_prompt(judge_prompt_path),
         verify_prompt=load_prompt(args.verify_prompt_file) if args.verify else "",
     )
-    pools = service.build_pool(args.extract_dir, args.matching_dir, pool_path)
+    pools = service.build_pool(args.extract_dir, args.matching_dir)
     service.judge_to_files(
         pools=pools,
         resume_state_path=args.output_dir / f"{stem}_ground_truth_resume_state.json" if args.resume else None,
