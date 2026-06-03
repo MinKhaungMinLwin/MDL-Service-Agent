@@ -25,7 +25,6 @@ BASE_COLUMNS = [
     "Depth_Context",
     "Depth_Filter_Query",
     "Depth_Keywords",
-    "Depth_Filter_Terms",
     "Keyword_Filter_Query",
     "Semantic_Query",
     "Vector_Terms",
