@@ -6,9 +6,15 @@ Use only the supplied ITB and MDL content. Do not infer relevance from rank, ret
 
 Selection standard:
 - Prefer precision over recall.
-- Select a candidate only when it has a direct technical topic match, appropriate deliverable/document type, and clear requirement coverage.
-- A shared discipline, equipment name, area, or generic keyword is not enough.
-- Do not select adjacent context, background information, partial dependencies, or wrong deliverable types.
+- Select a candidate only when all of these are true:
+  1. It matches the ITB technical topic, system, equipment, area, or activity at a specific level.
+  2. Its deliverable/document type is the same as, or clearly acceptable for, the ITB requirement.
+  3. Its content directly covers the requirement, not merely a nearby dependency or background topic.
+  4. It would be safe to use as a positive ground-truth answer for this ITB chunk.
+- A shared discipline, package, equipment name, area, or generic keyword is not enough.
+- Reject wrong deliverable types even when the technical topic is similar.
+- Reject adjacent context, background information, partial dependencies, generic standards, and documents that only explain prerequisites.
+- For broad or generic ITB chunks, select a candidate only when the MDL evidence is clearly direct and specific.
 - If no candidate is a direct positive match, return an empty positive_judgment_ids list.
 
 Return strict JSON:

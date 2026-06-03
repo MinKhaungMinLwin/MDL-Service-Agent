@@ -7,14 +7,21 @@ import os
 from pathlib import Path
 
 from common.config import required_env
+from common.neo4j_client import Neo4jConnection
 from common.openai_client import build_azure_openai_client
 from common.prompts import load_prompt
 from evaluation_service.ground_truth.service import (
+    DEFAULT_AUDIT_PROMPT_PATH,
     DEFAULT_JUDGE_PROMPT_PATH,
     DEFAULT_POSITIVE_JUDGE_PROMPT_PATH,
     DEFAULT_VERIFY_PROMPT_PATH,
+    AuditConfig,
     EvaluationConfig,
+    GroundTruthAuditService,
     GroundTruthService,
+    MDLGroundTruthRepository,
+    build_verified_positive_ground_truth_rows,
+    write_merged_positive_ground_truth_rows,
 )
 
 DEFAULT_BASE_DIR = Path("output") / "current_test_env"
@@ -22,6 +29,9 @@ DEFAULT_EXTRACT_DIR = DEFAULT_BASE_DIR / "itb_extract"
 DEFAULT_MATCHING_DIR = DEFAULT_BASE_DIR / "matching"
 DEFAULT_OUTPUT_DIR = DEFAULT_BASE_DIR / "evaluation" / "ground_truth"
 DEFAULT_OUTPUT_STEM = "itb_mdl_matching"
+DEFAULT_FINAL_GROUND_TRUTH_PATH = DEFAULT_OUTPUT_DIR / f"{DEFAULT_OUTPUT_STEM}_ground_truth_final.csv"
+DEFAULT_AUDIT_OUTPUT_PATH = DEFAULT_OUTPUT_DIR / f"{DEFAULT_OUTPUT_STEM}_ground_truth_audit.csv"
+DEFAULT_SUSPICIOUS_OUTPUT_PATH = DEFAULT_OUTPUT_DIR / f"{DEFAULT_OUTPUT_STEM}_ground_truth_suspicious.csv"
 
 
 def _discover_sections(extract_dir: Path) -> tuple[str, ...]:
@@ -100,6 +110,12 @@ def build_ground_truth(argv: list[str] | None = None) -> None:
     )
     parser.add_argument("--judge-prompt-file", type=Path)
     parser.add_argument("--verify-prompt-file", type=Path, default=DEFAULT_VERIFY_PROMPT_PATH)
+    parser.add_argument(
+        "--final-ground-truth",
+        type=Path,
+        default=None,
+        help="Canonical positive ground-truth CSV to update after verification.",
+    )
     args = parser.parse_args(argv)
 
     sections = tuple(args.sections) if args.sections else _discover_sections(args.extract_dir)
@@ -135,14 +151,84 @@ def build_ground_truth(argv: list[str] | None = None) -> None:
         verify_prompt=load_prompt(args.verify_prompt_file) if args.verify else "",
     )
     pools = service.build_pool(args.extract_dir, args.matching_dir)
-    service.judge_to_files(
+    judgments, verifications = service.judge(
         pools=pools,
         resume_state_path=args.output_dir / f"{stem}_ground_truth_resume_state.json" if args.resume else None,
-        ground_truth_path=None if args.verify else args.output_dir / f"{stem}_ground_truth.csv",
-        positive_path=args.output_dir / f"{stem}_ground_truth_positive.csv" if args.verify else None,
-        negative_path=args.output_dir / f"{stem}_ground_truth_negative.csv" if args.verify else None,
-        verified_path=args.output_dir / f"{stem}_ground_truth_verified.csv" if args.verify else None,
     )
+    if args.verify:
+        final_path = args.final_ground_truth or args.output_dir / f"{stem}_ground_truth_final.csv"
+        positive_rows = build_verified_positive_ground_truth_rows(judgments, verifications)
+        count = merge_positive_ground_truth(final_path, positive_rows)
+        print(f"Saved {count} final positive ground-truth rows: {final_path}")
+
+
+def merge_positive_ground_truth(final_path: Path, rows: list[dict]) -> int:
+    """Merge new verified positives into the canonical final ground truth."""
+    return write_merged_positive_ground_truth_rows(final_path, rows)
+
+
+def audit_ground_truth(argv: list[str] | None = None) -> None:
+    """Audit final ITB-to-MDL matching ground truth with an LLM."""
+    parser = argparse.ArgumentParser(description="Audit final ITB-to-MDL matching ground truth.")
+    parser.add_argument("--sections", nargs="+")
+    parser.add_argument("--ground-truth", type=Path, default=DEFAULT_FINAL_GROUND_TRUTH_PATH)
+    parser.add_argument("--extract-dir", type=Path, default=DEFAULT_EXTRACT_DIR)
+    parser.add_argument("--output", type=Path, default=DEFAULT_AUDIT_OUTPUT_PATH)
+    parser.add_argument(
+        "--audited-ground-truth",
+        type=Path,
+        default=None,
+        help="Write audit_status=ok rows to this CSV. Defaults to overwriting --ground-truth.",
+    )
+    parser.add_argument(
+        "--suspicious-output",
+        type=Path,
+        default=DEFAULT_SUSPICIOUS_OUTPUT_PATH,
+        help="Write audit_status=suspicious rows to a separate review CSV.",
+    )
+    parser.add_argument("--batch-size", type=int, default=int(os.getenv("ITB_EVAL_AUDIT_BATCH_SIZE", "5")))
+    parser.add_argument("--llm-retries", type=int, default=int(os.getenv("ITB_EVAL_LLM_RETRIES", "2")))
+    parser.add_argument("--max-concurrency", type=int, default=int(os.getenv("ITB_EVAL_MAX_CONCURRENCY", "1")))
+    parser.add_argument(
+        "--max-rows",
+        type=int,
+        default=int(os.getenv("ITB_EVAL_AUDIT_MAX_ROWS", "0")),
+        help="Limit the number of ground-truth rows for quick audit runs. Use 0 to process all rows.",
+    )
+    parser.add_argument("--node-label", default=os.getenv("MDL_NEO4J_NODE_LABEL", "TestMDLDocument"))
+    parser.add_argument("--audit-prompt-file", type=Path, default=DEFAULT_AUDIT_PROMPT_PATH)
+    args = parser.parse_args(argv)
+
+    sections = tuple(args.sections) if args.sections else _discover_sections(args.extract_dir)
+    if not sections:
+        parser.error(f"No ITB extract files found in {args.extract_dir}")
+
+    config = AuditConfig(
+        model=required_env("AZURE_OPENAI_CHAT_DEPLOYMENT"),
+        sections=sections,
+        batch_size=args.batch_size,
+        llm_retries=args.llm_retries,
+        max_concurrency=args.max_concurrency,
+        max_rows=args.max_rows,
+        node_label=args.node_label,
+    )
+    with Neo4jConnection() as conn:
+        service = GroundTruthAuditService(
+            config=config,
+            client=build_azure_openai_client(
+                api_version_env="AZURE_OPENAI_CHAT_API_VERSION",
+                default_api_version="2024-12-01-preview",
+            ),
+            repository=MDLGroundTruthRepository(conn, config.node_label),
+            audit_prompt=load_prompt(args.audit_prompt_file),
+        )
+        service.audit_to_file(
+            ground_truth_path=args.ground_truth,
+            extract_dir=args.extract_dir,
+            output_path=args.output,
+            audited_ground_truth_path=args.audited_ground_truth or args.ground_truth,
+            suspicious_path=args.suspicious_output,
+        )
 
 
 if __name__ == "__main__":
