@@ -1,6 +1,6 @@
 {
   "ground_truth_path": "output\\current_test_env\\evaluation\\ground_truth\\itb_mdl_matching_ground_truth_final.csv",
-  "matching_dir": "output\\current_test_env\\matching",
+  "matching_dir": "output\\current_test_env\\matching\\R_N_MDL",
   "modes": [
     "keyword",
     "semantic",
@@ -21,9 +21,9 @@
       "queries": 113,
       "positive_queries": 16,
       "positive_query_coverage": 0.1415929203539823,
-      "hit_rate_at_20": 0.3125,
-      "judged_at_20": 0.02731958762886598,
-      "recall_at_20": 0.20163690476190477
+      "hit_rate_at_20": 0.25,
+      "judged_at_20": 0.023240997229916897,
+      "recall_at_20": 0.1453373015873016
     },
     {
       "mode": "keyword",
@@ -31,8 +31,8 @@
       "queries": 113,
       "positive_queries": 16,
       "positive_query_coverage": 0.1415929203539823,
-      "judged_at_100": 0.023353386313196767,
-      "recall_at_100": 0.2677083333333333
+      "judged_at_100": 0.023222667824313335,
+      "recall_at_100": 0.15783730158730158
     },
     {
       "mode": "semantic",
@@ -40,9 +40,9 @@
       "queries": 113,
       "positive_queries": 16,
       "positive_query_coverage": 0.1415929203539823,
-      "hit_rate_at_20": 0.8125,
-      "judged_at_20": 0.019469026548672566,
-      "recall_at_20": 0.6104088345864662
+      "hit_rate_at_20": 0.4375,
+      "judged_at_20": 0.005752212389380531,
+      "recall_at_20": 0.28020572263993315
     },
     {
       "mode": "semantic",
@@ -50,8 +50,8 @@
       "queries": 113,
       "positive_queries": 16,
       "positive_query_coverage": 0.1415929203539823,
-      "judged_at_100": 0.005752212389380531,
-      "recall_at_100": 0.8592105263157894
+      "judged_at_100": 0.0019469026548672567,
+      "recall_at_100": 0.3969820384294068
     },
     {
       "mode": "hybrid",
@@ -59,9 +59,9 @@
       "queries": 113,
       "positive_queries": 16,
       "positive_query_coverage": 0.1415929203539823,
-      "hit_rate_at_20": 0.75,
-      "judged_at_20": 0.01504424778761062,
-      "recall_at_20": 0.5003576649958229
+      "hit_rate_at_20": 0.4375,
+      "judged_at_20": 0.005752212389380531,
+      "recall_at_20": 0.28020572263993315
     },
     {
       "mode": "hybrid",
@@ -69,8 +69,8 @@
       "queries": 113,
       "positive_queries": 16,
       "positive_query_coverage": 0.1415929203539823,
-      "judged_at_100": 0.005309734513274336,
-      "recall_at_100": 0.9241593567251462
+      "judged_at_100": 0.0020353982300884955,
+      "recall_at_100": 0.40948203842940684
     }
   ],
   "skipped_stages": []

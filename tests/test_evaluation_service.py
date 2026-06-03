@@ -7,18 +7,21 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from evaluation_service.ground_truth.cli import _discover_sections
+from evaluation_service.ground_truth.cli import _discover_sections, merge_positive_ground_truth
 from evaluation_service.ground_truth.service import (
+    AuditConfig,
     EvaluationConfig,
+    GroundTruthAuditService,
     GroundTruthService,
     _resolve_judgments,
+    _resolve_positive_judgments,
     _resolve_verifications,
+    build_audit_payloads,
+    build_audited_ground_truth_rows,
     build_candidate_pool,
-    build_reference_candidate_pool,
-    build_reference_search_candidate_pool,
     iter_judge_pairs,
     limit_itb_rows,
-    load_reference_mdl_candidates,
+    load_positive_ground_truth_rows,
     write_high_precision_ground_truth,
 )
 
@@ -33,17 +36,13 @@ class EvaluationServiceTest(unittest.TestCase):
 
             self.assertEqual(_discover_sections(base), ("2", "10", "A"))
 
-    def test_reference_pool_top_k_cannot_exceed_retrieval_candidates(self) -> None:
-        with self.assertRaisesRegex(ValueError, "reference_pool_top_k cannot exceed"):
-            EvaluationConfig(
-                model="deployment",
-                reference_retrieval_candidate_limit=10,
-                reference_pool_top_k=20,
-            )
-
     def test_max_itb_chunks_cannot_be_negative(self) -> None:
         with self.assertRaisesRegex(ValueError, "max_itb_chunks cannot be negative"):
             EvaluationConfig(model="deployment", max_itb_chunks=-1)
+
+    def test_evaluation_config_defaults_to_verification(self) -> None:
+        self.assertTrue(EvaluationConfig(model="deployment").verify)
+        self.assertTrue(EvaluationConfig(model="deployment").positive_only)
 
     def test_limit_itb_rows_keeps_first_rows_in_section_chunk_order(self) -> None:
         rows = {
@@ -102,106 +101,6 @@ class EvaluationServiceTest(unittest.TestCase):
         self.assertEqual(len(pools[0]["candidates"]), 1)
         self.assertEqual(pools[0]["candidates"][0]["doc_id"], "A-1")
 
-    def test_reference_pool_loads_and_deduplicates_reference_mdl_candidates(self) -> None:
-        conn = _Neo4jConn(
-            [
-                _candidate("A-1", 1.0, source_file="R&N_MDL.xlsx", document_no="001", title="Layout"),
-                _candidate("A-2", 0.9, source_file="R&N_MDL.xlsx", document_no="001", title="Layout"),
-                _candidate("B", 0.8, source_file="R&N_MDL.xlsx", document_no="002", title="Foundation"),
-            ]
-        )
-        candidates = load_reference_mdl_candidates(conn, "R&N_MDL.xlsx")
-        pools = build_reference_candidate_pool(
-            {"7:chunk-1": {"Chunk Text": "Cooling water requirement"}},
-            candidates,
-        )
-        pairs = iter_judge_pairs(pools)
-
-        self.assertEqual([candidate["doc_id"] for candidate in candidates], ["A-1", "B"])
-        self.assertEqual(len(pools), 1)
-        self.assertEqual({pair["mdl"]["source_file"] for pair in pairs}, {"R&N_MDL.xlsx"})
-        self.assertEqual({pair["mdl"]["document_no"] for pair in pairs}, {"001", "002"})
-
-    def test_reference_pool_uses_minimal_source_grounded_itb_fields(self) -> None:
-        pools = build_reference_candidate_pool(
-            {
-                "7:chunk-1": {
-                    "Document": "R&N_ITB",
-                    "Chunk ID": "chunk-1",
-                    "Page": "120",
-                    "Section": "7",
-                    "Section Path": "Section > Generated path",
-                    "Hierarchy Context": "7. Mechanical requirements",
-                    "1st Depth": "Mechanical",
-                    "2nd Depth": "Cooling Water",
-                    "Keywords": "cooling water, pump",
-                    "Search Query": "cooling water pump generated query",
-                    "Chunk Text": "Cooling water pump requirement",
-                }
-            },
-            [_candidate("A", 1.0, source_file="R&N_MDL.xlsx", document_no="001", title="Pump")],
-        )
-
-        itb = pools[0]["itb"]
-        self.assertEqual(
-            itb,
-            {
-                "document": "R&N_ITB",
-                "chunk_id": "chunk-1",
-                "page": "120",
-                "section": "7",
-                "hierarchy_context": "7. Mechanical requirements",
-                "depths": {"1st Depth": "Mechanical", "2nd Depth": "Cooling Water"},
-                "keywords": "cooling water, pump",
-                "chunk_text": "Cooling water pump requirement",
-            },
-        )
-        self.assertNotIn("section_path", itb)
-        self.assertNotIn("search_query", itb)
-
-    def test_reference_pool_fails_when_neo4j_source_has_no_candidates(self) -> None:
-        with self.assertRaisesRegex(ValueError, "No MDL candidates found"):
-            load_reference_mdl_candidates(_Neo4jConn([]), "R&N_MDL.xlsx")
-
-    def test_reference_search_pool_uses_matching_search_inside_reference_source(self) -> None:
-        conn = _Neo4jConn(
-            [
-                _candidate("A", 1.0, source_file="R&N_MDL.xlsx", document_no="001", title="Pump"),
-                _candidate("B", 0.9, source_file="R&N_MDL.xlsx", document_no="002", title="Valve"),
-            ]
-        )
-        pools = build_reference_search_candidate_pool(
-            {
-                "7:chunk-1": {
-                    "Document": "R&N_ITB",
-                    "Page": "120",
-                    "Section": "7",
-                    "Hierarchy Context": "7. Mechanical requirements",
-                    "1st Depth": "Mechanical",
-                    "2nd Depth": "Cooling Water",
-                    "Keywords": "cooling water, pump",
-                    "Chunk Text": "Cooling water pump requirement",
-                }
-            },
-            conn,
-            EvaluationConfig(
-                model="pool-only",
-                modes=("keyword",),
-                reference_retrieval_candidate_limit=2,
-                reference_pool_top_k=1,
-            ),
-            "R&N_MDL.xlsx",
-            "TestMDLDocument",
-            cross_encoder_reranker=_RecordingReferenceReranker(),
-        )
-
-        self.assertEqual(len(pools), 1)
-        self.assertEqual([candidate["doc_id"] for candidate in pools[0]["candidates"]], ["B"])
-        self.assertNotIn("source_modes", pools[0]["candidates"][0])
-        self.assertNotIn("cross_encoder_score", pools[0]["candidates"][0])
-        self.assertEqual(conn.last_parameters["included_source_text"], "R&N_MDL.xlsx")
-        self.assertEqual(conn.last_parameters["excluded_source_text"], "")
-
     def test_service_judges_all_rows_and_verifies_all_rows(self) -> None:
         pools = build_candidate_pool(
             itb_rows={"6:chunk-1": {"Chunk Text": "Steam turbine foundation requirement"}},
@@ -236,7 +135,13 @@ class EvaluationServiceTest(unittest.TestCase):
             ]
         )
         service = GroundTruthService(
-            EvaluationConfig(model="deployment", modes=("hybrid",), verify=True, batch_delay_seconds=0),
+            EvaluationConfig(
+                model="deployment",
+                modes=("hybrid",),
+                verify=True,
+                positive_only=False,
+                batch_delay_seconds=0,
+            ),
             client,
             "judge prompt",
             "verify prompt",
@@ -291,7 +196,13 @@ class EvaluationServiceTest(unittest.TestCase):
             ]
         )
         service = GroundTruthService(
-            EvaluationConfig(model="deployment", modes=("hybrid",), verify=True, batch_delay_seconds=0),
+            EvaluationConfig(
+                model="deployment",
+                modes=("hybrid",),
+                verify=True,
+                positive_only=False,
+                batch_delay_seconds=0,
+            ),
             client,
             "judge prompt",
             "verify prompt",
@@ -302,19 +213,298 @@ class EvaluationServiceTest(unittest.TestCase):
             base = Path(directory)
             positive_path = base / "ground_truth_positive.csv"
             negative_path = base / "ground_truth_negative.csv"
+            verified_path = base / "ground_truth_verified.csv"
             service.judge_to_files(
                 pools,
                 resume_state_path=None,
                 ground_truth_path=None,
                 positive_path=positive_path,
                 negative_path=negative_path,
+                verified_path=verified_path,
             )
 
             self.assertTrue(positive_path.exists())
             self.assertTrue(negative_path.exists())
+            self.assertTrue(verified_path.exists())
             self.assertFalse((base / "judgments.json").exists())
             self.assertFalse((base / "resume_state.json").exists())
             self.assertFalse((base / "ground_truth.csv").exists())
+
+    def test_positive_only_service_selects_and_verifies_only_positive_rows(self) -> None:
+        pools = build_candidate_pool(
+            itb_rows={"7:chunk-1": {"Chunk Text": "Cooling water requirement"}},
+            records_by_source={
+                ("7", "hybrid"): [_matching_record("chunk-1", [_candidate("A", 1.0), _candidate("B", 0.5)])],
+            },
+            top_k=2,
+        )
+        pair_by_doc = {pair["mdl"]["doc_id"]: pair for pair in iter_judge_pairs(pools)}
+        client = _ChatClient(
+            [
+                {
+                    "results": [
+                        {
+                            "section": "7",
+                            "chunk_id": "chunk-1",
+                            "positive_judgment_ids": [pair_by_doc["A"]["judgment_id"]],
+                            "reasons": {pair_by_doc["A"]["judgment_id"]: "Direct cooling water reference."},
+                        }
+                    ]
+                },
+                {
+                    "results": [
+                        {
+                            "judgment_id": pair_by_doc["A"]["judgment_id"],
+                            "relevance": 3,
+                            "agrees": True,
+                        }
+                    ]
+                },
+            ]
+        )
+        service = GroundTruthService(
+            EvaluationConfig(model="deployment", modes=("hybrid",), verify=True, batch_delay_seconds=0),
+            client,
+            "positive judge prompt",
+            "verify prompt",
+            sleep=lambda _: None,
+        )
+
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            positive_path = base / "ground_truth_positive.csv"
+            negative_path = base / "ground_truth_negative.csv"
+            verified_path = base / "ground_truth_verified.csv"
+            service.judge_to_files(
+                pools,
+                resume_state_path=base / "resume_state.json",
+                ground_truth_path=None,
+                positive_path=positive_path,
+                negative_path=negative_path,
+                verified_path=verified_path,
+            )
+            resume_state = json.loads((base / "resume_state.json").read_text(encoding="utf-8"))
+            verified_rows = verified_path.read_text(encoding="utf-8-sig").splitlines()
+
+        self.assertEqual(len(client.calls), 2)
+        verify_payload = json.loads(client.calls[1]["messages"][1]["content"])
+        self.assertEqual(len(verify_payload["judgments"]), 1)
+        self.assertEqual(verify_payload["judgments"][0]["judgment_id"], pair_by_doc["A"]["judgment_id"])
+        self.assertEqual(len(resume_state["judgments"]), 1)
+        self.assertEqual(len(resume_state["verifications"]), 1)
+        self.assertEqual(len(verified_rows), 2)
+        self.assertIn(pair_by_doc["A"]["mdl"]["doc_id"], verified_rows[1])
+
+    def test_positive_only_resume_remembers_pools_with_no_positive_rows(self) -> None:
+        pools = build_candidate_pool(
+            itb_rows={"7:chunk-1": {"Chunk Text": "Cooling water requirement"}},
+            records_by_source={("7", "hybrid"): [_matching_record("chunk-1", [_candidate("A", 1.0)])]},
+            top_k=1,
+        )
+        client = _ChatClient(
+            [
+                {
+                    "results": [
+                        {
+                            "section": "7",
+                            "chunk_id": "chunk-1",
+                            "positive_judgment_ids": [],
+                        }
+                    ]
+                },
+            ]
+        )
+        service = GroundTruthService(
+            EvaluationConfig(
+                model="deployment",
+                modes=("hybrid",),
+                verify=False,
+                resume=True,
+                batch_delay_seconds=0,
+            ),
+            client,
+            "positive judge prompt",
+            sleep=lambda _: None,
+        )
+
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            resume_state_path = base / "resume_state.json"
+            service.judge_to_files(pools, resume_state_path, base / "ground_truth.csv")
+            service.judge_to_files(pools, resume_state_path, base / "ground_truth.csv")
+            resume_state = json.loads(resume_state_path.read_text(encoding="utf-8"))
+
+        self.assertEqual(len(client.calls), 1)
+        self.assertEqual(resume_state["judgments"], [])
+        self.assertEqual(resume_state["positive_only_completed_pools"], [{"section": "7", "chunk_id": "chunk-1"}])
+
+    def test_merge_positive_ground_truth_updates_final_file(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            final_path = base / "itb_mdl_matching_ground_truth_final.csv"
+            _write_csv(
+                final_path,
+                ["section", "chunk_id", "mdl_doc_id", "relevance", "final_relevance", "label_status"],
+                [
+                    {
+                        "section": "6",
+                        "chunk_id": "chunk-1",
+                        "mdl_doc_id": "A",
+                        "relevance": "3",
+                        "final_relevance": "3",
+                        "label_status": "positive",
+                    }
+                ],
+            )
+            new_rows = [
+                {
+                    "section": "6",
+                    "chunk_id": "chunk-1",
+                    "mdl_doc_id": "A",
+                    "relevance": "3",
+                    "final_relevance": "3",
+                    "label_status": "positive",
+                },
+                {
+                    "section": "7",
+                    "chunk_id": "chunk-2",
+                    "mdl_doc_id": "B",
+                    "relevance": "3",
+                    "final_relevance": "3",
+                    "label_status": "positive",
+                },
+            ]
+
+            count = merge_positive_ground_truth(final_path, new_rows)
+            rows = load_positive_ground_truth_rows((final_path,))
+
+        self.assertEqual(count, 2)
+        self.assertEqual(
+            [(row["section"], row["chunk_id"], row["mdl_doc_id"]) for row in rows],
+            [("6", "chunk-1", "A"), ("7", "chunk-2", "B")],
+        )
+
+    def test_build_audit_payloads_resolves_itb_and_mdl_context(self) -> None:
+        payloads, unresolved = build_audit_payloads(
+            ground_truth_rows=[
+                {"section": "7", "chunk_id": "chunk-1", "mdl_doc_id": "A", "final_relevance": "3"},
+                {"section": "7", "chunk_id": "chunk-2", "mdl_doc_id": "missing", "final_relevance": "3"},
+            ],
+            itb_rows={"7:chunk-1": {"Chunk ID": "chunk-1", "Chunk Text": "Cooling water layout requirement"}},
+            mdl_docs={"A": _candidate("A", 1.0, title="Cooling Layout")},
+        )
+
+        self.assertEqual(len(payloads), 1)
+        self.assertEqual(len(unresolved), 1)
+        self.assertEqual(payloads[0]["judgment_id"], "7:chunk-1:A")
+        self.assertEqual(payloads[0]["itb"]["text"], "Cooling water layout requirement")
+        self.assertEqual(payloads[0]["mdl"]["title"], "Cooling Layout")
+
+    def test_audited_ground_truth_keeps_ok_and_splits_suspicious_for_review(self) -> None:
+        ground_truth_rows = [
+            {
+                "section": "7",
+                "chunk_id": "chunk-1",
+                "mdl_doc_id": "A",
+                "relevance": "3",
+                "final_relevance": "3",
+                "label_status": "positive",
+            },
+            {
+                "section": "7",
+                "chunk_id": "chunk-1",
+                "mdl_doc_id": "B",
+                "relevance": "3",
+                "final_relevance": "3",
+                "label_status": "positive",
+            },
+            {
+                "section": "7",
+                "chunk_id": "chunk-1",
+                "mdl_doc_id": "C",
+                "relevance": "3",
+                "final_relevance": "3",
+                "label_status": "positive",
+            },
+        ]
+        audit_rows = [
+            {"section": "7", "chunk_id": "chunk-1", "mdl_doc_id": "A", "audit_status": "ok"},
+            {
+                "section": "7",
+                "chunk_id": "chunk-1",
+                "mdl_doc_id": "B",
+                "audit_status": "suspicious",
+                "audit_relevance": "2",
+                "reason": "Partial evidence.",
+            },
+            {"section": "7", "chunk_id": "chunk-1", "mdl_doc_id": "C", "audit_status": "remove"},
+        ]
+
+        ok_rows, suspicious_rows = build_audited_ground_truth_rows(ground_truth_rows, audit_rows)
+
+        self.assertEqual([row["mdl_doc_id"] for row in ok_rows], ["A"])
+        self.assertEqual([row["mdl_doc_id"] for row in suspicious_rows], ["B"])
+        self.assertEqual(suspicious_rows[0]["audit_reason"], "Partial evidence.")
+
+    def test_audit_service_writes_report_with_unresolved_rows(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            extract_dir = base / "extract"
+            extract_dir.mkdir()
+            ground_truth_path = base / "ground_truth_final.csv"
+            output_path = base / "audit.csv"
+            _write_csv(
+                extract_dir / "output_itb_section7_focused.csv",
+                ["Chunk ID", "Chunk Text"],
+                [{"Chunk ID": "chunk-1", "Chunk Text": "Cooling water layout requirement"}],
+            )
+            _write_csv(
+                ground_truth_path,
+                ["section", "chunk_id", "mdl_doc_id", "final_relevance", "label_status"],
+                [
+                    {
+                        "section": "7",
+                        "chunk_id": "chunk-1",
+                        "mdl_doc_id": "A",
+                        "final_relevance": "3",
+                        "label_status": "positive",
+                    },
+                    {
+                        "section": "7",
+                        "chunk_id": "chunk-1",
+                        "mdl_doc_id": "missing",
+                        "final_relevance": "3",
+                        "label_status": "positive",
+                    },
+                ],
+            )
+            service = GroundTruthAuditService(
+                AuditConfig(model="deployment", sections=("7",), batch_delay_seconds=0),
+                _ChatClient(
+                    [
+                        {
+                            "results": [
+                                {
+                                    "judgment_id": "7:chunk-1:A",
+                                    "audit_status": "ok",
+                                    "audit_relevance": 3,
+                                    "reason": "Direct cooling layout match.",
+                                }
+                            ]
+                        }
+                    ]
+                ),
+                _AuditRepository({"A": _candidate("A", 1.0, title="Cooling Layout")}),
+                "audit prompt",
+                sleep=lambda _: None,
+            )
+
+            service.audit_to_file(ground_truth_path, extract_dir, output_path)
+            report_rows = output_path.read_text(encoding="utf-8-sig").splitlines()
+
+        self.assertEqual(len(report_rows), 3)
+        self.assertIn(",ok,3,Direct cooling layout match.", report_rows[1])
+        self.assertIn(",unresolved,,", report_rows[2])
 
     def test_service_can_resume_existing_judgments(self) -> None:
         pools = build_candidate_pool(
@@ -332,7 +522,14 @@ class EvaluationServiceTest(unittest.TestCase):
             ]
         )
         service = GroundTruthService(
-            EvaluationConfig(model="deployment", modes=("hybrid",), resume=True, batch_delay_seconds=0),
+            EvaluationConfig(
+                model="deployment",
+                modes=("hybrid",),
+                verify=False,
+                positive_only=False,
+                resume=True,
+                batch_delay_seconds=0,
+            ),
             client,
             "judge prompt",
             sleep=lambda _: None,
@@ -390,6 +587,8 @@ class EvaluationServiceTest(unittest.TestCase):
             EvaluationConfig(
                 model="deployment",
                 modes=("hybrid",),
+                verify=False,
+                positive_only=False,
                 judge_candidates_per_call=25,
                 batch_delay_seconds=0,
             ),
@@ -434,7 +633,14 @@ class EvaluationServiceTest(unittest.TestCase):
             ]
         )
         service = GroundTruthService(
-            EvaluationConfig(model="deployment", modes=("hybrid",), llm_retries=1, batch_delay_seconds=0),
+            EvaluationConfig(
+                model="deployment",
+                modes=("hybrid",),
+                verify=False,
+                positive_only=False,
+                llm_retries=1,
+                batch_delay_seconds=0,
+            ),
             client,
             "judge prompt",
             sleep=lambda _: None,
@@ -466,6 +672,7 @@ class EvaluationServiceTest(unittest.TestCase):
                 model="deployment",
                 modes=("hybrid",),
                 verify=True,
+                positive_only=False,
                 batch_size=1,
                 judge_candidates_per_call=1,
                 max_concurrency=2,
@@ -534,12 +741,15 @@ class EvaluationServiceTest(unittest.TestCase):
             base = Path(directory)
             positive_path = base / "ground_truth_positive.csv"
             negative_path = base / "ground_truth_negative.csv"
-            write_high_precision_ground_truth(positive_path, negative_path, judgments, verifications)
+            verified_path = base / "ground_truth_verified.csv"
+            write_high_precision_ground_truth(positive_path, negative_path, judgments, verifications, verified_path)
             positive_rows = positive_path.read_text(encoding="utf-8-sig").splitlines()
             negative_rows = negative_path.read_text(encoding="utf-8-sig").splitlines()
+            verified_rows = verified_path.read_text(encoding="utf-8-sig").splitlines()
 
         self.assertEqual(len(positive_rows), 2)
         self.assertEqual(len(negative_rows), 3)
+        self.assertEqual(len(verified_rows), 4)
         self.assertIn(",3,positive", positive_rows[1])
         self.assertIn(",0,negative", negative_rows[1])
         self.assertIn(",2,negative", negative_rows[2])
@@ -561,6 +771,28 @@ class EvaluationServiceTest(unittest.TestCase):
         self.assertEqual(result["topic_match"], 0)
         self.assertNotIn("confidence", result)
 
+    def test_resolved_positive_judgments_keep_only_selected_known_ids(self) -> None:
+        pair = {
+            "judgment_id": "6:chunk-1:A",
+            "section": "6",
+            "chunk_id": "chunk-1",
+            "mdl": {"doc_id": "A"},
+        }
+
+        result = _resolve_positive_judgments(
+            [pair],
+            [
+                {
+                    "positive_judgment_ids": [pair["judgment_id"], pair["judgment_id"]],
+                    "reasons": {pair["judgment_id"]: "Direct match."},
+                }
+            ],
+        )
+
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["relevance"], 3)
+        self.assertEqual(result[0]["reason"], "Direct match.")
+
     def test_resolved_verifications_clamp_scores_and_require_boolean_agreement(self) -> None:
         result = _resolve_verifications(
             [{"judgment_id": "6:chunk-1:A"}],
@@ -570,33 +802,6 @@ class EvaluationServiceTest(unittest.TestCase):
         self.assertEqual(result["relevance"], 3)
         self.assertNotIn("confidence", result)
         self.assertFalse(result["agrees"])
-
-
-class _Neo4jConn:
-    def __init__(self, records: list[dict]) -> None:
-        self.records = records
-        self.last_parameters = {}
-
-    def session(self):
-        return _Neo4jSession(self)
-
-
-class _Neo4jSession:
-    def __init__(self, conn: _Neo4jConn) -> None:
-        self.conn = conn
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
-        return None
-
-    def run(self, query, **parameters):
-        self.conn.last_parameters = parameters
-        limit = parameters.get("limit")
-        if isinstance(limit, int) and limit > 0:
-            return self.conn.records[:limit]
-        return self.conn.records
 
 
 class _ChatClient:
@@ -627,6 +832,20 @@ class _EchoChatClient:
     def __init__(self) -> None:
         self.calls = []
         self.chat = _EchoChat(self)
+
+
+class _AuditRepository:
+    def __init__(self, docs_by_id: dict[str, dict]) -> None:
+        self.docs_by_id = docs_by_id
+        self.requested_doc_ids = []
+
+    def load_by_doc_ids(self, doc_ids: list[str]) -> dict[str, dict]:
+        self.requested_doc_ids.extend(doc_ids)
+        return {
+            doc_id: self.docs_by_id[doc_id]
+            for doc_id in doc_ids
+            if doc_id in self.docs_by_id
+        }
 
 
 class _EchoChat:
@@ -664,14 +883,6 @@ class _EchoCompletions:
         message = type("Message", (), {"content": json.dumps({"results": results})})()
         choice = type("Choice", (), {"message": message})()
         return type("Response", (), {"choices": [choice]})()
-
-
-class _RecordingReferenceReranker:
-    def rerank(self, query_text: str, candidates: list[dict], top_k: int) -> list[dict]:
-        reranked = []
-        for index, candidate in enumerate(reversed(candidates), start=1):
-            reranked.append({**candidate, "cross_encoder_score": float(3 - index), "final_rank": index})
-        return reranked[:top_k]
 
 
 def _matching_record(chunk_id: str, candidates: list[dict]) -> dict:
@@ -712,6 +923,15 @@ def _judgment(pair: dict, relevance: int, confidence: float) -> dict:
         "mdl_doc_id": pair["mdl"]["doc_id"],
         "relevance": relevance,
     }
+
+
+def _write_csv(path: Path, fieldnames: list[str], rows: list[dict]) -> None:
+    import csv
+
+    with open(path, "w", newline="", encoding="utf-8-sig") as file:
+        writer = csv.DictWriter(file, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)
 
 
 if __name__ == "__main__":
