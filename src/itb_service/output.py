@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from itb_service.extraction import as_list_text, as_text, fallback_search_query
-from itb_service.models import OUTPUT_HEADER, TOKEN_HEADER
+from itb_service.models import OUTPUT_HEADER, REJECTED_HEADER, TOKEN_HEADER
 
 
 def build_csv_row(
@@ -98,6 +98,52 @@ def build_token_row(document_name: str, chunk: dict[str, Any], token_usage: dict
     ]
 
 
+def build_rejected_csv_row(
+    document_name: str,
+    chunk: dict[str, Any],
+    extraction: dict[str, Any],
+    requested_section: str,
+) -> list[str]:
+    """Build one audit row for chunks rejected by the section-boundary check."""
+    return [
+        document_name,
+        as_text(chunk.get("chunk_id")),
+        ", ".join(map(str, chunk.get("page_num", []))),
+        as_text(chunk.get("section")),
+        as_list_text(chunk.get("section_path")),
+        requested_section,
+        as_text(extraction.get("actual_section")),
+        as_text(extraction.get("belongs_to_requested_section")),
+        as_text(extraction.get("section_boundary_reason")),
+        as_text(extraction.get("confidence")),
+        _source_text(chunk),
+    ]
+
+
+def build_rejected_json_record(
+    document_name: str,
+    chunk: dict[str, Any],
+    hierarchy: str,
+    extraction: dict[str, Any],
+    requested_section: str,
+) -> dict[str, Any]:
+    """Build one structured audit record for a section-boundary rejection."""
+    return {
+        "document": document_name,
+        "chunk_id": chunk.get("chunk_id", ""),
+        "pages": chunk.get("page_num", []),
+        "section": chunk.get("section", ""),
+        "section_path": chunk.get("section_path", ""),
+        "requested_section": requested_section,
+        "actual_section": extraction.get("actual_section", ""),
+        "belongs_to_requested_section": extraction.get("belongs_to_requested_section", ""),
+        "section_boundary_reason": extraction.get("section_boundary_reason", ""),
+        "hierarchy_context": hierarchy,
+        "llm_output": extraction,
+        "chunk_text": _source_text(chunk),
+    }
+
+
 def write_outputs(
     csv_path: str | Path,
     json_path: str | Path,
@@ -112,6 +158,20 @@ def write_outputs(
         path.parent.mkdir(parents=True, exist_ok=True)
     _write_csv(paths[0], OUTPUT_HEADER, csv_rows)
     _write_csv(paths[2], TOKEN_HEADER, token_rows)
+    paths[1].write_text(json.dumps(json_records, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def write_rejected_outputs(
+    csv_path: str | Path,
+    json_path: str | Path,
+    csv_rows: list[list[Any]],
+    json_records: list[dict[str, Any]],
+) -> None:
+    """Write section-boundary rejection audit artifacts."""
+    paths = [Path(csv_path), Path(json_path)]
+    for path in paths:
+        path.parent.mkdir(parents=True, exist_ok=True)
+    _write_csv(paths[0], REJECTED_HEADER, csv_rows)
     paths[1].write_text(json.dumps(json_records, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 

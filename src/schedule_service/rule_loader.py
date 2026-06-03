@@ -41,10 +41,13 @@ class ValidationRule:
     _doc_kw_tokens: frozenset = field(default=frozenset(), init=False, repr=False, compare=False)
 
     def __post_init__(self) -> None:
+        # Combine doc_keyword + item_name so queries without equipment context
+        # can't score above threshold against equipment-specific rules.
+        combined = f"{self.doc_keyword} {self.item_name}"
         object.__setattr__(
             self,
             "_doc_kw_tokens",
-            frozenset(tok for tok in _TOKEN_RE.findall(self.doc_keyword.lower()) if len(tok) >= _MIN_TOKEN_LEN),
+            frozenset(tok for tok in _TOKEN_RE.findall(combined.lower()) if len(tok) >= _MIN_TOKEN_LEN),
         )
 
     def describe(self) -> str:
@@ -100,8 +103,19 @@ class RuleTable:
                 if not doc_kw:
                     continue
                 sub_type_raw = row.get("Pur.", "").strip().lower()
-                sub_type = _SUB_TYPE_MAP.get(sub_type_raw, "SKIP")
                 vt_raw = row.get("Validation Time", "").strip()
+                if sub_type_raw in _SUB_TYPE_MAP:
+                    sub_type = _SUB_TYPE_MAP[sub_type_raw]
+                elif not sub_type_raw:
+                    # Pur. is empty — infer from VT formula instead of defaulting to SKIP.
+                    # 2896 rules have empty Pur. but valid FA/FC formulas in the CSV.
+                    vt_temp = parse_validation_time(vt_raw)
+                    if vt_temp.get("has_fa_rule") or vt_temp.get("has_fc_rule"):
+                        sub_type = "FA"
+                    else:
+                        sub_type = "SKIP"
+                else:
+                    sub_type = "SKIP"
                 act_kws = [k.strip() for k in row.get("Activity Keyword", "").split("|") if k.strip()]
                 rules.append(
                     ValidationRule(

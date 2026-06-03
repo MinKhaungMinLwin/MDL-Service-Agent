@@ -15,7 +15,9 @@ from matching_service.ranking import CrossEncoderReranker
 from matching_service.repository import MDLSearchRepository
 from matching_service.service import MatchingService
 
-DEFAULT_OUTPUT_DIR = Path("output") / "current_test_env"
+DEFAULT_BASE_OUTPUT_DIR = Path("output") / "current_test_env"
+DEFAULT_INPUT_DIR = DEFAULT_BASE_OUTPUT_DIR / "itb_extract"
+DEFAULT_OUTPUT_DIR = DEFAULT_BASE_OUTPUT_DIR / "matching"
 DEFAULT_CROSS_ENCODER_MODEL = "cross-encoder/ms-marco-MiniLM-L6-v2"
 
 
@@ -30,8 +32,8 @@ def match(argv: list[str] | None = None) -> None:
         choices=["keyword", "semantic", "hybrid"],
         default=os.getenv("ITB_RETRIEVAL_MODE", "keyword").strip().lower(),
     )
-    parser.add_argument("--retrieval-candidates", type=int, default=int(os.getenv("ITB_RETRIEVAL_CANDIDATES", "200")))
-    parser.add_argument("--output-limit", type=int, default=int(os.getenv("ITB_OUTPUT_LIMIT", "100")))
+    parser.add_argument("--retrieval-candidates", type=int, default=int(os.getenv("ITB_RETRIEVAL_CANDIDATES", "100")))
+    parser.add_argument("--output-limit", type=int, default=int(os.getenv("ITB_OUTPUT_LIMIT", "20")))
     parser.add_argument(
         "--cross-encoder-model",
         default=os.getenv("ITB_CROSS_ENCODER_MODEL", DEFAULT_CROSS_ENCODER_MODEL),
@@ -43,7 +45,8 @@ def match(argv: list[str] | None = None) -> None:
     )
     args = parser.parse_args(argv)
 
-    files_to_process = _files_to_process(args.inputs, args.outputs, args.output_dir)
+    output_dir = args.output_dir / args.retrieval_mode
+    files_to_process = _files_to_process(args.inputs, args.outputs, DEFAULT_INPUT_DIR, output_dir)
     config = MatchingConfig(
         retrieval_mode=args.retrieval_mode,
         retrieval_candidate_limit=args.retrieval_candidates,
@@ -55,7 +58,7 @@ def match(argv: list[str] | None = None) -> None:
         batch_size=args.cross_encoder_batch_size,
     )
 
-    args.output_dir.mkdir(parents=True, exist_ok=True)
+    output_dir.mkdir(parents=True, exist_ok=True)
     with Neo4jConnection() as conn:
         service = MatchingService(
             repository=MDLSearchRepository(conn, config),
@@ -75,6 +78,7 @@ def match(argv: list[str] | None = None) -> None:
 def _files_to_process(
     inputs: list[Path] | None,
     outputs: list[Path] | None,
+    input_dir: Path,
     output_dir: Path,
 ) -> list[tuple[Path, Path]]:
     if inputs:
@@ -86,11 +90,11 @@ def _files_to_process(
         ]
     return [
         (
-            output_dir / "output_itb_section6_focused.csv",
+            input_dir / "output_itb_section6_focused.csv",
             output_dir / "output_match_all_projects_section6.csv",
         ),
         (
-            output_dir / "output_itb_section7_focused.csv",
+            input_dir / "output_itb_section7_focused.csv",
             output_dir / "output_match_all_projects_section7.csv",
         ),
     ]

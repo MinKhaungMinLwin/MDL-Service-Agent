@@ -31,6 +31,13 @@ def expand_schedule_abbreviations(text: str) -> str:
     return normalize_space(expanded)
 
 
+def expand_abbreviation_terms(terms: list[str]) -> list[str]:
+    """Keep original retrieval terms and append distinct expanded variants."""
+    expanded_terms = list(terms)
+    expanded_terms.extend(expand_schedule_abbreviations(term) for term in terms)
+    return _unique_texts(expanded_terms)
+
+
 def normalize_space(text: str) -> str:
     """Normalize whitespace and lightweight schedule separators."""
     cleaned = text.replace(">", " ")
@@ -41,6 +48,11 @@ def normalize_space(text: str) -> str:
 
 def join_unique_texts(texts: list[str]) -> str:
     """Join text variants while preserving order and removing duplicates."""
+    return " ".join(_unique_texts(texts))
+
+
+def _unique_texts(texts: list[str]) -> list[str]:
+    """Return normalized unique text variants while preserving order."""
     seen: set[str] = set()
     unique_texts = []
     for text in texts:
@@ -49,7 +61,7 @@ def join_unique_texts(texts: list[str]) -> str:
         if cleaned and key not in seen:
             unique_texts.append(cleaned)
             seen.add(key)
-    return " ".join(unique_texts)
+    return unique_texts
 
 
 @lru_cache(maxsize=1)

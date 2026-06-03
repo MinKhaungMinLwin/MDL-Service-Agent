@@ -1,0 +1,200 @@
+[
+  {
+    "document": "R&N_ITB",
+    "chunk_id": "test_temp_R&N_ITB_chunk_427",
+    "pages": [
+      96,
+      97
+    ],
+    "section": "6.6.1_Operating_Points",
+    "section_path": [
+      6,
+      6,
+      1
+    ],
+    "requested_section": "7",
+    "actual_section": "6.6.1 Operating Points",
+    "belongs_to_requested_section": false,
+    "section_boundary_reason": "Chunk section is 6.6.1 (Plant Performance and Schedule), which does not start with requested section prefix 7.",
+    "hierarchy_context": "6.6_Plant_Performance_and_Schedule > 6.6.1_Operating_Points",
+    "llm_output": {
+      "chunk_id": "test_temp_R&N_ITB_chunk_427",
+      "belongs_to_requested_section": false,
+      "actual_section": "6.6.1 Operating Points",
+      "section_boundary_reason": "Chunk section is 6.6.1 (Plant Performance and Schedule), which does not start with requested section prefix 7.",
+      "depth_1": "Plant Performance and Schedule",
+      "depth_2": "Operating Points",
+      "depth_3": "Reference Site Condition and operating points",
+      "depth_4": "",
+      "depth_5": "",
+      "keywords": [
+        "reference operating points",
+        "RSC (Reference Site Condition)",
+        "OP1 OP2 OP3 OP4 OP5",
+        "fuel: gas",
+        "air temperature (dry bulb) 48°C 40°C 35°C 25°C 15°C",
+        "relative humidity 20% 30% 60% 70%",
+        "atmospheric pressure 955 mbar",
+        "net dependable capacity (export) 100% 90% 75% 60% 30%",
+        "annual operation hours 100 3400 3300 1150 810 h/year",
+        "Rumah 1 IPP Rumah 2 IPP group dispatch"
+      ],
+      "search_query": "Operating points, RSC, OP1 OP2 OP3 OP4 OP5, gas fuel, dry bulb temperature 48/40/35/25/15°C, relative humidity 20/30/60/70%, atmospheric pressure 955 mbar, net dependable capacity export 100/90/75/60/30%, annual operation hours h/year",
+      "entities": {
+        "equipment": [],
+        "systems": [],
+        "buildings": [],
+        "deliverables": [],
+        "standards": []
+      },
+      "confidence": "high",
+      "needs_review": false,
+      "reason": "Clear table/text defining reference operating points (RSC and OP1–OP5) with explicit ambient conditions and capacity/export percentages and annual operating hours for Rumah IPPs."
+    },
+    "chunk_text": "The following reference operating points are assumed for the Rumah 1 IPP and Rumah 2 IPP or Group dispatch:\nFuel, Unit = . Fuel, RSC = . Fuel, OP1 = Gas. Fuel, OP2 = Gas. Fuel, OP3 = Gas. Fuel, OP4 = Gas. Fuel, OP5 = Gas. Air Temperature (dry bulb), Unit = °C. Air Temperature (dry bulb), RSC = 48. Air Temperature (dry bulb), OP1 = 48. Air Temperature (dry bulb), OP2 = 40. Air Temperature (dry bulb), OP3 = 35. Air Temperature (dry bulb), OP4 = 25. Air Temperature (dry bulb), OP5 = 15. Relative humidity, Unit = %. Relative humidity, RSC = 20. Relative humidity, OP1 = 20. Relative humidity, OP2 = 30. Relative humidity, OP3 = 60. Relative humidity, OP4 = 70. Relative humidity, OP5 = 70. Atmospheric pressure, Unit = mbar. Atmospheric pressure, RSC = 955. Atmospheric pressure, OP1 = 955. Atmospheric pressure, OP2 = 955. Atmospheric pressure, OP3 = 955. Atmospheric pressure, OP4 = 955. Atmospheric pressure, OP5 = 955. Net Dependable Capacity (Export), Unit = %. Net Dependable Capacity (Export), RSC = . Net Dependable Capacity (Export), OP1 = 100. Net Dependable Capacity (Export), OP2 = 90. Net Dependable Capacity (Export), OP3 = 75. Net Dependable Capacity (Export), OP4 = 60. Net Dependable Capacity (Export), OP5 = 30. Annual operation hours, Unit = h/year. Annual operation hours, RSC = . Annual operation hours, OP1 = 100. Annual operation hours, OP2 = 3400. Annual operation hours, OP3 = 3300. Annual operation hours, OP4 = 1150. Annual operation hours, OP5 = 810\nThe following reference operating points are assumed for the Nairyah 1 IPP and Nairyah 2 IPP or Group dispatch:"
+  },
+  {
+    "document": "R&N_ITB",
+    "chunk_id": "test_temp_R&N_ITB_chunk_428",
+    "pages": [
+      97
+    ],
+    "section": "6.6.1_Operating_Points",
+    "section_path": [
+      6,
+      6,
+      1
+    ],
+    "requested_section": "7",
+    "actual_section": "6.6.1 Operating Points",
+    "belongs_to_requested_section": false,
+    "section_boundary_reason": "Chunk section is 6.6.1 (Plant Performance and Schedule), which does not start with requested section prefix 7.",
+    "hierarchy_context": "6.6_Plant_Performance_and_Schedule > 6.6.1_Operating_Points",
+    "llm_output": {
+      "chunk_id": "test_temp_R&N_ITB_chunk_428",
+      "belongs_to_requested_section": false,
+      "actual_section": "6.6.1 Operating Points",
+      "section_boundary_reason": "Chunk section is 6.6.1 (Plant Performance and Schedule), which does not start with requested section prefix 7.",
+      "depth_1": "Plant Performance",
+      "depth_2": "Operating Points",
+      "depth_3": "Reference Site Condition and Operating Point conditions",
+      "depth_4": "",
+      "depth_5": "",
+      "keywords": [
+        "Operating Points OP1 OP2 OP3 OP4 OP5",
+        "Reference Site Condition (RSC)",
+        "fuel gas",
+        "air temperature dry bulb 48°C 40°C 35°C 25°C 15°C",
+        "relative humidity 30% 60% 70%",
+        "atmospheric pressure 1005 mbar",
+        "net dependable capacity export 100% 90% 75% 60% 30%",
+        "annual operation hours 100 3400 3300 1150 810 h/year"
+      ],
+      "search_query": "Plant performance, operating points OP1 OP2 OP3 OP4 OP5, RSC reference site condition, gas fuel, dry bulb air temperature 48 40 35 25 15 C, relative humidity 30 60 70 %, atmospheric pressure 1005 mbar, net dependable capacity export 100 90 75 60 30 %, annual operation hours h/year",
+      "entities": {
+        "equipment": [],
+        "systems": [],
+        "buildings": [],
+        "deliverables": [],
+        "standards": []
+      },
+      "confidence": "high",
+      "needs_review": false,
+      "reason": "Table explicitly defines operating point ambient conditions and performance/load factors (capacity export %) and annual operating hours for OP1–OP5 at constant atmospheric pressure."
+    },
+    "chunk_text": "Fuel, Unit = . Fuel, RSC = . Fuel, OP1 = Gas. Fuel, OP2 = Gas. Fuel, OP3 = Gas. Fuel, OP4 = Gas. Fuel, OP5 = Gas. Air Temperature (dry bulb), Unit = °C. Air Temperature (dry bulb), RSC = 48. Air Temperature (dry bulb), OP1 = 48. Air Temperature (dry bulb), OP2 = 40. Air Temperature (dry bulb), OP3 = 35. Air Temperature (dry bulb), OP4 = 25. Air Temperature (dry bulb), OP5 = 15. Relative humidity, Unit = %. Relative humidity, RSC = 30. Relative humidity, OP1 = 30. Relative humidity, OP2 = 30. Relative humidity, OP3 = 60. Relative humidity, OP4 = 70. Relative humidity, OP5 = 70. Atmospheric pressure, Unit = mbar. Atmospheric pressure, RSC = 1005. Atmospheric pressure, OP1 = 1005. Atmospheric pressure, OP2 = 1005. Atmospheric pressure, OP3 = 1005. Atmospheric pressure, OP4 = 1005. Atmospheric pressure, OP5 = 1005. Net Dependable Capacity (Export), Unit = %. Net Dependable Capacity (Export), RSC = . Net Dependable Capacity (Export), OP1 = 100. Net Dependable Capacity (Export), OP2 = 90. Net Dependable Capacity (Export), OP3 = 75. Net Dependable Capacity (Export), OP4 = 60. Net Dependable Capacity (Export), OP5 = 30. Annual operation hours, Unit = h/year. Annual operation hours, RSC = . Annual operation hours, OP1 = 100. Annual operation hours, OP2 = 3400. Annual operation hours, OP3 = 3300. Annual operation hours, OP4 = 1150. Annual operation hours, OP5 = 810"
+  },
+  {
+    "document": "R&N_ITB",
+    "chunk_id": "test_temp_R&N_ITB_chunk_492",
+    "pages": [
+      124,
+      125
+    ],
+    "section": "8._PLANT_CONTROL_AND_OPERATIONAL_SYSTEM",
+    "section_path": [
+      8
+    ],
+    "requested_section": "7",
+    "actual_section": "8 Plant Control and Operational System",
+    "belongs_to_requested_section": false,
+    "section_boundary_reason": "Chunk section is 8 (Plant Control and Operational System), which does not start with requested section prefix 7.",
+    "hierarchy_context": "8._PLANT_CONTROL_AND_OPERATIONAL_SYSTEM",
+    "llm_output": {
+      "chunk_id": "test_temp_R&N_ITB_chunk_492",
+      "belongs_to_requested_section": false,
+      "actual_section": "8 Plant Control and Operational System",
+      "section_boundary_reason": "Chunk section is 8 (Plant Control and Operational System), which does not start with requested section prefix 7.",
+      "depth_1": "Plant Control and Operational System",
+      "depth_2": "Control and Monitoring System",
+      "depth_3": "Redundancy and Cybersecurity",
+      "depth_4": "",
+      "depth_5": "",
+      "keywords": [
+        "redundant process control system",
+        "primary sensors transmitters actuators",
+        "IEC code / international standards",
+        "DCS for CCR",
+        "SCADA for substation and packaged systems",
+        "redundant operator stations",
+        "cyber security regulations HCIS requirements",
+        "ISO 27000 series (ISO 27001, ISO 27002, ISO 27019)",
+        "quadrant segregation network architecture",
+        "ACWA cyber security policy",
+        "RAID long-term data server archiving",
+        "PASS Plant Accounting Settlement System (AMI integration, LDC remote control)"
+      ],
+      "search_query": "Plant control and monitoring, redundant process control system, DCS CCR, SCADA substation, HCIS cybersecurity, ISO 27001 ISO 27002 ISO 27019, quadrant segregation network, RAID data server, PASS settlement AMI LDC remote control",
+      "entities": {
+        "equipment": [
+          "primary sensors",
+          "transmitters",
+          "actuators",
+          "routers",
+          "switches",
+          "Copper/FO-converters",
+          "RAID station",
+          "GPS-based clock systems",
+          "field testing equipment",
+          "instrument workshop equipment"
+        ],
+        "systems": [
+          "process control system (redundant configuration)",
+          "plant control and monitoring system (DCS)",
+          "Supervisory Control and Data Acquisition (SCADA)",
+          "cyber security (HCIS requirements)",
+          "network architecture (quadrant segregation)",
+          "long-term data server / archiving",
+          "plant monitoring system and performance calculation",
+          "settlement metering system (including check meter)",
+          "Plant Accounting Settlement System (PASS)",
+          "internal communication systems (telephone, public address, LAN/WAN)",
+          "HVAC",
+          "fire-fighting system",
+          "fire detection system",
+          "CCTV and surveillance systems"
+        ],
+        "buildings": [
+          "Central Control Room (CCR)",
+          "control room"
+        ],
+        "deliverables": [],
+        "standards": [
+          "IEC",
+          "ISO 27000 series",
+          "ISO 27001",
+          "ISO 27002",
+          "ISO 27019",
+          "Grid Code",
+          "HCIS",
+          "ACWA cyber security policy",
+          "HICS KSA"
+        ]
+      },
+      "confidence": "high",
+      "needs_review": false,
+      "reason": "Explicit list of plant control/monitoring scope including DCS/SCADA, redundancy, cybersecurity standards, network architecture, data server, settlement metering and PASS, and related BOP interfaces."
+    },
+    "chunk_text": "The plant shall be provided with a process control system based on redundant configuration for safe and reliable operations with high availability. The design, control philosophy, redundancy concept, grade of integration, etc. will be subject to review, comment and approval by the Offtaker. The scope of supply shall include - but not be limited to - the following systems and components:\n- Primary sensors, transmitters, actuators minimum equipment required shall be according to relevant IEC code or International Standards\n- Plant control and monitoring system (DCS -Digital Control System) for CCR & Supervisory Control  and  Data  Acquisition  (SCADA)  for  the  Substation  and  other  Plant  packaged systems, including all necessary software licenses for the Plant with redundant operator stations and additional one operator / engineering station.\n- The plant and control and monitoring system shall be designed to fulfill all Cyber Security regulations including HCIS requirements and international standards such as ISO 27000 series (especially ISO 27001,ISO 27002 and ISO 27019\n- The network architecture shall be designed using quadrant segregation and will fulfill all requirements as per ACWA cyber security policy.\n- Long-term  data  server  via  RAID  station  (Redundant  Arrays  of  Independent  Disks)  for central back management and archiving.\n- Network with routers and switches\n- Copper/FO-converters where applicable\n- Plant monitoring system and performance calculation (at all design conditions).\n- Settlement metering system including check meter shall be provided in line with the latest version of the Grid Code at the date of the Bid submittal.\n- Hardware and software for Plant Accounting Settlement System (PASS)) including and other  requirements  (data  transmission,  Remote  control  from  LDC,  cybersecurity,  AMI integration) as defined by Offtaker.\n- Internal communication systems (telephone, public address system, LAN/ WAN system)\n- GPS-based clock systems\n- All relevant BOP system like HVAC, Fire-fighting and Fire detection systems, CCTV and surveillance systems in accordance with the country local requirements i.e. HICS KSA .\n- Ergonomic designed control room\n- Field testing equipment\n- Instrument workshop equipment."
+  }
+]

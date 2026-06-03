@@ -12,7 +12,15 @@ from loguru import logger
 from itb_service.extraction import as_text, extract_chunk_batch, failed_extraction, split_token_usage
 from itb_service.loader import load_target_chunks, prepare_chunks
 from itb_service.models import ITBExtractionConfig, ITBTarget, PreparedChunk
-from itb_service.output import build_csv_row, build_json_record, build_token_row, write_outputs
+from itb_service.output import (
+    build_csv_row,
+    build_json_record,
+    build_rejected_csv_row,
+    build_rejected_json_record,
+    build_token_row,
+    write_outputs,
+    write_rejected_outputs,
+)
 from itb_service.verification import build_verification_payload, failed_verification, verify_extraction_batch
 
 
@@ -43,37 +51,76 @@ class ITBExtractionService:
         csv_path: str | Path,
         json_path: str | Path,
         token_path: str | Path,
+        rejected_csv_path: str | Path | None = None,
+        rejected_json_path: str | Path | None = None,
     ) -> int:
         """Extract configured targets and write CSV, JSON, and token artifacts."""
         csv_rows = []
         json_records = []
         token_rows = []
+        rejected_csv_rows = []
+        rejected_json_records = []
         for target in targets:
             chunks = load_target_chunks(target, self.config.max_chunks)
-            prepared_chunks = prepare_chunks(target.document_name, chunks, self.abbreviation_rules)
+            prepared_chunks = prepare_chunks(
+                target.document_name,
+                chunks,
+                self.abbreviation_rules,
+                self.config.requested_section,
+            )
             logger.info(
                 "{}: loaded {} target chunks and prepared {} non-empty chunks",
                 target.document_name,
                 len(chunks),
                 len(prepared_chunks),
             )
-            for batch in _chunked(prepared_chunks, self.config.batch_size):
-                batch_csv_rows, batch_json_records, batch_token_rows = self._extract_batch(target.document_name, batch)
+            batches = _chunked(prepared_chunks, self.config.batch_size)
+            for batch_index, batch in enumerate(batches, start=1):
+                logger.info(
+                    "{}: processing batch {}/{} ({} chunk{})",
+                    target.document_name,
+                    batch_index,
+                    len(batches),
+                    len(batch),
+                    "" if len(batch) == 1 else "s",
+                )
+                (
+                    batch_csv_rows,
+                    batch_json_records,
+                    batch_token_rows,
+                    batch_rejected_csv_rows,
+                    batch_rejected_json_records,
+                ) = self._extract_batch(target.document_name, batch)
                 csv_rows.extend(batch_csv_rows)
                 json_records.extend(batch_json_records)
                 token_rows.extend(batch_token_rows)
+                rejected_csv_rows.extend(batch_rejected_csv_rows)
+                rejected_json_records.extend(batch_rejected_json_records)
+                write_outputs(csv_path, json_path, token_path, csv_rows, json_records, token_rows)
+                if rejected_csv_path and rejected_json_path:
+                    write_rejected_outputs(
+                        rejected_csv_path,
+                        rejected_json_path,
+                        rejected_csv_rows,
+                        rejected_json_records,
+                    )
+                logger.info("{}: completed batch {}/{}", target.document_name, batch_index, len(batches))
                 self.sleep(self.config.batch_delay_seconds)
         write_outputs(csv_path, json_path, token_path, csv_rows, json_records, token_rows)
+        if rejected_csv_path and rejected_json_path:
+            write_rejected_outputs(rejected_csv_path, rejected_json_path, rejected_csv_rows, rejected_json_records)
+            logger.info("Rejected {} chunk(s) outside requested section", len(rejected_csv_rows))
         return len(csv_rows)
 
     def _extract_batch(
         self,
         document_name: str,
         batch: list[PreparedChunk],
-    ) -> tuple[list[list[Any]], list[dict[str, Any]], list[list[Any]]]:
+    ) -> tuple[list[list[Any]], list[dict[str, Any]], list[list[Any]], list[list[Any]], list[dict[str, Any]]]:
         payloads = [item.payload for item in batch]
         batch_error = ""
         try:
+            logger.info("Running ITB extraction for {} chunk{}", len(batch), "" if len(batch) == 1 else "s")
             results_by_id, batch_token_usage = extract_chunk_batch(
                 self.client,
                 self.config.model,
@@ -92,9 +139,32 @@ class ITBExtractionService:
         csv_rows = []
         json_records = []
         token_rows = []
+        rejected_csv_rows = []
+        rejected_json_records = []
         for item in batch:
             chunk_id = as_text(item.chunk.get("chunk_id"))
             extraction = extraction_by_id[chunk_id]
+            token_rows.append(build_token_row(document_name, item.chunk, per_chunk_usage))
+            if self._is_rejected_by_section_boundary(extraction):
+                logger.info(
+                    "{}: rejected chunk {} outside requested section {}",
+                    document_name,
+                    chunk_id,
+                    self.config.requested_section,
+                )
+                rejected_csv_rows.append(
+                    build_rejected_csv_row(document_name, item.chunk, extraction, self.config.requested_section)
+                )
+                rejected_json_records.append(
+                    build_rejected_json_record(
+                        document_name,
+                        item.chunk,
+                        item.hierarchy,
+                        extraction,
+                        self.config.requested_section,
+                    )
+                )
+                continue
             verification = verification_by_id.get(chunk_id, {})
             csv_rows.append(build_csv_row(document_name, item.chunk, item.hierarchy, extraction, verification))
             json_records.append(
@@ -109,8 +179,7 @@ class ITBExtractionService:
                     error=error_by_id.get(chunk_id, ""),
                 )
             )
-            token_rows.append(build_token_row(document_name, item.chunk, per_chunk_usage))
-        return csv_rows, json_records, token_rows
+        return csv_rows, json_records, token_rows, rejected_csv_rows, rejected_json_records
 
     def _resolve_extractions(
         self,
@@ -142,13 +211,23 @@ class ITBExtractionService:
         if not self.config.enable_verification:
             return {}
         payloads = [
-            build_verification_payload(document_name, item.chunk, item.hierarchy, extraction_by_id[chunk_id])
+            build_verification_payload(
+                document_name,
+                item.chunk,
+                item.hierarchy,
+                item.known_abbreviations,
+                extraction_by_id[chunk_id],
+            )
             for item in batch
-            if (chunk_id := as_text(item.chunk.get("chunk_id"))) not in error_by_id
+            if (
+                (chunk_id := as_text(item.chunk.get("chunk_id"))) not in error_by_id
+                and not self._is_rejected_by_section_boundary(extraction_by_id[chunk_id])
+            )
         ]
         if not payloads:
             return {}
         try:
+            logger.info("Running ITB verification for {} chunk{}", len(payloads), "" if len(payloads) == 1 else "s")
             results_by_id = verify_extraction_batch(self.client, self.config.model, self.verification_prompt, payloads)
             return {
                 chunk_id: results_by_id.get(
@@ -161,6 +240,20 @@ class ITBExtractionService:
         except Exception as exc:
             logger.exception("ITB verification batch failed")
             return {as_text(payload.get("chunk_id")): failed_verification(exc) for payload in payloads}
+
+    def _is_rejected_by_section_boundary(self, extraction: dict[str, Any]) -> bool:
+        if not self.config.requested_section:
+            return False
+        value = extraction.get("belongs_to_requested_section")
+        if isinstance(value, bool):
+            return not value
+        if isinstance(value, str):
+            normalized = value.strip().casefold()
+            if normalized in {"false", "no", "n", "0"}:
+                return True
+            if normalized in {"true", "yes", "y", "1"}:
+                return False
+        return False
 
 
 def _chunked(items: list[PreparedChunk], size: int) -> list[list[PreparedChunk]]:

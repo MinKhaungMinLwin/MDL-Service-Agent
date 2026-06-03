@@ -5,7 +5,8 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from itb_service.extraction import parse_batch_results, parse_json_output
+from common.llm_json import parse_json_output
+from itb_service.extraction import parse_batch_results
 
 
 def verify_extraction_batch(
@@ -33,6 +34,7 @@ def build_verification_payload(
     document_name: str,
     chunk: dict[str, Any],
     hierarchy: str,
+    known_abbreviations: dict[str, str],
     extraction: dict[str, Any],
 ) -> dict[str, Any]:
     """Build one verifier payload from source data and extractor output."""
@@ -47,6 +49,7 @@ def build_verification_payload(
             "chunk_type": chunk.get("chunk_type", ""),
             "label": chunk.get("label", ""),
             "hierarchy_context": hierarchy,
+            "known_abbreviations": known_abbreviations,
             "chunk_text": chunk.get("text", ""),
         },
         "extractor_output": extraction,

@@ -15,36 +15,46 @@ from typing import Any
 
 from loguru import logger
 
-DEFAULT_SCORE_THRESHOLD = 0.85
+DEFAULT_SCORE_THRESHOLD = 0.75
 DEFAULT_TOP_N = 5          # how many Matched_Doc_N per row to consider
 DEFAULT_OUTPUT_DIR = Path("output/schedule_service")
 
 # Known deliverable keywords to extract from title (longest/most specific first)
 _DELIVERABLE_KEYWORDS: list[str] = [
     # P&ID variants
-    "P&I DIAGRAM", "P&ID", "PIPING AND INSTRUMENTATION DIAGRAM",
+    "P&I DIAGRAM", "P&ID", "PIPING AND INSTRUMENTATION DIAGRAM", "PIPING & INSTRUMENTATION DRAWING",
     # Arrangement / Layout
-    "GENERAL ARRANGEMENT", "GA DRAWING",
-    "ARRANGEMENT DRAWING", "ARRANGEMENT",
+    "GENERAL ARRANGEMENT DRAWING", "GENERAL ARRANGEMENT", "GA DRAWING",
+    "PIPING ARRANGEMENT DRAWING", "ARRANGEMENT DRAWING", "ARRANGEMENT",
     "LAYOUT DRAWING", "LAYOUT",
-    # Electrical diagrams
+    # Electrical / Control diagrams (longest first to avoid partial match)
+    "ELECTRICAL CONTROL LOGIC DIAGRAM",
+    "FUNCTIONAL LOOP DIAGRAM",
+    "CONTROL LOOP DIAGRAM",
+    "CONTROL LOGIC DIAGRAM",
     "SINGLE LINE DIAGRAM",
-    # Calculation
-    "CALCULATION SHEET", "CALCULATION",
-    # Data sheet
-    "DATA SHEET",
+    "SCHEMATIC DIAGRAM",
+    "WIRING DIAGRAM",
+    "LOGIC DIAGRAM",
+    # Calculation variants
+    "SIZING CALCULATION", "CALCULATION SHEET", "DESIGN CALCULATION", "CALCULATION",
+    # Data sheet variants
+    "TECHNICAL DATA SHEET", "TECHNICAL DATASHEET", "DATA SHEET", "DATASHEET",
     # Drawings
-    "OUTLINE DRAWING", "ISOMETRIC DRAWING", "DETAIL DRAWING", "ELEVATION",
+    "OUTLINE DRAWING", "ISOMETRIC DRAWING", "DETAIL DRAWING", "SECTIONAL DRAWING",
+    "PIPING ISO DRAWING", "ELEVATION", "PLAN & SECTION", "PLAN AND SECTION",
     "DRAWING",
     # Specification / Criteria / Requirements
-    "TECHNICAL SPECIFICATION", "SPECIFICATION",
+    "TECHNICAL SPECIFICATIONS", "TECHNICAL SPECIFICATION", "SPECIFICATION",
     "DESIGN CRITERIA", "CRITERIA",
     "DESIGN REQUIREMENTS", "REQUIREMENTS",
+    # Manuals
+    "OPERATION & MAINTENANCE MANUAL", "ASSEMBLY MANUAL", "MANUAL",
     # Descriptions / Overviews
     "SYSTEM DESCRIPTION", "CONTROL DESCRIPTION", "CONTROL PHILOSOPHY",
     "OVERVIEW", "SUMMARY",
     # Lists / Schedules / Databases
-    "INSTRUMENT LIST", "CABLE SCHEDULE", "SCHEDULE",
+    "INSTRUMENT LIST", "VALVE LIST", "CABLE SCHEDULE", "SCHEDULE",
     "LIST", "DATABASE",
     # Test / Procedure
     "TEST PROCEDURE", "TEST REPORT", "TEST",
@@ -53,23 +63,28 @@ _DELIVERABLE_KEYWORDS: list[str] = [
     "STUDY REPORT", "DESIGN REPORT", "HAZARDOUS AREA CLASSIFICATION",
     "REPORT", "STUDY",
     # Models / Curves
-    "MODEL", "CURVES", "CURVE",
+    "MODEL", "PERFORMANCE CURVE", "PERFORMANCE DATA", "CURVES", "CURVE",
     # Schematics
     "SCHEMATICS", "SCHEMATIC",
-    # Notes
+    # Notes / Plans
     "GENERAL NOTES", "NOTES",
+    "PLAN",
     # Other
     "FOUNDATION AND LOADING DATA",
-    "PERFORMANCE CURVE", "PERFORMANCE DATA",
-    "OPERATIONAL DATA", "DATA",
+    "OPERATIONAL DATA",
     "SETTINGS",
     "ISOMETRIC",
+    "ASSEMBLY",
+    "OUTLINE",
+    "SECTION",
     "DETAIL",
     "DIAGRAM",
+    "DATA",
 ]
 
-# Normalize equipment abbreviations to full names
+# Normalize equipment abbreviations and full names to canonical form
 _EQUIPMENT_NORM: dict[str, str] = {
+    # Short codes
     "GTG": "Gas Turbine Generator",
     "GT": "Gas Turbine Generator",
     "HRSG": "Heat Recovery Steam Generator",
@@ -78,11 +93,71 @@ _EQUIPMENT_NORM: dict[str, str] = {
     "ACC": "Air Cooled Condenser",
     "BOP": "Balance of Plant",
     "DCS": "DCS",
+    "GIS": "GIS",
+    "CEP": "Condensate Extraction Pump",
+    "BFP": "Boiler Feed Pump",
     "BOP PIPING": "BOP Piping",
     "CCWP": "Cooling Water Package",
     "FGP": "Fuel Gas Package",
     "BSEDG": "Blackstart Emergency Diesel Generator",
+    # Full names from Matched_Doc_N underscore-prefixes
+    "AIR COOLED CONDENSER": "Air Cooled Condenser",
+    "AIR COOLED CONDENSER FOUNDATION": "Air Cooled Condenser",
+    "HEAT RECOVERY STEAM GENERATOR": "Heat Recovery Steam Generator",
+    "HEAT RECOVERY STEAM GENERATOR FOUNDATION": "Heat Recovery Steam Generator",
+    "GAS TURBINE GENERATOR": "Gas Turbine Generator",
+    "GAS TURBINE": "Gas Turbine Generator",
+    "STEAM TURBINE & GENERATOR": "Steam Turbine & Generator",
+    "STEAM TURBINE GENERATOR": "Steam Turbine & Generator",
+    "STEAM TURBINE": "Steam Turbine",
+    "CONDENSATE EXTRACTION PUMP": "Condensate Extraction Pump",
+    "CONDENSER VACUUM PUMP": "Condenser Vacuum Pump",
+    "CEP & CONDENSER FOUNDATION": "Steam Turbine",
+    "CONDENSER TUBE CLEANING SYSTEM": "Steam Turbine",
+    "BOILER FEED PUMP": "Boiler Feed Pump",
+    "FIN FAN COOLER": "Fin Fan Cooler",
+    "FIN FAN": "Fin Fan Cooler",
+    "AIR COMPRESSOR": "Air Compressor",
+    "FUEL GAS SUPPLY SYSTEM": "Fuel Gas Package",
+    "FUEL GAS STATION FOUNDATION": "Fuel Gas Package",
+    "WTP": "Water Treatment Plant",
+    "WATER TREATMENT PLANT": "Water Treatment Plant",
+    "WASTE WATER TREATMENT PLANT": "Water Treatment Plant",
+    "WASTE WATER TREATMENT": "Water Treatment Plant",
+    "WATER TREATMENT": "Water Treatment Plant",
+    "ULSD STORAGE TANK FOUNDATION": "Fuel Oil System",
+    "FUEL OIL FALSE START STORAGE TANK PIT": "Fuel Oil System",
+    "HVAC SYSTEM": "HVAC",
 }
+
+# Ordered list for scanning equipment keywords embedded in plain titles (longest first)
+_EQUIPMENT_SCAN: list[tuple[str, str]] = [
+    ("HEAT RECOVERY STEAM GENERATOR", "Heat Recovery Steam Generator"),
+    ("AIR COOLED CONDENSER", "Air Cooled Condenser"),
+    ("GAS TURBINE GENERATOR", "Gas Turbine Generator"),
+    ("STEAM TURBINE & GENERATOR", "Steam Turbine & Generator"),
+    ("STEAM TURBINE GENERATOR", "Steam Turbine & Generator"),
+    ("CONDENSATE EXTRACTION PUMP", "Condensate Extraction Pump"),
+    ("CONDENSER VACUUM PUMP", "Condenser Vacuum Pump"),
+    ("WATER TREATMENT PLANT", "Water Treatment Plant"),
+    ("WASTE WATER TREATMENT", "Water Treatment Plant"),
+    ("BOILER FEED PUMP", "Boiler Feed Pump"),
+    ("FIN FAN COOLER", "Fin Fan Cooler"),
+    ("AIR COMPRESSOR", "Air Compressor"),
+    ("STEAM TURBINE", "Steam Turbine"),
+    ("GAS TURBINE", "Gas Turbine Generator"),
+    ("FUEL OIL", "Fuel Oil System"),
+    ("FUEL GAS", "Fuel Gas Package"),
+    ("HRSG", "Heat Recovery Steam Generator"),
+    ("GTG", "Gas Turbine Generator"),
+    ("STG", "Steam Turbine & Generator"),
+    ("CEP", "Condensate Extraction Pump"),
+    ("BFP", "Boiler Feed Pump"),
+    ("GIS", "GIS"),
+    ("DCS", "DCS"),
+    ("ACC", "Air Cooled Condenser"),
+    ("BOP", "Balance of Plant"),
+]
 
 
 def extract_candidates(
@@ -91,6 +166,7 @@ def extract_candidates(
     score_threshold: float = DEFAULT_SCORE_THRESHOLD,
     top_n: int = DEFAULT_TOP_N,
     limit: int = 0,
+    classify_with_llm: bool = False,
 ) -> Path:
     """Extract and deduplicate MDL candidates from an ITB matching CSV.
 
@@ -136,6 +212,10 @@ def extract_candidates(
         len(candidate_list), score_threshold, top_n,
     )
 
+    if classify_with_llm and candidate_list:
+        logger.info("LLM-classifying {} candidates to improve Equipment/Building/System/Deliverable fields", len(candidate_list))
+        candidate_list = _classify_candidates(candidate_list)
+
     output_dir.mkdir(parents=True, exist_ok=True)
     stem = f"mdl_candidates_{input_csv.stem}"
     output_path = output_dir / f"{stem}.csv"
@@ -154,6 +234,12 @@ def _parse_matched_doc(raw: str) -> dict[str, Any]:
     # Strip [Project] prefix
     text = re.sub(r'^\[.+?\]\s*', '', text)
 
+    document_no = ""
+    m_doc = re.match(r'^([A-Za-z0-9][A-Za-z0-9_.\/-]*\d[A-Za-z0-9_.\/-]*)\s+-\s+(.+)$', text)
+    if m_doc:
+        document_no = m_doc.group(1).strip()
+        text = m_doc.group(2).strip()
+
     # Optional [Equipment bracket]
     equip_bracket = ""
     m_eq = re.match(r'^\[(.+?)\]\s*', text)
@@ -167,25 +253,36 @@ def _parse_matched_doc(raw: str) -> dict[str, Any]:
         parts = text.split(' - ', 1)
         raw_equipment = equip_bracket or parts[0].strip()
         title = parts[1].strip()
-    # Pattern 2: "EQUIP_CODE_TITLE" (short code before first underscore)
+    # Pattern 2: "EQUIPMENT_TITLE" — extract equipment from prefix, keep full text as title
     elif '_' in text:
         parts = text.split('_', 1)
-        if len(parts[0]) <= 12:
-            raw_equipment = equip_bracket or parts[0].strip()
-            title = parts[1].replace('_', ' ').strip()
-        else:
-            raw_equipment = equip_bracket
-            title = text.replace('_', ' ').strip()
+        raw_equipment = equip_bracket or parts[0].strip()
+        title = text.replace('_', ' ').strip()
     else:
+        # No separator — scan title text for known equipment keywords
         raw_equipment = equip_bracket
         title = text
 
+    # If the extracted prefix is itself a deliverable keyword (e.g. "CONTROL LOGIC DIAGRAM_FUEL OIL...")
+    # it is a doc type masquerading as equipment — drop it and scan the title instead.
+    forced_deliverable = ""
+    if raw_equipment and not equip_bracket:
+        extracted = _extract_deliverable(raw_equipment)
+        if extracted:
+            forced_deliverable = extracted
+            raw_equipment = ""
+
     equipment = _normalize_equipment(raw_equipment)
-    deliverable = _extract_deliverable(title)
+    if not equipment:
+        equipment = _extract_equipment_from_title(title)
+    deliverable = _extract_deliverable(title) or forced_deliverable
 
     return {
         "project": "",        # stripped above
+        "document_no": document_no,
         "equipment": equipment,
+        "building": "",
+        "system": "",
         "title": title,
         "deliverable": deliverable,
         "score": score,
@@ -193,15 +290,29 @@ def _parse_matched_doc(raw: str) -> dict[str, Any]:
 
 
 def _extract_score(raw: str) -> float:
-    """Extract the best available matching score from a formatted candidate."""
-    for pattern in (
-        r"CrossEncoder:\s*([-+]?\d*\.?\d+)",
-        r"Vector:\s*([-+]?\d*\.?\d+)",
-        r"최종점수:\s*([-+]?\d*\.?\d+)",
-    ):
-        match = re.search(pattern, raw)
-        if match:
-            return float(match.group(1))
+    """Extract the best available matching score from a formatted candidate.
+
+    Score format evolution:
+    - New format (hybrid/semantic mode): Semantic score (0–1 cosine similarity) is
+      the reliable 0–1 range metric. CrossEncoder in this format is an ms-marco raw
+      logit (can be negative) and is NOT comparable to the 0–1 threshold.
+    - Old format (Korean pipeline): 최종점수 is a combined score, often > 1.
+    Priority: Semantic → 최종점수/Vector (old) → CrossEncoder only if positive.
+    """
+    # Prefer Semantic (0–1 range, comparable to score_threshold)
+    m = re.search(r"Semantic:\s*([-+]?\d*\.?\d+)", raw)
+    if m:
+        return float(m.group(1))
+    # Old-format combined scores
+    for pattern in (r"최종점수:\s*([-+]?\d*\.?\d+)", r"Vector:\s*([-+]?\d*\.?\d+)"):
+        m = re.search(pattern, raw)
+        if m:
+            return float(m.group(1))
+    # CrossEncoder as last resort — only use if positive (ms-marco logit scale)
+    m = re.search(r"CrossEncoder:\s*([-+]?\d*\.?\d+)", raw)
+    if m:
+        val = float(m.group(1))
+        return val if val > 0 else 0.0
     return 0.0
 
 
@@ -215,9 +326,19 @@ def _extract_deliverable(title: str) -> str:
 
 
 def _normalize_equipment(raw: str) -> str:
-    """Normalize equipment abbreviation to full name."""
-    upper = raw.strip().upper()
-    return _EQUIPMENT_NORM.get(upper, raw.strip())
+    """Normalize equipment name to canonical form."""
+    cleaned = re.sub(r'\(.*?\)', '', raw).strip()  # strip "(CCPP PLANT AREA)", "(For Block 2)"
+    upper = cleaned.upper()
+    return _EQUIPMENT_NORM.get(upper, cleaned) or raw.strip()
+
+
+def _extract_equipment_from_title(title: str) -> str:
+    """Scan a plain title (no separator) for known equipment keywords."""
+    upper = title.upper()
+    for keyword, canonical in _EQUIPMENT_SCAN:
+        if keyword in upper:
+            return canonical
+    return ""
 
 
 def _dedup_key(equipment: str, deliverable: str, title: str) -> str:
@@ -250,16 +371,48 @@ def _write_csv(path: Path, candidates: list[dict[str, Any]]) -> None:
         for c in candidates:
             writer.writerow({
                 "Source File": "itb_candidates",
-                "Document No": "",
+                "Document No": c.get("document_no", ""),
                 "Title": c["title"],
                 "Equipment": c["equipment"],
-                "Building": "",
-                "System": "",
+                "Building": c.get("building", ""),
+                "System": c.get("system", ""),
                 "Deliverable": c["deliverable"],
                 "Note": "",
                 "match_score": f"{c['score']:.4f}",
                 "itb_sources": " | ".join(c["itb_sources"][:5]),
             })
+
+
+def _classify_candidates(candidates: list[dict[str, Any]], batch_size: int = 20) -> list[dict[str, Any]]:
+    """Re-classify Equipment/Building/System/Deliverable using the MDL LLM classifier."""
+    import time
+    from common.config import required_env
+    from common.openai_client import build_azure_openai_client
+    from mdl_service.classification import DEFAULT_CLASSIFICATION_PROMPT_PATH, MDLClassifier, load_system_prompt
+
+    client = build_azure_openai_client("AZURE_OPENAI_API_VERSION", "2024-08-01-preview")
+    model = required_env("AZURE_OPENAI_CHAT_DEPLOYMENT")
+    system_prompt = load_system_prompt(DEFAULT_CLASSIFICATION_PROMPT_PATH)
+    classifier = MDLClassifier(client, model, system_prompt)
+
+    for start in range(0, len(candidates), batch_size):
+        batch = candidates[start : start + batch_size]
+        titles = [c["title"] for c in batch]
+        logger.info("LLM classifying batch {}/{} ({} titles)", start // batch_size + 1, -(-len(candidates) // batch_size), len(titles))
+        results = classifier.classify_titles(titles)
+        for candidate, result in zip(batch, results, strict=True):
+            if result.equipment:
+                candidate["equipment"] = result.equipment
+            if result.building:
+                candidate["building"] = result.building
+            if result.system:
+                candidate["system"] = result.system
+            if result.deliverable:
+                candidate["deliverable"] = result.deliverable
+        if start + batch_size < len(candidates):
+            time.sleep(1.0)
+
+    return candidates
 
 
 def _read_csv(path: Path) -> list[dict[str, str]]:

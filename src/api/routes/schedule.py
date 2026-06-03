@@ -109,6 +109,16 @@ def schedule_generate(
             examples=["2024-01-15"],
         ),
     ] = "",
+    rule_csv: Annotated[
+        str,
+        Query(
+            description=(
+                "Optional path to a custom validation rule CSV. "
+                "Defaults to data/schedule_sources/rules/validation_rule.csv when omitted."
+            ),
+            examples=["data/schedule_sources/rules/mock_validation_rule.csv"],
+        ),
+    ] = "",
     limit: ScheduleLimit = 0,
 ) -> dict[str, object]:
     """Generate FA/FC schedule date ranges from an MDL classified CSV."""
@@ -117,11 +127,17 @@ def schedule_generate(
     if ntp_date:
         logger.info("NTP date: {}", ntp_date)
 
+    from schedule_service.rule_loader import DEFAULT_RULE_PATH
+    rule_path = _existing_path(rule_csv) if rule_csv else DEFAULT_RULE_PATH
+    if rule_csv:
+        logger.info("Using custom rule file: {}", rule_path)
+
     schedule_activities = load_schedule_activities(DEFAULT_SCHEDULE_PATH)
     xlsx_path, json_path = generate_schedule_file(
         input_csv=input_path,
         schedule_activities=schedule_activities,
         output_dir=SCHEDULE_OUTPUT_DIR,
+        rule_path=rule_path,
         limit=limit,
         ntp_date=ntp_date,
     )
@@ -148,12 +164,27 @@ def schedule_candidates(
     ],
     score_threshold: Annotated[
         float,
-        Query(description="Minimum final score to include a matched document."),
-    ] = 0.85,
+        Query(
+            description=(
+                "Minimum score to include a matched document. "
+                "New hybrid/semantic format uses Semantic score (0–1); recommended 0.75. "
+                "Old format uses 최종점수 (can exceed 1); recommended 0.85."
+            ),
+        ),
+    ] = 0.75,
     top_n: Annotated[
         int,
         Query(gt=0, le=100, description="Number of Matched_Doc_N columns to consider per row."),
     ] = 5,
+    classify_with_llm: Annotated[
+        bool,
+        Query(
+            description=(
+                "Re-classify Equipment/Building/System/Deliverable using the MDL LLM classifier. "
+                "Improves rule matching quality in /schedule/generate. Requires Azure OpenAI credentials."
+            ),
+        ),
+    ] = False,
     limit: ScheduleLimit = 0,
 ) -> dict[str, object]:
     """Extract MDL candidates from ITB matching CSV and write a candidate CSV."""
@@ -166,6 +197,7 @@ def schedule_candidates(
         score_threshold=score_threshold,
         top_n=top_n,
         limit=limit,
+        classify_with_llm=classify_with_llm,
     )
     return {
         "kind": "mdl_candidates",

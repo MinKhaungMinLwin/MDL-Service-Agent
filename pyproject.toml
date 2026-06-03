@@ -33,6 +33,7 @@ mdl-classify = "mdl_service.cli:classify"
 mdl-ingest = "mdl_service.cli:ingest"
 itb-extract = "itb_service.cli:extract"
 itb-match = "matching_service.cli:match"
+itb-eval-build-ground-truth = "evaluation_service.ground_truth.cli:build_ground_truth"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
@@ -43,6 +44,7 @@ where = ["src"]
 [tool.setuptools.package-data]
 mdl_service = ["prompts/*.md"]
 itb_service = ["prompts/*.md"]
+evaluation_service = ["ground_truth/prompts/*.md"]
 
 [tool.ruff]
 line-length = 120

@@ -8,6 +8,7 @@ Use only:
 - `source_input.hierarchy_context`
 - `source_input.section`
 - `source_input.section_path`
+- `source_input.known_abbreviations`
 - `source_input.chunk_text`
 - `extractor_output`
 
@@ -43,6 +44,9 @@ Each result must include the original `chunk_id`.
 Verification rules:
 - Judge whether the extraction would support correct MDL filtering and matching. Focus on retrieval impact, not stylistic perfection.
 - Depth values should reflect the actual technical scope of the chunk, using `hierarchy_context` as context but not blindly copying broad parent labels when the chunk text or child section gives a clearer scope.
+- Prefer the most useful technical retrieval domain over a broad parent section label. For example, if the parent hierarchy says Civil Works but the chunk clearly describes HVAC, potable water, compressed air, fire protection, or other building services, do not mark a Building Services / Mechanical Building Services depth as wrong just because it does not copy Civil Works.
+- For fragmented redundancy or availability tables, verify depth against the actual systems/equipment rows being described, not against noisy repeated table headers, column labels, or nearby parent labels. If the chunk is about GT air intake, evaporative cooler, wet compression, or enhanced cooling air, a Gas Turbine / Air Intake & Inlet Cooling depth is preferred over Control Instrumentation or Fuel Gas Metering.
+- For plant performance chunks that also define outage modes, outage durations, outage frequencies, or availability assumptions, accept and prefer a combined performance/availability depth when the chunk supports it.
 - Depth values should be normalized when possible. Raw section numbers, underscores, or breadcrumb artifacts are issues only when they would reduce clarity or matching quality.
 - `depth_1` should identify the broad useful domain.
 - `depth_2` should identify the major sub-domain when the hierarchy or chunk text provides one.
@@ -54,7 +58,12 @@ Verification rules:
 - Administrative or procedural labels such as quality control submittals, design information, design criteria, approval, submission, or procedure should not be suggested for `depth_4`/`depth_5`.
 - Deliverable/admin terms such as drawing, calculation, report, list, schedule, procedure, approval, or submission should not drive the depth hierarchy unless the deliverable itself is the explicit technical target.
 - Do not require or suggest named tests, systems, or formal deliverables unless they are explicitly stated in the current chunk or current section title. Preserve methodology/process wording when the source does not name a system.
+- Abbreviation expansion is valid when the acronym or variant appears in the source input and the expansion exists in `source_input.known_abbreviations`. Do not flag such expansions as hallucinations. Prefer keeping both the acronym and canonical expansion when both improve retrieval, such as `GSUT / Generator Step-Up Transformer`.
+- If an expansion is not supported by `known_abbreviations` and is not explicit in the source text, treat it as inferred and flag it when it could mislead retrieval.
 - Keywords should be useful MDL retrieval anchors: equipment, systems, buildings, study/survey terms, standards, operating conditions, quantities, and parameters.
+- For list or table chunks, check that keywords include the strongest explicit retrieval anchors across named equipment, systems, standards, operating conditions, pollutants, treatment facilities, outage modes, correction factors, and numeric parameters. Do not require every item, but mark a major issue when missing anchors would likely cause MDL retrieval to miss the correct domain.
+- Entity classification should be checked for retrieval impact. Flag major when a noisy table header, adjacent label, or condition-only item is promoted to a primary entity and would materially mis-route retrieval. Treat it as minor or ok when the item is merely a useful keyword and the depth/search query still represent the correct technical scope.
+- If an acronym expansion is supported by `known_abbreviations` but appears only inside a curve name, parameter, or condition, prefer suggesting it as a keyword rather than a standalone equipment entity. Do not call the expansion hallucinated, but do flag misleading entity scope if it would affect matching.
 - Search query should combine the most useful depth terms and keywords as concise comma-separated technical phrases, without broad labels that conflict with the chunk's actual technical scope.
 
 Severity guidance:
