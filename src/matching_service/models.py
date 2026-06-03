@@ -18,8 +18,6 @@ class MatchingConfig:
     fulltext_index_name: str = "test_mdl_document_fulltext_idx"
     vector_index_name: str = "test_mdl_document_vector_idx"
     node_label: str = "TestMDLDocument"
-    excluded_source_text: str = "R&N_MDL"
-    included_source_text: str = ""
     rrf_k: int = 60
 
     def __post_init__(self) -> None:

@@ -14,11 +14,8 @@ from evaluation_service.ground_truth.service import (
     _resolve_judgments,
     _resolve_verifications,
     build_candidate_pool,
-    build_reference_candidate_pool,
-    build_reference_search_candidate_pool,
     iter_judge_pairs,
     limit_itb_rows,
-    load_reference_mdl_candidates,
     write_high_precision_ground_truth,
 )
 
@@ -32,14 +29,6 @@ class EvaluationServiceTest(unittest.TestCase):
             (base / "output_itb_sectionA_focused.csv").write_text("Chunk ID,Chunk Text\n", encoding="utf-8")
 
             self.assertEqual(_discover_sections(base), ("2", "10", "A"))
-
-    def test_reference_pool_top_k_cannot_exceed_retrieval_candidates(self) -> None:
-        with self.assertRaisesRegex(ValueError, "reference_pool_top_k cannot exceed"):
-            EvaluationConfig(
-                model="deployment",
-                reference_retrieval_candidate_limit=10,
-                reference_pool_top_k=20,
-            )
 
     def test_max_itb_chunks_cannot_be_negative(self) -> None:
         with self.assertRaisesRegex(ValueError, "max_itb_chunks cannot be negative"):
@@ -101,106 +90,6 @@ class EvaluationServiceTest(unittest.TestCase):
 
         self.assertEqual(len(pools[0]["candidates"]), 1)
         self.assertEqual(pools[0]["candidates"][0]["doc_id"], "A-1")
-
-    def test_reference_pool_loads_and_deduplicates_reference_mdl_candidates(self) -> None:
-        conn = _Neo4jConn(
-            [
-                _candidate("A-1", 1.0, source_file="R&N_MDL.xlsx", document_no="001", title="Layout"),
-                _candidate("A-2", 0.9, source_file="R&N_MDL.xlsx", document_no="001", title="Layout"),
-                _candidate("B", 0.8, source_file="R&N_MDL.xlsx", document_no="002", title="Foundation"),
-            ]
-        )
-        candidates = load_reference_mdl_candidates(conn, "R&N_MDL.xlsx")
-        pools = build_reference_candidate_pool(
-            {"7:chunk-1": {"Chunk Text": "Cooling water requirement"}},
-            candidates,
-        )
-        pairs = iter_judge_pairs(pools)
-
-        self.assertEqual([candidate["doc_id"] for candidate in candidates], ["A-1", "B"])
-        self.assertEqual(len(pools), 1)
-        self.assertEqual({pair["mdl"]["source_file"] for pair in pairs}, {"R&N_MDL.xlsx"})
-        self.assertEqual({pair["mdl"]["document_no"] for pair in pairs}, {"001", "002"})
-
-    def test_reference_pool_uses_minimal_source_grounded_itb_fields(self) -> None:
-        pools = build_reference_candidate_pool(
-            {
-                "7:chunk-1": {
-                    "Document": "R&N_ITB",
-                    "Chunk ID": "chunk-1",
-                    "Page": "120",
-                    "Section": "7",
-                    "Section Path": "Section > Generated path",
-                    "Hierarchy Context": "7. Mechanical requirements",
-                    "1st Depth": "Mechanical",
-                    "2nd Depth": "Cooling Water",
-                    "Keywords": "cooling water, pump",
-                    "Search Query": "cooling water pump generated query",
-                    "Chunk Text": "Cooling water pump requirement",
-                }
-            },
-            [_candidate("A", 1.0, source_file="R&N_MDL.xlsx", document_no="001", title="Pump")],
-        )
-
-        itb = pools[0]["itb"]
-        self.assertEqual(
-            itb,
-            {
-                "document": "R&N_ITB",
-                "chunk_id": "chunk-1",
-                "page": "120",
-                "section": "7",
-                "hierarchy_context": "7. Mechanical requirements",
-                "depths": {"1st Depth": "Mechanical", "2nd Depth": "Cooling Water"},
-                "keywords": "cooling water, pump",
-                "chunk_text": "Cooling water pump requirement",
-            },
-        )
-        self.assertNotIn("section_path", itb)
-        self.assertNotIn("search_query", itb)
-
-    def test_reference_pool_fails_when_neo4j_source_has_no_candidates(self) -> None:
-        with self.assertRaisesRegex(ValueError, "No MDL candidates found"):
-            load_reference_mdl_candidates(_Neo4jConn([]), "R&N_MDL.xlsx")
-
-    def test_reference_search_pool_uses_matching_search_inside_reference_source(self) -> None:
-        conn = _Neo4jConn(
-            [
-                _candidate("A", 1.0, source_file="R&N_MDL.xlsx", document_no="001", title="Pump"),
-                _candidate("B", 0.9, source_file="R&N_MDL.xlsx", document_no="002", title="Valve"),
-            ]
-        )
-        pools = build_reference_search_candidate_pool(
-            {
-                "7:chunk-1": {
-                    "Document": "R&N_ITB",
-                    "Page": "120",
-                    "Section": "7",
-                    "Hierarchy Context": "7. Mechanical requirements",
-                    "1st Depth": "Mechanical",
-                    "2nd Depth": "Cooling Water",
-                    "Keywords": "cooling water, pump",
-                    "Chunk Text": "Cooling water pump requirement",
-                }
-            },
-            conn,
-            EvaluationConfig(
-                model="pool-only",
-                modes=("keyword",),
-                reference_retrieval_candidate_limit=2,
-                reference_pool_top_k=1,
-            ),
-            "R&N_MDL.xlsx",
-            "TestMDLDocument",
-            cross_encoder_reranker=_RecordingReferenceReranker(),
-        )
-
-        self.assertEqual(len(pools), 1)
-        self.assertEqual([candidate["doc_id"] for candidate in pools[0]["candidates"]], ["B"])
-        self.assertNotIn("source_modes", pools[0]["candidates"][0])
-        self.assertNotIn("cross_encoder_score", pools[0]["candidates"][0])
-        self.assertEqual(conn.last_parameters["included_source_text"], "R&N_MDL.xlsx")
-        self.assertEqual(conn.last_parameters["excluded_source_text"], "")
 
     def test_service_judges_all_rows_and_verifies_all_rows(self) -> None:
         pools = build_candidate_pool(
@@ -578,33 +467,6 @@ class EvaluationServiceTest(unittest.TestCase):
         self.assertFalse(result["agrees"])
 
 
-class _Neo4jConn:
-    def __init__(self, records: list[dict]) -> None:
-        self.records = records
-        self.last_parameters = {}
-
-    def session(self):
-        return _Neo4jSession(self)
-
-
-class _Neo4jSession:
-    def __init__(self, conn: _Neo4jConn) -> None:
-        self.conn = conn
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
-        return None
-
-    def run(self, query, **parameters):
-        self.conn.last_parameters = parameters
-        limit = parameters.get("limit")
-        if isinstance(limit, int) and limit > 0:
-            return self.conn.records[:limit]
-        return self.conn.records
-
-
 class _ChatClient:
     def __init__(self, responses: list[dict]) -> None:
         self.responses = responses
@@ -670,14 +532,6 @@ class _EchoCompletions:
         message = type("Message", (), {"content": json.dumps({"results": results})})()
         choice = type("Choice", (), {"message": message})()
         return type("Response", (), {"choices": [choice]})()
-
-
-class _RecordingReferenceReranker:
-    def rerank(self, query_text: str, candidates: list[dict], top_k: int) -> list[dict]:
-        reranked = []
-        for index, candidate in enumerate(reversed(candidates), start=1):
-            reranked.append({**candidate, "cross_encoder_score": float(3 - index), "final_rank": index})
-        return reranked[:top_k]
 
 
 def _matching_record(chunk_id: str, candidates: list[dict]) -> dict:

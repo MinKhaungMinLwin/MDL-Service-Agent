@@ -98,24 +98,20 @@ class MatchingServiceTest(unittest.TestCase):
         self.assertIn("DROP INDEX test_mdl_document_fulltext_idx", conn.calls[1][0])
         self.assertIn("CREATE FULLTEXT INDEX test_mdl_document_fulltext_idx", conn.calls[2][0])
 
-    def test_repository_can_search_only_one_source_without_changing_default_exclusion(self) -> None:
+    def test_repository_searches_all_sources_without_source_filters(self) -> None:
         conn = _SearchConnection()
         config = MatchingConfig(
             retrieval_candidate_limit=5,
             output_limit=5,
-            excluded_source_text="",
-            included_source_text="R&N_MDL.xlsx",
         )
 
         MDLSearchRepository(conn, config).search_keyword("pump")
 
         query, parameters = conn.calls[0]
-        self.assertIn("$included_source_text", query)
-        self.assertIn("$excluded_source_text", query)
-        self.assertEqual(parameters["included_source_text"], "R&N_MDL.xlsx")
-        self.assertEqual(parameters["excluded_source_text"], "")
-        self.assertEqual(MatchingConfig().excluded_source_text, "R&N_MDL")
-        self.assertEqual(MatchingConfig().included_source_text, "")
+        self.assertNotIn("included_source_text", query)
+        self.assertNotIn("excluded_source_text", query)
+        self.assertNotIn("included_source_text", parameters)
+        self.assertNotIn("excluded_source_text", parameters)
 
     def test_default_matching_paths_read_itb_extract_and_write_mode_output(self) -> None:
         files = _files_to_process(

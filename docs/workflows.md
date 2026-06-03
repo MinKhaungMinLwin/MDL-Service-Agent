@@ -52,6 +52,7 @@ Defaults:
 - keyword mode merges aggregated depth and keyword full-text searches
 - semantic mode embeds one comma-separated depth-and-keyword query per ITB chunk
 - hybrid mode merges keyword and semantic rankings with reciprocal rank fusion
+- all matching modes search every MDL document available in Neo4j
 - all modes preserve detected abbreviations and append canonical expansions from `src/common/normalization_rules/abbreviations.json`
 - retrieved MDL candidates passed to the cross-encoder: `100`
 - final cross-encoder matches written per ITB chunk: `20`
@@ -62,14 +63,6 @@ Examples:
 uv run itb-match --retrieval-mode keyword
 uv run itb-match --retrieval-mode semantic
 uv run itb-match --retrieval-mode hybrid
-```
-
-To evaluate against the verified `R&N_MDL` ground truth, run matching on the same MDL source:
-
-```powershell
-uv run itb-match --retrieval-mode keyword --include-source-text "R&N_MDL" --no-exclude-source-text
-uv run itb-match --retrieval-mode semantic --include-source-text "R&N_MDL" --no-exclude-source-text
-uv run itb-match --retrieval-mode hybrid --include-source-text "R&N_MDL" --no-exclude-source-text
 ```
 
 Use `--help` on any command to see path and runtime overrides.
@@ -92,7 +85,6 @@ Defaults:
 
 - input matching JSON files: `output/current_test_env/matching/<retrieval-mode>`
 - pooled candidates per mode and ITB chunk: `20`
-- reference MDL CrossEncoder candidates kept per mode and ITB chunk: `50`
 - output ground-truth files: `output/current_test_env/evaluation/ground_truth`
 - verified evaluation input: `output/current_test_env/evaluation/ground_truth/itb_mdl_matching_ground_truth_verified.csv`
 - LLM judge payloads do not expose retrieval mode, rank, or score
@@ -112,5 +104,5 @@ Defaults:
 - input ground truth: `output/current_test_env/evaluation/ground_truth/itb_mdl_matching_ground_truth_verified.csv`
 - output reports: `output/current_test_env/evaluation/matching`
 - retrieval stage metrics: `recall_at_100` and `judged_at_100`
-- cross-encoder stage metrics: `ndcg_at_20`, `recall_at_20`, and `judged_at_20`
+- cross-encoder stage metrics: `recall_at_20` and `judged_at_20`
 - recall uses `relevance_threshold=3`, recorded once in `report.json`

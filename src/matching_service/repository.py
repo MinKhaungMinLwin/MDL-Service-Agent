@@ -61,8 +61,6 @@ class MDLSearchRepository:
         query = """
         CALL db.index.fulltext.queryNodes($index_name, $search_query, {limit: $limit})
         YIELD node, score
-        WHERE ($included_source_text = "" OR coalesce(node.source_file, "") CONTAINS $included_source_text)
-          AND ($excluded_source_text = "" OR NOT coalesce(node.source_file, "") CONTAINS $excluded_source_text)
         RETURN node.doc_id AS doc_id,
                node.source_file AS source_file,
                node.document_no AS document_no,
@@ -83,8 +81,6 @@ class MDLSearchRepository:
             query,
             index_name=self.config.fulltext_index_name,
             search_query=fulltext_query,
-            included_source_text=self.config.included_source_text,
-            excluded_source_text=self.config.excluded_source_text,
             limit=self.config.retrieval_candidate_limit,
         )
         for rank, candidate in enumerate(candidates, start=1):
@@ -100,8 +96,6 @@ class MDLSearchRepository:
         query = f"""
         CALL db.index.vector.queryNodes("{self.config.vector_index_name}", $limit, $embedding)
         YIELD node, score
-        WHERE ($included_source_text = "" OR coalesce(node.source_file, "") CONTAINS $included_source_text)
-          AND ($excluded_source_text = "" OR NOT coalesce(node.source_file, "") CONTAINS $excluded_source_text)
         RETURN node.doc_id AS doc_id,
                node.source_file AS source_file,
                node.document_no AS document_no,
@@ -119,8 +113,6 @@ class MDLSearchRepository:
         candidates = self._run(
             query,
             embedding=query_embedding,
-            included_source_text=self.config.included_source_text,
-            excluded_source_text=self.config.excluded_source_text,
             limit=self.config.retrieval_candidate_limit,
         )
         for rank, candidate in enumerate(candidates, start=1):

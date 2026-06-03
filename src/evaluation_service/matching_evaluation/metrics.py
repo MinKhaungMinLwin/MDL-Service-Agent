@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import math
 from statistics import mean
 
 from evaluation_service.matching_evaluation.loaders import Qrels, Rankings
@@ -19,7 +18,6 @@ def evaluate_cross_encoder(qrels: Qrels, rankings: Rankings) -> tuple[dict, list
         rows.append(
             {
                 "query_id": query_id,
-                "ndcg_at_20": _ndcg_at_k(query_qrels, ranking, 20),
                 "recall_at_20": _recall_at_k(query_qrels, ranking, 20, RELEVANCE_THRESHOLD),
                 "judged_at_20": _judged_at_k(query_qrels, ranking, 20),
             }
@@ -53,18 +51,6 @@ def _summarize(rows: list[dict], recall_metric: str) -> dict:
         values = [row[metric_name] for row in rows if row.get(metric_name) is not None]
         summary[metric_name] = mean(values) if values else None
     return summary
-
-
-def _ndcg_at_k(qrels: dict[str, int], ranking: list[str], k: int) -> float | None:
-    ideal_relevances = sorted(qrels.values(), reverse=True)[:k]
-    ideal_dcg = _dcg(ideal_relevances)
-    if ideal_dcg == 0:
-        return None
-    return _dcg([qrels.get(doc_id, 0) for doc_id in ranking[:k]]) / ideal_dcg
-
-
-def _dcg(relevances: list[int]) -> float:
-    return sum((2**relevance - 1) / math.log2(rank + 1) for rank, relevance in enumerate(relevances, start=1))
 
 
 def _recall_at_k(qrels: dict[str, int], ranking: list[str], k: int, threshold: int) -> float | None:

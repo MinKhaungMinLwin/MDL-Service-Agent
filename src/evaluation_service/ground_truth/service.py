@@ -17,18 +17,6 @@ from loguru import logger
 
 from common.json_io import read_json, write_json
 from common.llm_json import parse_json_output
-from common.text_normalizer import expand_abbreviation_terms
-from matching_service.models import MatchingConfig
-from matching_service.query import (
-    build_cross_encoder_query,
-    build_depth_filter_query,
-    build_fulltext_query,
-    build_semantic_query,
-    get_keyword_terms,
-    unique_preserve_order,
-)
-from matching_service.repository import MDLSearchRepository
-from matching_service.retrieval import DepthRetriever
 
 PROMPTS_DIR = Path(__file__).resolve().parent / "prompts"
 DEFAULT_JUDGE_PROMPT_PATH = PROMPTS_DIR / "matching_relevance_judge.md"
@@ -75,8 +63,6 @@ class EvaluationConfig:
     sections: tuple[str, ...] = ("6", "7")
     modes: tuple[str, ...] = ("keyword", "semantic", "hybrid")
     pool_top_k: int = 20
-    reference_retrieval_candidate_limit: int = 300
-    reference_pool_top_k: int = 50
     batch_size: int = 5
     judge_candidates_per_call: int = 25
     llm_retries: int = 2
@@ -97,12 +83,6 @@ class EvaluationConfig:
             raise ValueError("modes must contain only keyword, semantic, or hybrid")
         if self.pool_top_k <= 0:
             raise ValueError("pool_top_k must be positive")
-        if self.reference_retrieval_candidate_limit <= 0:
-            raise ValueError("reference_retrieval_candidate_limit must be positive")
-        if self.reference_pool_top_k <= 0:
-            raise ValueError("reference_pool_top_k must be positive")
-        if self.reference_pool_top_k > self.reference_retrieval_candidate_limit:
-            raise ValueError("reference_pool_top_k cannot exceed reference_retrieval_candidate_limit")
         if self.batch_size <= 0:
             raise ValueError("batch_size must be positive")
         if self.judge_candidates_per_call <= 0:
@@ -149,8 +129,6 @@ class GroundTruthService:
         client: Any,
         judge_prompt: str,
         verify_prompt: str = "",
-        embedding_service: Any | None = None,
-        cross_encoder_reranker: Any | None = None,
         sleep: Callable[[float], None] = time.sleep,
     ) -> None:
         if config.verify and not verify_prompt:
@@ -159,8 +137,6 @@ class GroundTruthService:
         self.client = client
         self.judge_prompt = judge_prompt
         self.verify_prompt = verify_prompt
-        self.embedding_service = embedding_service
-        self.cross_encoder_reranker = cross_encoder_reranker
         self.sleep = sleep
 
     def build_pool(self, extract_dir: Path, matching_dir: Path, pool_path: Path | None = None) -> list[dict[str, Any]]:
@@ -175,37 +151,6 @@ class GroundTruthService:
             "Saved" if pool_path is not None else "Built",
             len(pools),
             _candidate_count(pools),
-            f": {pool_path}" if pool_path is not None else "",
-        )
-        return pools
-
-    def build_reference_pool(
-        self,
-        extract_dir: Path,
-        conn: Any,
-        pool_path: Path | None,
-        source_file: str,
-        node_label: str,
-    ) -> list[dict[str, Any]]:
-        """Build a candidate pool from one reference MDL source in Neo4j."""
-        itb_rows = limit_itb_rows(load_itb_rows(extract_dir, self.config.sections), self.config.max_itb_chunks)
-        pools = build_reference_search_candidate_pool(
-            itb_rows,
-            conn,
-            self.config,
-            source_file,
-            node_label,
-            self.embedding_service,
-            self.cross_encoder_reranker,
-        )
-        if pool_path is not None:
-            write_json(pool_path, pools)
-        logger.info(
-            "{} {} ITB reference pools with {} MDL candidates from {}{}",
-            "Saved" if pool_path is not None else "Built",
-            len(pools),
-            _candidate_count(pools),
-            source_file,
             f": {pool_path}" if pool_path is not None else "",
         )
         return pools
@@ -488,151 +433,6 @@ def build_candidate_pool(
     return pools
 
 
-def load_reference_mdl_candidates(
-    conn: Any,
-    source_file: str,
-    node_label: str = "TestMDLDocument",
-    limit: int = 0,
-) -> list[dict[str, Any]]:
-    """Load and deduplicate MDL candidates from one Neo4j source_file."""
-    if not source_file:
-        raise ValueError("source_file is required")
-    _validate_neo4j_identifier(node_label)
-    query = f"""
-    MATCH (n:{node_label})
-    WHERE coalesce(n.source_file, "") = $source_file
-    RETURN n.doc_id AS doc_id,
-           n.source_file AS source_file,
-           n.document_no AS document_no,
-           n.title AS title,
-           n.system AS system,
-           n.equipment AS equipment,
-           n.building AS building,
-           n.study_survey AS study_survey,
-           n.others AS others,
-           n.deliverable AS deliverable,
-           n.text_content AS text_content
-    ORDER BY n.document_no, n.title, n.doc_id
-    """
-    if limit > 0:
-        query += "\nLIMIT $limit"
-    with conn.session() as session:
-        records = [dict(record) for record in session.run(query, source_file=source_file, limit=limit)]
-    if not records:
-        raise ValueError(f"No MDL candidates found in Neo4j for source_file={source_file}")
-    candidates = _dedupe_candidates(records)
-    logger.info(
-        "Loaded {} Neo4j MDL candidates from {} ({} after dedupe)",
-        len(records),
-        source_file,
-        len(candidates),
-    )
-    return candidates
-
-
-def build_reference_candidate_pool(
-    itb_rows: dict[str, dict[str, Any]],
-    candidates: list[dict[str, Any]],
-) -> list[dict[str, Any]]:
-    """Build ITB pools by pairing each ITB chunk with reference MDL candidates."""
-    pools = []
-    for key in sorted(itb_rows, key=_section_chunk_sort_key):
-        section, chunk_id = key.split(":", maxsplit=1)
-        pool = _build_pool_record(section, {"chunk_id": chunk_id}, itb_rows[key])
-        pool.pop("_candidates_by_id")
-        pool["candidates"] = [_build_pool_candidate(candidate) for candidate in candidates]
-        pools.append(pool)
-    return pools
-
-
-def build_reference_search_candidate_pool(
-    itb_rows: dict[str, dict[str, Any]],
-    conn: Any,
-    config: EvaluationConfig,
-    source_file: str,
-    node_label: str,
-    embedding_service: Any | None = None,
-    cross_encoder_reranker: Any | None = None,
-) -> list[dict[str, Any]]:
-    """Build ITB pools by searching only within one reference MDL source."""
-    if cross_encoder_reranker is None:
-        raise ValueError("cross_encoder_reranker is required for reference search")
-    semantic_embeddings = _embed_reference_semantic_queries(itb_rows, config.modes, embedding_service)
-    pools = []
-    for key in sorted(itb_rows, key=_section_chunk_sort_key):
-        section, chunk_id = key.split(":", maxsplit=1)
-        itb_row = itb_rows[key]
-        pool = _build_pool_record(section, {"chunk_id": chunk_id}, itb_row)
-        candidates_by_key: dict[str, dict[str, Any]] = {}
-        depth_filter_query, depth_terms = build_depth_filter_query(itb_row)
-        keyword_terms = get_keyword_terms(itb_row)
-        keyword_filter_query = build_fulltext_query(expand_abbreviation_terms(keyword_terms))
-        semantic_query = build_semantic_query(depth_terms, keyword_terms)
-        semantic_embedding = semantic_embeddings.get(semantic_query, [])
-        cross_encoder_query = build_cross_encoder_query(depth_terms, keyword_terms)
-
-        for mode in config.modes:
-            mode_config = MatchingConfig(
-                retrieval_mode=mode,
-                retrieval_candidate_limit=config.reference_retrieval_candidate_limit,
-                output_limit=config.reference_pool_top_k,
-                node_label=node_label,
-                excluded_source_text="",
-                included_source_text=source_file,
-            )
-            retrieval = DepthRetriever(MDLSearchRepository(conn, mode_config), mode_config).retrieve(
-                depth_filter_query,
-                keyword_filter_query,
-                semantic_query,
-                semantic_embedding,
-            )
-            reranked_candidates = cross_encoder_reranker.rerank(
-                cross_encoder_query,
-                retrieval.candidates[: config.reference_retrieval_candidate_limit],
-                top_k=config.reference_pool_top_k,
-            )
-            for candidate in reranked_candidates:
-                key = _candidate_key(candidate)
-                if not key:
-                    continue
-                candidates_by_key.setdefault(key, _build_pool_candidate(candidate))
-
-        pool.pop("_candidates_by_id")
-        pool["candidates"] = list(candidates_by_key.values())
-        pools.append(pool)
-
-    if not _candidate_count(pools):
-        raise ValueError(f"No reference MDL search candidates found in Neo4j for source_file={source_file}")
-    logger.info(
-        "Built reference search pools with top {} per mode from {}",
-        config.reference_pool_top_k,
-        source_file,
-    )
-    return pools
-
-
-def _embed_reference_semantic_queries(
-    itb_rows: dict[str, dict[str, Any]],
-    modes: tuple[str, ...],
-    embedding_service: Any | None,
-) -> dict[str, list[float]]:
-    if not any(mode in {"semantic", "hybrid"} for mode in modes):
-        return {}
-    if embedding_service is None:
-        raise ValueError("embedding_service is required for semantic or hybrid reference search")
-
-    semantic_queries = []
-    for itb_row in itb_rows.values():
-        _, depth_terms = build_depth_filter_query(itb_row)
-        semantic_queries.append(build_semantic_query(depth_terms, get_keyword_terms(itb_row)))
-    unique_queries = unique_preserve_order(query for query in semantic_queries if query)
-    if not unique_queries:
-        return {}
-    logger.info("Embedding {} unique reference search queries...", len(unique_queries))
-    embeddings = embedding_service.embed_texts(unique_queries)
-    return dict(zip(unique_queries, embeddings, strict=True))
-
-
 def iter_judge_pairs(pools: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Flatten candidate pools into blind ITB to MDL pairs for the LLM judge."""
     pairs = []
@@ -840,15 +640,6 @@ def _build_itb_depths(itb_row: dict[str, Any], fallback_depths: dict[str, Any]) 
     return depths or fallback_depths
 
 
-def _dedupe_candidates(candidates: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    candidates_by_key = {}
-    for candidate in candidates:
-        key = _candidate_key(candidate)
-        if key and key not in candidates_by_key:
-            candidates_by_key[key] = candidate
-    return list(candidates_by_key.values())
-
-
 def _candidate_key(candidate: dict[str, Any]) -> str:
     document_values = [str(candidate.get(field) or "").strip() for field in ("source_file", "document_no", "title")]
     if all(document_values):
@@ -861,11 +652,6 @@ def _section_chunk_sort_key(key: str) -> tuple[int, int | str, str]:
     section, chunk_id = key.split(":", maxsplit=1)
     section_key: int | str = int(section) if section.isdigit() else section
     return (0 if section.isdigit() else 1, section_key, chunk_id)
-
-
-def _validate_neo4j_identifier(value: str) -> None:
-    if not value.replace("_", "").isalnum() or value[0].isdigit():
-        raise ValueError(f"Invalid Neo4j identifier: {value}")
 
 
 def _build_ground_truth_row(judgment: dict[str, Any], verification: dict[str, Any]) -> dict[str, Any]:
