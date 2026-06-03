@@ -15,6 +15,13 @@ from typing import Any
 
 from loguru import logger
 
+from schedule_service.normalizer import (
+    extract_equipment_from_title as _extract_equipment_from_title_fn,
+)
+from schedule_service.normalizer import (
+    normalize_equipment as _normalize_equipment_fn,
+)
+
 DEFAULT_SCORE_THRESHOLD = 0.75
 DEFAULT_TOP_N = 5          # how many Matched_Doc_N per row to consider
 DEFAULT_OUTPUT_DIR = Path("output/schedule_service")
@@ -82,82 +89,6 @@ _DELIVERABLE_KEYWORDS: list[str] = [
     "DATA",
 ]
 
-# Normalize equipment abbreviations and full names to canonical form
-_EQUIPMENT_NORM: dict[str, str] = {
-    # Short codes
-    "GTG": "Gas Turbine Generator",
-    "GT": "Gas Turbine Generator",
-    "HRSG": "Heat Recovery Steam Generator",
-    "STG": "Steam Turbine & Generator",
-    "ST": "Steam Turbine",
-    "ACC": "Air Cooled Condenser",
-    "BOP": "Balance of Plant",
-    "DCS": "DCS",
-    "GIS": "GIS",
-    "CEP": "Condensate Extraction Pump",
-    "BFP": "Boiler Feed Pump",
-    "BOP PIPING": "BOP Piping",
-    "CCWP": "Cooling Water Package",
-    "FGP": "Fuel Gas Package",
-    "BSEDG": "Blackstart Emergency Diesel Generator",
-    # Full names from Matched_Doc_N underscore-prefixes
-    "AIR COOLED CONDENSER": "Air Cooled Condenser",
-    "AIR COOLED CONDENSER FOUNDATION": "Air Cooled Condenser",
-    "HEAT RECOVERY STEAM GENERATOR": "Heat Recovery Steam Generator",
-    "HEAT RECOVERY STEAM GENERATOR FOUNDATION": "Heat Recovery Steam Generator",
-    "GAS TURBINE GENERATOR": "Gas Turbine Generator",
-    "GAS TURBINE": "Gas Turbine Generator",
-    "STEAM TURBINE & GENERATOR": "Steam Turbine & Generator",
-    "STEAM TURBINE GENERATOR": "Steam Turbine & Generator",
-    "STEAM TURBINE": "Steam Turbine",
-    "CONDENSATE EXTRACTION PUMP": "Condensate Extraction Pump",
-    "CONDENSER VACUUM PUMP": "Condenser Vacuum Pump",
-    "CEP & CONDENSER FOUNDATION": "Steam Turbine",
-    "CONDENSER TUBE CLEANING SYSTEM": "Steam Turbine",
-    "BOILER FEED PUMP": "Boiler Feed Pump",
-    "FIN FAN COOLER": "Fin Fan Cooler",
-    "FIN FAN": "Fin Fan Cooler",
-    "AIR COMPRESSOR": "Air Compressor",
-    "FUEL GAS SUPPLY SYSTEM": "Fuel Gas Package",
-    "FUEL GAS STATION FOUNDATION": "Fuel Gas Package",
-    "WTP": "Water Treatment Plant",
-    "WATER TREATMENT PLANT": "Water Treatment Plant",
-    "WASTE WATER TREATMENT PLANT": "Water Treatment Plant",
-    "WASTE WATER TREATMENT": "Water Treatment Plant",
-    "WATER TREATMENT": "Water Treatment Plant",
-    "ULSD STORAGE TANK FOUNDATION": "Fuel Oil System",
-    "FUEL OIL FALSE START STORAGE TANK PIT": "Fuel Oil System",
-    "HVAC SYSTEM": "HVAC",
-}
-
-# Ordered list for scanning equipment keywords embedded in plain titles (longest first)
-_EQUIPMENT_SCAN: list[tuple[str, str]] = [
-    ("HEAT RECOVERY STEAM GENERATOR", "Heat Recovery Steam Generator"),
-    ("AIR COOLED CONDENSER", "Air Cooled Condenser"),
-    ("GAS TURBINE GENERATOR", "Gas Turbine Generator"),
-    ("STEAM TURBINE & GENERATOR", "Steam Turbine & Generator"),
-    ("STEAM TURBINE GENERATOR", "Steam Turbine & Generator"),
-    ("CONDENSATE EXTRACTION PUMP", "Condensate Extraction Pump"),
-    ("CONDENSER VACUUM PUMP", "Condenser Vacuum Pump"),
-    ("WATER TREATMENT PLANT", "Water Treatment Plant"),
-    ("WASTE WATER TREATMENT", "Water Treatment Plant"),
-    ("BOILER FEED PUMP", "Boiler Feed Pump"),
-    ("FIN FAN COOLER", "Fin Fan Cooler"),
-    ("AIR COMPRESSOR", "Air Compressor"),
-    ("STEAM TURBINE", "Steam Turbine"),
-    ("GAS TURBINE", "Gas Turbine Generator"),
-    ("FUEL OIL", "Fuel Oil System"),
-    ("FUEL GAS", "Fuel Gas Package"),
-    ("HRSG", "Heat Recovery Steam Generator"),
-    ("GTG", "Gas Turbine Generator"),
-    ("STG", "Steam Turbine & Generator"),
-    ("CEP", "Condensate Extraction Pump"),
-    ("BFP", "Boiler Feed Pump"),
-    ("GIS", "GIS"),
-    ("DCS", "DCS"),
-    ("ACC", "Air Cooled Condenser"),
-    ("BOP", "Balance of Plant"),
-]
 
 
 def extract_candidates(
@@ -167,17 +98,23 @@ def extract_candidates(
     top_n: int = DEFAULT_TOP_N,
     limit: int = 0,
     classify_with_llm: bool = False,
-) -> Path:
+) -> tuple[Path, dict[str, Any]]:
     """Extract and deduplicate MDL candidates from an ITB matching CSV.
 
-    Returns the path to the written candidate CSV.
+    Returns (csv_path, timing) where timing breaks down each processing phase.
     """
+    import time
+
+    t0 = time.perf_counter()
+
     logger.info("Reading ITB matching CSV: {}", input_csv)
     rows = _read_csv(input_csv)
     original_count = len(rows)
     if limit > 0:
         rows = rows[:limit]
         logger.info("Limit: processing first {} of {} rows", len(rows), original_count)
+
+    t_read = time.perf_counter()
 
     candidates: dict[str, dict[str, Any]] = {}  # dedup_key → candidate
 
@@ -207,21 +144,46 @@ def extract_candidates(
                 candidates[key]["score"] = parsed["score"]
 
     candidate_list = sorted(candidates.values(), key=lambda c: c["score"], reverse=True)
+    t_regex = time.perf_counter()
+
     logger.info(
         "Extracted {} unique MDL candidates (threshold={}, top_n={})",
         len(candidate_list), score_threshold, top_n,
     )
 
+    llm_timing: dict[str, Any] = {"llm_enabled": False}
     if classify_with_llm and candidate_list:
-        logger.info("LLM-classifying {} candidates to improve Equipment/Building/System/Deliverable fields", len(candidate_list))
-        candidate_list = _classify_candidates(candidate_list)
+        logger.info(
+            "LLM-classifying {} candidates to improve Equipment/Building/System/Deliverable fields",
+            len(candidate_list),
+        )
+        llm_timing = _classify_candidates(candidate_list)
+
+    t_llm = time.perf_counter()
 
     output_dir.mkdir(parents=True, exist_ok=True)
     stem = f"mdl_candidates_{input_csv.stem}"
     output_path = output_dir / f"{stem}.csv"
     _write_csv(output_path, candidate_list)
+
+    t_end = time.perf_counter()
+
+    timing: dict[str, Any] = {
+        "csv_read_s": round(t_read - t0, 3),
+        "regex_extract_s": round(t_regex - t_read, 3),
+        "llm_total_s": round(t_llm - t_regex, 3),
+        "write_s": round(t_end - t_llm, 3),
+        "total_s": round(t_end - t0, 3),
+        "candidates_total": len(candidate_list),
+        **llm_timing,
+    }
+    logger.info(
+        "Timing — read: {csv_read_s}s | regex: {regex_extract_s}s"
+        " | llm: {llm_total_s}s | write: {write_s}s | total: {total_s}s",
+        **timing,
+    )
     logger.info("Wrote MDL candidates to {}", output_path)
-    return output_path
+    return output_path, timing
 
 
 def _parse_matched_doc(raw: str) -> dict[str, Any]:
@@ -327,18 +289,12 @@ def _extract_deliverable(title: str) -> str:
 
 def _normalize_equipment(raw: str) -> str:
     """Normalize equipment name to canonical form."""
-    cleaned = re.sub(r'\(.*?\)', '', raw).strip()  # strip "(CCPP PLANT AREA)", "(For Block 2)"
-    upper = cleaned.upper()
-    return _EQUIPMENT_NORM.get(upper, cleaned) or raw.strip()
+    return _normalize_equipment_fn(raw)
 
 
 def _extract_equipment_from_title(title: str) -> str:
     """Scan a plain title (no separator) for known equipment keywords."""
-    upper = title.upper()
-    for keyword, canonical in _EQUIPMENT_SCAN:
-        if keyword in upper:
-            return canonical
-    return ""
+    return _extract_equipment_from_title_fn(title)
 
 
 def _dedup_key(equipment: str, deliverable: str, title: str) -> str:
@@ -383,36 +339,80 @@ def _write_csv(path: Path, candidates: list[dict[str, Any]]) -> None:
             })
 
 
-def _classify_candidates(candidates: list[dict[str, Any]], batch_size: int = 20) -> list[dict[str, Any]]:
-    """Re-classify Equipment/Building/System/Deliverable using the MDL LLM classifier."""
+def _classify_candidates(
+    candidates: list[dict[str, Any]], batch_size: int = 20, max_workers: int = 4
+) -> dict[str, Any]:
+    """Re-classify Equipment/Building/System/Deliverable using the MDL LLM classifier.
+
+    Only sends candidates where equipment or deliverable is missing after regex extraction.
+    Batches are processed in parallel. Mutates candidates in-place and returns timing info.
+    """
     import time
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
     from common.config import required_env
     from common.openai_client import build_azure_openai_client
     from mdl_service.classification import DEFAULT_CLASSIFICATION_PROMPT_PATH, MDLClassifier, load_system_prompt
 
+    t_import = time.perf_counter()
+
+    # Skip candidates where regex already extracted both fields
+    need_llm = [c for c in candidates if not c.get("equipment") or not c.get("deliverable")]
+    skipped = len(candidates) - len(need_llm)
+    if skipped:
+        logger.info("LLM classify: skipping {} candidates already fully extracted by regex", skipped)
+
+    timing: dict[str, Any] = {
+        "llm_enabled": True,
+        "llm_import_s": 0.0,
+        "llm_classify_s": 0.0,
+        "llm_candidates_skipped": skipped,
+        "llm_candidates_sent": len(need_llm),
+        "llm_batches": 0,
+    }
+
+    if not need_llm:
+        return timing
+
     client = build_azure_openai_client("AZURE_OPENAI_API_VERSION", "2024-08-01-preview")
     model = required_env("AZURE_OPENAI_CHAT_DEPLOYMENT")
     system_prompt = load_system_prompt(DEFAULT_CLASSIFICATION_PROMPT_PATH)
-    classifier = MDLClassifier(client, model, system_prompt)
 
-    for start in range(0, len(candidates), batch_size):
-        batch = candidates[start : start + batch_size]
+    t_classify = time.perf_counter()
+    timing["llm_import_s"] = round(t_classify - t_import, 3)
+
+    batches = [need_llm[i : i + batch_size] for i in range(0, len(need_llm), batch_size)]
+    timing["llm_batches"] = len(batches)
+    logger.info(
+        "LLM classifying {} candidates in {} batches (parallel workers={})",
+        len(need_llm), len(batches), min(max_workers, len(batches)),
+    )
+
+    def _run_batch(batch_idx: int, batch: list[dict[str, Any]]) -> tuple[int, list]:
+        classifier = MDLClassifier(client, model, system_prompt)
         titles = [c["title"] for c in batch]
-        logger.info("LLM classifying batch {}/{} ({} titles)", start // batch_size + 1, -(-len(candidates) // batch_size), len(titles))
+        logger.info("LLM batch {}/{} started ({} titles)", batch_idx + 1, len(batches), len(titles))
         results = classifier.classify_titles(titles)
-        for candidate, result in zip(batch, results, strict=True):
-            if result.equipment:
-                candidate["equipment"] = result.equipment
-            if result.building:
-                candidate["building"] = result.building
-            if result.system:
-                candidate["system"] = result.system
-            if result.deliverable:
-                candidate["deliverable"] = result.deliverable
-        if start + batch_size < len(candidates):
-            time.sleep(1.0)
+        logger.info("LLM batch {}/{} done", batch_idx + 1, len(batches))
+        return batch_idx, results
 
-    return candidates
+    with ThreadPoolExecutor(max_workers=min(max_workers, len(batches))) as executor:
+        futures = {executor.submit(_run_batch, i, batch): batch for i, batch in enumerate(batches)}
+        for future in as_completed(futures):
+            batch = futures[future]
+            _, results = future.result()
+            for candidate, result in zip(batch, results, strict=True):
+                if result.equipment:
+                    candidate["equipment"] = result.equipment
+                if result.building:
+                    candidate["building"] = result.building
+                if result.system:
+                    candidate["system"] = result.system
+                if result.deliverable:
+                    candidate["deliverable"] = result.deliverable
+
+    timing["llm_classify_s"] = round(time.perf_counter() - t_classify, 3)
+    return timing
 
 
 def _read_csv(path: Path) -> list[dict[str, str]]:
