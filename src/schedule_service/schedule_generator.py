@@ -352,7 +352,8 @@ def _format_schedule_row(
         date_range_status = "skip"
     elif rule:
         anchor = _resolve_anchor_date(activity.start_date, activity.finish_date, rule, shift_days)
-        dr = compute_date_range(vt_parsed, anchor, sub_type, rule.priority)
+        ntp_floor = TEMPLATE_NTP + timedelta(days=shift_days) if shift_days else None
+        dr = compute_date_range(vt_parsed, anchor, sub_type, rule.priority, ntp_floor=ntp_floor)
         date_range_status = "generated" if anchor is not None else "missing_date"
 
     return {

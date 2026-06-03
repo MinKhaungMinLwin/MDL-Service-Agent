@@ -36,7 +36,7 @@ itb_candidates,,DESIGN CRITERIA FOR WASTE WATER TRANSFER SYSTEM,,,WASTE WATER TR
 itb_candidates,,GTG System Description Combustion Chamber Instrumentation,Gas Turbine Generator,,,SYSTEM DESCRIPTION,,0.7885,R&N_ITB:p94(score=0.78) | R&N_ITB:p95(score=0.79)
 itb_candidates,,FUEL OIL SYSTEM,Fuel Oil System,,,CONTROL LOOP DIAGRAM,,0.7883,R&N_ITB:p94(score=0.79)
 itb_candidates,,"DESIGN REQUIREMENTS FOR VT & SURGE, BAB36",Gas Turbine Generator,,,DESIGN REQUIREMENTS,,0.7876,R&N_ITB:p79(score=0.76) | R&N_ITB:p81(score=0.78) | R&N_ITB:p81(score=0.79) | R&N_ITB:p84(score=0.77)
-itb_candidates,,CONSUMER SCHEMES FOR I&C (BLOCK #2),Steam Turbine,,Instrumentation & Control,,,0.7872,R&N_ITB:p92(score=0.79)
+itb_candidates,,CONSUMER SCHEMES FOR I&C (BLOCK #2),Steam Turbine,,Instrumentation & Control (BLOCK #2),,,0.7872,R&N_ITB:p92(score=0.79)
 itb_candidates,,WATER & WASTE WATER TREATMENT PLANT SCHEMATIC DIAGRAM,Water Treatment Plant,,,SCHEMATIC DIAGRAM,,0.7860,"R&N_ITB:p86, 87(score=0.79)"
 itb_candidates,,FUEL OIL SYSTEM,Fuel Oil System,,,CONTROL LOGIC DIAGRAM,,0.7858,R&N_ITB:p94(score=0.79)
 itb_candidates,,WATER & WASTE WATER TREATMENT PLANT TECHNICAL DATASHEET-Demi.Water System,Water Treatment Plant,,,TECHNICAL DATASHEET,,0.7848,"R&N_ITB:p86, 87(score=0.78)"
