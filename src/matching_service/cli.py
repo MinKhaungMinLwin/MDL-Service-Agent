@@ -35,6 +35,21 @@ def match(argv: list[str] | None = None) -> None:
     parser.add_argument("--retrieval-candidates", type=int, default=int(os.getenv("ITB_RETRIEVAL_CANDIDATES", "100")))
     parser.add_argument("--output-limit", type=int, default=int(os.getenv("ITB_OUTPUT_LIMIT", "20")))
     parser.add_argument(
+        "--include-source-text",
+        default=os.getenv("ITB_INCLUDE_SOURCE_TEXT", ""),
+        help="Only search MDL documents whose source_file contains this text.",
+    )
+    parser.add_argument(
+        "--exclude-source-text",
+        default=os.getenv("ITB_EXCLUDE_SOURCE_TEXT", "R&N_MDL"),
+        help="Exclude MDL documents whose source_file contains this text. Use an empty string to disable.",
+    )
+    parser.add_argument(
+        "--no-exclude-source-text",
+        action="store_true",
+        help="Disable the default source_file exclusion.",
+    )
+    parser.add_argument(
         "--cross-encoder-model",
         default=os.getenv("ITB_CROSS_ENCODER_MODEL", DEFAULT_CROSS_ENCODER_MODEL),
     )
@@ -51,6 +66,8 @@ def match(argv: list[str] | None = None) -> None:
         retrieval_mode=args.retrieval_mode,
         retrieval_candidate_limit=args.retrieval_candidates,
         output_limit=args.output_limit,
+        included_source_text=args.include_source_text,
+        excluded_source_text="" if args.no_exclude_source_text else args.exclude_source_text,
     )
     embedding_service = AzureEmbeddingService() if config.retrieval_mode in {"semantic", "hybrid"} else None
     cross_encoder_reranker = CrossEncoderReranker(

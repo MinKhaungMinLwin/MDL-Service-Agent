@@ -302,16 +302,19 @@ class EvaluationServiceTest(unittest.TestCase):
             base = Path(directory)
             positive_path = base / "ground_truth_positive.csv"
             negative_path = base / "ground_truth_negative.csv"
+            verified_path = base / "ground_truth_verified.csv"
             service.judge_to_files(
                 pools,
                 resume_state_path=None,
                 ground_truth_path=None,
                 positive_path=positive_path,
                 negative_path=negative_path,
+                verified_path=verified_path,
             )
 
             self.assertTrue(positive_path.exists())
             self.assertTrue(negative_path.exists())
+            self.assertTrue(verified_path.exists())
             self.assertFalse((base / "judgments.json").exists())
             self.assertFalse((base / "resume_state.json").exists())
             self.assertFalse((base / "ground_truth.csv").exists())
@@ -534,12 +537,15 @@ class EvaluationServiceTest(unittest.TestCase):
             base = Path(directory)
             positive_path = base / "ground_truth_positive.csv"
             negative_path = base / "ground_truth_negative.csv"
-            write_high_precision_ground_truth(positive_path, negative_path, judgments, verifications)
+            verified_path = base / "ground_truth_verified.csv"
+            write_high_precision_ground_truth(positive_path, negative_path, judgments, verifications, verified_path)
             positive_rows = positive_path.read_text(encoding="utf-8-sig").splitlines()
             negative_rows = negative_path.read_text(encoding="utf-8-sig").splitlines()
+            verified_rows = verified_path.read_text(encoding="utf-8-sig").splitlines()
 
         self.assertEqual(len(positive_rows), 2)
         self.assertEqual(len(negative_rows), 3)
+        self.assertEqual(len(verified_rows), 4)
         self.assertIn(",3,positive", positive_rows[1])
         self.assertIn(",0,negative", negative_rows[1])
         self.assertIn(",2,negative", negative_rows[2])

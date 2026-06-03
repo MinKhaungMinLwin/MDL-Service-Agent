@@ -64,6 +64,14 @@ uv run itb-match --retrieval-mode semantic
 uv run itb-match --retrieval-mode hybrid
 ```
 
+To evaluate against the verified `R&N_MDL` ground truth, run matching on the same MDL source:
+
+```powershell
+uv run itb-match --retrieval-mode keyword --include-source-text "R&N_MDL" --no-exclude-source-text
+uv run itb-match --retrieval-mode semantic --include-source-text "R&N_MDL" --no-exclude-source-text
+uv run itb-match --retrieval-mode hybrid --include-source-text "R&N_MDL" --no-exclude-source-text
+```
+
 Use `--help` on any command to see path and runtime overrides.
 
 ## ITB To MDL Ground Truth
@@ -84,7 +92,9 @@ Defaults:
 
 - input matching JSON files: `output/current_test_env/matching/<retrieval-mode>`
 - pooled candidates per mode and ITB chunk: `20`
+- reference MDL CrossEncoder candidates kept per mode and ITB chunk: `50`
 - output ground-truth files: `output/current_test_env/evaluation/ground_truth`
+- verified evaluation input: `output/current_test_env/evaluation/ground_truth/itb_mdl_matching_ground_truth_verified.csv`
 - LLM judge payloads do not expose retrieval mode, rank, or score
 - verification runs for every LLM judgment
 
@@ -99,7 +109,7 @@ uv run itb-eval-matching
 Defaults:
 
 - input matching JSON files: `output/current_test_env/matching/<retrieval-mode>`
-- input ground truth: `output/current_test_env/evaluation/ground_truth/itb_mdl_matching_ground_truth.csv`
+- input ground truth: `output/current_test_env/evaluation/ground_truth/itb_mdl_matching_ground_truth_verified.csv`
 - output reports: `output/current_test_env/evaluation/matching`
 - retrieval stage metrics: `recall_at_100` and `judged_at_100`
 - cross-encoder stage metrics: `ndcg_at_20`, `recall_at_20`, and `judged_at_20`

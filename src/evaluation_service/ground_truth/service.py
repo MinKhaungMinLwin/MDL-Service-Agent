@@ -76,7 +76,7 @@ class EvaluationConfig:
     modes: tuple[str, ...] = ("keyword", "semantic", "hybrid")
     pool_top_k: int = 20
     reference_retrieval_candidate_limit: int = 300
-    reference_pool_top_k: int = 100
+    reference_pool_top_k: int = 50
     batch_size: int = 5
     judge_candidates_per_call: int = 25
     llm_retries: int = 2
@@ -217,6 +217,7 @@ class GroundTruthService:
         ground_truth_path: Path | None,
         positive_path: Path | None = None,
         negative_path: Path | None = None,
+        verified_path: Path | None = None,
     ) -> None:
         """Generate judgments, optionally verify all rows, and write ground truth."""
         pairs = iter_judge_pairs(pools)
@@ -235,7 +236,7 @@ class GroundTruthService:
             write_ground_truth(ground_truth_path, judgments, verifications)
             logger.info("Saved silver ground truth: {}", ground_truth_path)
         if positive_path is not None and negative_path is not None:
-            write_high_precision_ground_truth(positive_path, negative_path, judgments, verifications)
+            write_high_precision_ground_truth(positive_path, negative_path, judgments, verifications, verified_path)
 
     def _judge_pools(
         self,
@@ -725,31 +726,36 @@ def write_high_precision_ground_truth(
     negative_path: Path,
     judgments: list[dict[str, Any]],
     verifications: list[dict[str, Any]],
+    verified_path: Path | None = None,
 ) -> None:
     """Write clear positive and negative labels agreed by judge and verifier."""
     verification_by_id = {row.get("judgment_id"): row for row in verifications}
     rows_by_status = {"positive": [], "negative": []}
+    verified_rows = []
     for judgment in judgments:
         verification = verification_by_id.get(judgment.get("judgment_id"), {})
         label_status = _high_precision_label_status(judgment, verification)
         if label_status:
             row = _build_ground_truth_row(judgment, verification)
             final_relevance = int(verification["relevance"])
-            rows_by_status[label_status].append(
-                {
-                    **row,
-                    "final_relevance": final_relevance,
-                    "label_status": label_status,
-                }
-            )
+            verified_row = {
+                **row,
+                "final_relevance": final_relevance,
+                "label_status": label_status,
+            }
+            rows_by_status[label_status].append(verified_row)
+            verified_rows.append(verified_row)
     _write_high_precision_rows(positive_path, rows_by_status["positive"])
     _write_high_precision_rows(negative_path, rows_by_status["negative"])
+    if verified_path is not None:
+        _write_high_precision_rows(verified_path, verified_rows)
     logger.info(
-        "Saved {} positive and {} negative high-precision ground truth labels: {}, {}",
+        "Saved {} positive and {} negative high-precision ground truth labels: {}, {}{}",
         len(rows_by_status["positive"]),
         len(rows_by_status["negative"]),
         positive_path,
         negative_path,
+        f", {verified_path}" if verified_path is not None else "",
     )
 
 

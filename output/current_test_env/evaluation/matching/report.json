@@ -1,5 +1,5 @@
 {
-  "ground_truth_path": "output\\current_test_env\\evaluation\\ground_truth\\itb_mdl_matching_ground_truth.csv",
+  "ground_truth_path": "output\\current_test_env\\evaluation\\ground_truth\\itb_mdl_matching_ground_truth_verified.csv",
   "matching_dir": "output\\current_test_env\\matching",
   "modes": [
     "keyword",
@@ -10,7 +10,7 @@
     "6",
     "7"
   ],
-  "queries": 63,
+  "queries": 113,
   "relevance_threshold": 3,
   "output_limit": 20,
   "retrieval_limit": 100,
@@ -18,53 +18,53 @@
     {
       "mode": "keyword",
       "stage": "cross_encoder",
-      "queries": 63,
-      "positive_queries": 43,
-      "judged_at_20": 0.9841269841269841,
-      "ndcg_at_20": 0.23218010968263506,
-      "recall_at_20": 0.10534330011074197
+      "queries": 113,
+      "positive_queries": 18,
+      "judged_at_20": 0.564857978279031,
+      "ndcg_at_20": 0.1686993842356812,
+      "recall_at_20": 0.3194444444444444
     },
     {
       "mode": "keyword",
       "stage": "retrieval",
-      "queries": 63,
-      "positive_queries": 43,
-      "judged_at_100": 0.7505349223448542,
-      "recall_at_100": 0.13325027685492802
+      "queries": 113,
+      "positive_queries": 18,
+      "judged_at_100": 0.539833194431506,
+      "recall_at_100": 0.3194444444444444
     },
     {
       "mode": "semantic",
       "stage": "cross_encoder",
-      "queries": 63,
-      "positive_queries": 43,
-      "judged_at_20": 0.9539682539682539,
-      "ndcg_at_20": 0.7389926598534629,
-      "recall_at_20": 0.9520521264401314
+      "queries": 113,
+      "positive_queries": 18,
+      "judged_at_20": 0.7159958878851862,
+      "ndcg_at_20": 0.47819162706920276,
+      "recall_at_20": 0.7513888888888889
     },
     {
       "mode": "semantic",
       "stage": "retrieval",
-      "queries": 63,
-      "positive_queries": 43,
-      "judged_at_100": 0.2662935247731641,
-      "recall_at_100": 0.9715485418973792
+      "queries": 113,
+      "positive_queries": 18,
+      "judged_at_100": 0.6149444252985984,
+      "recall_at_100": 0.8069444444444445
     },
     {
       "mode": "hybrid",
       "stage": "cross_encoder",
-      "queries": 63,
-      "positive_queries": 43,
-      "judged_at_20": 0.996031746031746,
-      "ndcg_at_20": 0.4583277232130205,
-      "recall_at_20": 0.5474655631326378
+      "queries": 113,
+      "positive_queries": 18,
+      "judged_at_20": 0.7284806628905097,
+      "ndcg_at_20": 0.49342578650296043,
+      "recall_at_20": 0.8833333333333333
     },
     {
       "mode": "hybrid",
       "stage": "retrieval",
-      "queries": 63,
-      "positive_queries": 43,
-      "judged_at_100": 0.3701584655761262,
-      "recall_at_100": 0.9545069068018884
+      "queries": 113,
+      "positive_queries": 18,
+      "judged_at_100": 0.6098357668383285,
+      "recall_at_100": 0.9944444444444445
     }
   ],
   "skipped_stages": []

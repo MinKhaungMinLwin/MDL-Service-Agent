@@ -9,7 +9,9 @@ from evaluation_service.matching_evaluation.loaders import discover_modes, disco
 from evaluation_service.matching_evaluation.service import MatchingEvaluationService
 
 DEFAULT_BASE_DIR = Path("output") / "current_test_env"
-DEFAULT_GROUND_TRUTH_PATH = DEFAULT_BASE_DIR / "evaluation" / "ground_truth" / "itb_mdl_matching_ground_truth.csv"
+DEFAULT_GROUND_TRUTH_PATH = (
+    DEFAULT_BASE_DIR / "evaluation" / "ground_truth" / "itb_mdl_matching_ground_truth_verified.csv"
+)
 DEFAULT_MATCHING_DIR = DEFAULT_BASE_DIR / "matching"
 DEFAULT_OUTPUT_DIR = DEFAULT_BASE_DIR / "evaluation" / "matching"
 

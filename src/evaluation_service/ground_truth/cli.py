@@ -77,7 +77,7 @@ def build_ground_truth(argv: list[str] | None = None) -> None:
     parser.add_argument(
         "--reference-pool-top-k",
         type=int,
-        default=int(os.getenv("ITB_EVAL_REFERENCE_POOL_TOP_K", "100")),
+        default=int(os.getenv("ITB_EVAL_REFERENCE_POOL_TOP_K", "50")),
         help="Maximum candidates to keep per ITB chunk for each reference search mode.",
     )
     parser.add_argument("--pool-top-k", type=int, default=int(os.getenv("ITB_EVAL_POOL_TOP_K", "20")))
@@ -182,6 +182,7 @@ def build_ground_truth(argv: list[str] | None = None) -> None:
         ground_truth_path=None if args.verify else args.output_dir / f"{stem}_ground_truth.csv",
         positive_path=args.output_dir / f"{stem}_ground_truth_positive.csv" if args.verify else None,
         negative_path=args.output_dir / f"{stem}_ground_truth_negative.csv" if args.verify else None,
+        verified_path=args.output_dir / f"{stem}_ground_truth_verified.csv" if args.verify else None,
     )
 
 
