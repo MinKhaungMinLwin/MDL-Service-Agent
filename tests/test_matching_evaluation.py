@@ -38,11 +38,12 @@ class MatchingEvaluationTest(unittest.TestCase):
             )
 
             qrels = load_qrels(ground_truth_path, ("7",))
-            cross_encoder, retrieval = load_matching_runs(matching_dir, "hybrid", ("7",))
+            cross_encoder, retrieval, metadata = load_matching_runs(matching_dir, "hybrid", ("7",))
 
         self.assertEqual(qrels, {"7:chunk-1": {"A": 3}})
         self.assertEqual(cross_encoder, {"7:chunk-1": ["A", "B"]})
         self.assertEqual(retrieval, {"7:chunk-1": ["B", "A"]})
+        self.assertEqual(metadata, {"output_limit": 2, "retrieval_limit": 2})
 
     def test_cross_encoder_metrics_use_positive_relevance_and_skip_missing_positive_denominators(self) -> None:
         summary, rows = evaluate_cross_encoder(
@@ -59,12 +60,10 @@ class MatchingEvaluationTest(unittest.TestCase):
         row_by_query = {row["query_id"]: row for row in rows}
         self.assertEqual(row_by_query["7:chunk-1"]["recall_at_20"], 1.0)
         self.assertEqual(row_by_query["7:chunk-1"]["hit_rate_at_20"], 1.0)
-        self.assertEqual(row_by_query["7:chunk-1"]["judged_at_20"], 0.75)
         self.assertIsNone(row_by_query["7:chunk-2"]["recall_at_20"])
         self.assertIsNone(row_by_query["7:chunk-2"]["hit_rate_at_20"])
         self.assertEqual(summary["queries"], 2)
         self.assertEqual(summary["positive_queries"], 1)
-        self.assertEqual(summary["positive_query_coverage"], 0.5)
         self.assertEqual(summary["hit_rate_at_20"], 1.0)
 
     def test_retrieval_metrics_measure_recall_before_cross_encoder(self) -> None:
@@ -83,10 +82,9 @@ class MatchingEvaluationTest(unittest.TestCase):
         self.assertEqual(row_by_query["7:chunk-1"]["recall_at_100"], 1.0)
         self.assertIsNone(row_by_query["7:chunk-2"]["recall_at_100"])
         self.assertEqual(summary["recall_at_100"], 1.0)
-        self.assertEqual(summary["judged_at_100"], 0.75)
-        self.assertEqual(summary["positive_query_coverage"], 0.5)
+        self.assertEqual(summary["positive_queries"], 1)
 
-    def test_positive_query_coverage_uses_matching_queries_as_denominator(self) -> None:
+    def test_positive_queries_use_matching_queries_as_denominator(self) -> None:
         summary, rows = evaluate_cross_encoder(
             qrels={"7:chunk-1": {"A": 3}},
             rankings={
@@ -98,7 +96,6 @@ class MatchingEvaluationTest(unittest.TestCase):
         row_by_query = {row["query_id"]: row for row in rows}
         self.assertEqual(summary["queries"], 2)
         self.assertEqual(summary["positive_queries"], 1)
-        self.assertEqual(summary["positive_query_coverage"], 0.5)
         self.assertIsNone(row_by_query["7:chunk-2"]["recall_at_20"])
         self.assertIsNone(row_by_query["7:chunk-2"]["hit_rate_at_20"])
 
@@ -130,11 +127,72 @@ class MatchingEvaluationTest(unittest.TestCase):
 
         self.assertEqual([(row["mode"], row["stage"]) for row in summary_rows], [("hybrid", "cross_encoder")])
         self.assertEqual(report["relevance_threshold"], 3)
-        self.assertEqual(report["output_limit"], 20)
-        self.assertEqual(report["retrieval_limit"], 100)
+        self.assertEqual(report["output_limit"], 1)
+        self.assertIsNone(report["retrieval_limit"])
         self.assertEqual(report["skipped_stages"][0]["stage"], "retrieval")
         self.assertEqual(summary_rows[0]["hit_rate_at_20"], "1.0")
-        self.assertEqual(summary_rows[0]["positive_query_coverage"], "1.0")
+
+    def test_service_report_queries_matches_evaluated_query_union(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            ground_truth_path = base / "ground_truth.csv"
+            matching_dir = base / "matching"
+            output_dir = base / "evaluation"
+            _write_ground_truth(
+                ground_truth_path,
+                [{"section": "7", "chunk_id": "chunk-1", "mdl_doc_id": "A", "relevance": "3"}],
+            )
+            _write_matching_json(
+                matching_dir / "hybrid" / "output_match_all_projects_section7.json",
+                [
+                    {"chunk_id": "chunk-1", "retrieval_candidates": [{"doc_id": "A"}], "candidates": [{"doc_id": "A"}]},
+                    {"chunk_id": "chunk-2", "retrieval_candidates": [{"doc_id": "B"}], "candidates": [{"doc_id": "B"}]},
+                ],
+            )
+
+            MatchingEvaluationService().evaluate(
+                ground_truth_path=ground_truth_path,
+                matching_dir=matching_dir,
+                output_dir=output_dir,
+                modes=("hybrid",),
+                sections=("7",),
+            )
+            report = json.loads((output_dir / "report.json").read_text(encoding="utf-8"))
+
+        self.assertEqual(report["queries"], 2)
+
+    def test_service_report_uses_artifact_limits(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            ground_truth_path = base / "ground_truth.csv"
+            matching_dir = base / "matching"
+            output_dir = base / "evaluation"
+            _write_ground_truth(
+                ground_truth_path,
+                [{"section": "7", "chunk_id": "chunk-1", "mdl_doc_id": "A", "relevance": "3"}],
+            )
+            _write_matching_json(
+                matching_dir / "hybrid" / "output_match_all_projects_section7.json",
+                [
+                    {
+                        "chunk_id": "chunk-1",
+                        "retrieval_candidates": [{"doc_id": "A"}, {"doc_id": "B"}, {"doc_id": "C"}],
+                        "candidates": [{"doc_id": "A"}, {"doc_id": "B"}],
+                    }
+                ],
+            )
+
+            MatchingEvaluationService().evaluate(
+                ground_truth_path=ground_truth_path,
+                matching_dir=matching_dir,
+                output_dir=output_dir,
+                modes=("hybrid",),
+                sections=("7",),
+            )
+            report = json.loads((output_dir / "report.json").read_text(encoding="utf-8"))
+
+        self.assertEqual(report["output_limit"], 2)
+        self.assertEqual(report["retrieval_limit"], 3)
 
 
 def _write_ground_truth(path: Path, rows: list[dict[str, str]]) -> None:

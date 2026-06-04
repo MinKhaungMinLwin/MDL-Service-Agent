@@ -21,12 +21,9 @@ SUMMARY_HEADER = [
     "stage",
     "queries",
     "positive_queries",
-    "positive_query_coverage",
     "recall_at_20",
     "hit_rate_at_20",
-    "judged_at_20",
     "recall_at_100",
-    "judged_at_100",
 ]
 QUERY_HEADER = [
     "mode",
@@ -34,9 +31,7 @@ QUERY_HEADER = [
     "query_id",
     "recall_at_20",
     "hit_rate_at_20",
-    "judged_at_20",
     "recall_at_100",
-    "judged_at_100",
 ]
 
 
@@ -55,12 +50,18 @@ class MatchingEvaluationService:
         qrels = load_qrels(ground_truth_path, sections)
         summaries = []
         query_metrics = []
+        evaluated_query_ids = set()
         skipped_stages = []
+        output_limit = None
+        retrieval_limit = None
         for mode in modes:
-            cross_encoder_rankings, retrieval_rankings = load_matching_runs(matching_dir, mode, sections)
+            cross_encoder_rankings, retrieval_rankings, metadata = load_matching_runs(matching_dir, mode, sections)
             summary, rows = evaluate_cross_encoder(qrels, cross_encoder_rankings)
             summaries.append({"mode": mode, "stage": "cross_encoder", **summary})
             query_metrics.extend({"mode": mode, "stage": "cross_encoder", **row} for row in rows)
+            evaluated_query_ids.update(row["query_id"] for row in rows)
+            output_limit = _max_optional(output_limit, metadata.get("output_limit"))
+            retrieval_limit = _max_optional(retrieval_limit, metadata.get("retrieval_limit"))
 
             if retrieval_rankings is None:
                 skipped_stages.append(
@@ -78,6 +79,7 @@ class MatchingEvaluationService:
             summary, rows = evaluate_retrieval(qrels, retrieval_rankings)
             summaries.append({"mode": mode, "stage": "retrieval", **summary})
             query_metrics.extend({"mode": mode, "stage": "retrieval", **row} for row in rows)
+            evaluated_query_ids.update(row["query_id"] for row in rows)
 
         output_dir.mkdir(parents=True, exist_ok=True)
         _write_csv(output_dir / "summary.csv", SUMMARY_HEADER, summaries)
@@ -89,10 +91,10 @@ class MatchingEvaluationService:
                 "matching_dir": str(matching_dir),
                 "modes": list(modes),
                 "sections": list(sections),
-                "queries": len(qrels),
+                "queries": len(evaluated_query_ids),
                 "relevance_threshold": RELEVANCE_THRESHOLD,
-                "output_limit": 20,
-                "retrieval_limit": 100,
+                "output_limit": output_limit,
+                "retrieval_limit": retrieval_limit,
                 "summaries": summaries,
                 "skipped_stages": skipped_stages,
             },
@@ -105,3 +107,9 @@ def _write_csv(path: Path, header: list[str], rows: list[dict[str, Any]]) -> Non
         writer = csv.DictWriter(file, fieldnames=header, extrasaction="ignore")
         writer.writeheader()
         writer.writerows(rows)
+
+
+def _max_optional(left: int | None, right: Any) -> int | None:
+    if right is None:
+        return left
+    return right if left is None else max(left, int(right))

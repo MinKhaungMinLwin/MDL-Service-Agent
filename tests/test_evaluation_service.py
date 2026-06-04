@@ -9,14 +9,10 @@ from pathlib import Path
 
 from evaluation_service.ground_truth.cli import _discover_sections, merge_positive_ground_truth
 from evaluation_service.ground_truth.service import (
-    AuditConfig,
     EvaluationConfig,
-    GroundTruthAuditService,
     GroundTruthService,
     _resolve_positive_judgments,
     _resolve_verifications,
-    build_audit_payloads,
-    build_audited_ground_truth_rows,
     build_candidate_pool,
     build_verified_positive_ground_truth_rows,
     iter_judge_pairs,
@@ -153,6 +149,7 @@ class EvaluationServiceTest(unittest.TestCase):
         judge_mdl = judge_payload["pools"][0]["candidates"][0]["mdl"]
         self.assertIn("title", judge_mdl)
         self.assertIn("deliverable", judge_mdl)
+        self.assertIn("text_content", judge_mdl)
         self.assertNotIn("doc_id", judge_mdl)
         self.assertNotIn("source_file", judge_mdl)
         self.assertNotIn("document", judge_payload["pools"][0]["itb"])
@@ -258,128 +255,6 @@ class EvaluationServiceTest(unittest.TestCase):
             [(row["section"], row["chunk_id"], row["mdl_doc_id"]) for row in rows],
             [("6", "chunk-1", "A"), ("7", "chunk-2", "B")],
         )
-
-    def test_build_audit_payloads_resolves_itb_and_mdl_context(self) -> None:
-        payloads, unresolved = build_audit_payloads(
-            ground_truth_rows=[
-                {"section": "7", "chunk_id": "chunk-1", "mdl_doc_id": "A", "final_relevance": "3"},
-                {"section": "7", "chunk_id": "chunk-2", "mdl_doc_id": "missing", "final_relevance": "3"},
-            ],
-            itb_rows={"7:chunk-1": {"Chunk ID": "chunk-1", "Chunk Text": "Cooling water layout requirement"}},
-            mdl_docs={"A": _candidate("A", 1.0, title="Cooling Layout")},
-        )
-
-        self.assertEqual(len(payloads), 1)
-        self.assertEqual(len(unresolved), 1)
-        self.assertEqual(payloads[0]["judgment_id"], "7:chunk-1:A")
-        self.assertEqual(payloads[0]["itb"]["chunk_text"], "Cooling water layout requirement")
-        self.assertEqual(payloads[0]["mdl"]["title"], "Cooling Layout")
-
-    def test_audited_ground_truth_keeps_ok_and_splits_suspicious_for_review(self) -> None:
-        ground_truth_rows = [
-            {
-                "section": "7",
-                "chunk_id": "chunk-1",
-                "mdl_doc_id": "A",
-                "relevance": "3",
-                "final_relevance": "3",
-                "label_status": "positive",
-            },
-            {
-                "section": "7",
-                "chunk_id": "chunk-1",
-                "mdl_doc_id": "B",
-                "relevance": "3",
-                "final_relevance": "3",
-                "label_status": "positive",
-            },
-            {
-                "section": "7",
-                "chunk_id": "chunk-1",
-                "mdl_doc_id": "C",
-                "relevance": "3",
-                "final_relevance": "3",
-                "label_status": "positive",
-            },
-        ]
-        audit_rows = [
-            {"section": "7", "chunk_id": "chunk-1", "mdl_doc_id": "A", "audit_status": "ok"},
-            {
-                "section": "7",
-                "chunk_id": "chunk-1",
-                "mdl_doc_id": "B",
-                "audit_status": "suspicious",
-                "audit_relevance": "2",
-                "reason": "Partial evidence.",
-            },
-            {"section": "7", "chunk_id": "chunk-1", "mdl_doc_id": "C", "audit_status": "remove"},
-        ]
-
-        ok_rows, suspicious_rows = build_audited_ground_truth_rows(ground_truth_rows, audit_rows)
-
-        self.assertEqual([row["mdl_doc_id"] for row in ok_rows], ["A"])
-        self.assertEqual([row["mdl_doc_id"] for row in suspicious_rows], ["B"])
-        self.assertEqual(suspicious_rows[0]["audit_reason"], "Partial evidence.")
-
-    def test_audit_service_writes_report_with_unresolved_rows(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
-            base = Path(directory)
-            extract_dir = base / "extract"
-            extract_dir.mkdir()
-            ground_truth_path = base / "ground_truth_final.csv"
-            output_path = base / "audit.csv"
-            _write_csv(
-                extract_dir / "output_itb_section7_focused.csv",
-                ["Chunk ID", "Chunk Text"],
-                [{"Chunk ID": "chunk-1", "Chunk Text": "Cooling water layout requirement"}],
-            )
-            _write_csv(
-                ground_truth_path,
-                ["section", "chunk_id", "mdl_doc_id", "final_relevance", "label_status"],
-                [
-                    {
-                        "section": "7",
-                        "chunk_id": "chunk-1",
-                        "mdl_doc_id": "A",
-                        "final_relevance": "3",
-                        "label_status": "positive",
-                    },
-                    {
-                        "section": "7",
-                        "chunk_id": "chunk-1",
-                        "mdl_doc_id": "missing",
-                        "final_relevance": "3",
-                        "label_status": "positive",
-                    },
-                ],
-            )
-            service = GroundTruthAuditService(
-                AuditConfig(model="deployment", sections=("7",), batch_delay_seconds=0),
-                _ChatClient(
-                    [
-                        {
-                            "results": [
-                                {
-                                    "judgment_id": "7:chunk-1:A",
-                                    "audit_status": "ok",
-                                    "audit_relevance": 3,
-                                    "reason": "Direct cooling layout match.",
-                                }
-                            ]
-                        }
-                    ]
-                ),
-                _AuditRepository({"A": _candidate("A", 1.0, title="Cooling Layout")}),
-                "audit prompt",
-                sleep=lambda _: None,
-            )
-
-            service.audit_to_file(ground_truth_path, extract_dir, output_path)
-            report_rows = output_path.read_text(encoding="utf-8-sig").splitlines()
-
-        self.assertEqual(len(report_rows), 3)
-        self.assertIn(",ok,3,Direct cooling layout match.", report_rows[1])
-        self.assertIn(",unresolved,,", report_rows[2])
 
     def test_service_retries_when_llm_omits_a_judgment(self) -> None:
         pools = build_candidate_pool(
@@ -575,20 +450,6 @@ class _EchoChatClient:
         self.chat = _EchoChat(self)
 
 
-class _AuditRepository:
-    def __init__(self, docs_by_id: dict[str, dict]) -> None:
-        self.docs_by_id = docs_by_id
-        self.requested_doc_ids = []
-
-    def load_by_doc_ids(self, doc_ids: list[str]) -> dict[str, dict]:
-        self.requested_doc_ids.extend(doc_ids)
-        return {
-            doc_id: self.docs_by_id[doc_id]
-            for doc_id in doc_ids
-            if doc_id in self.docs_by_id
-        }
-
-
 class _EchoChat:
     def __init__(self, client: _EchoChatClient) -> None:
         self.completions = _EchoCompletions(client)
@@ -657,6 +518,7 @@ def _candidate(
         "title": title or f"Document {doc_id}",
         "equipment": "Steam Turbine",
         "deliverable": "Design Criteria",
+        "text_content": f"Full text for {doc_id}",
         "embedding": [1.0, 0.0],
         "cross_encoder_score": score,
     }
