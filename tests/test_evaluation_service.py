@@ -149,6 +149,7 @@ class EvaluationServiceTest(unittest.TestCase):
         judge_mdl = judge_payload["pools"][0]["candidates"][0]["mdl"]
         self.assertIn("title", judge_mdl)
         self.assertIn("deliverable", judge_mdl)
+        self.assertIn("text_content", judge_mdl)
         self.assertNotIn("doc_id", judge_mdl)
         self.assertNotIn("source_file", judge_mdl)
         self.assertNotIn("document", judge_payload["pools"][0]["itb"])
@@ -517,6 +518,7 @@ def _candidate(
         "title": title or f"Document {doc_id}",
         "equipment": "Steam Turbine",
         "deliverable": "Design Criteria",
+        "text_content": f"Full text for {doc_id}",
         "embedding": [1.0, 0.0],
         "cross_encoder_score": score,
     }

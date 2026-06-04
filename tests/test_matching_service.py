@@ -144,6 +144,7 @@ class MatchingServiceTest(unittest.TestCase):
         self.assertEqual(semantic_parameters["source_files"], ["R&N_MDL.xlsx"])
         self.assertEqual(keyword_parameters["search_limit"], 100)
         self.assertEqual(semantic_parameters["search_limit"], 100)
+        self.assertIn("node.text_content AS text_content", semantic_query)
 
     def test_default_matching_paths_read_itb_extract_and_write_mode_output(self) -> None:
         files = _files_to_process(
@@ -218,6 +219,7 @@ class MatchingServiceTest(unittest.TestCase):
             {"rank": 1, "retrieval_rank": 1, "doc_id": "1"},
         )
         self.assertEqual(len(json_output[0]["candidates"]), 20)
+        self.assertEqual(json_output[0]["candidates"][0]["text_content"], "Full text for doc 1")
 
     def test_service_can_rerank_with_full_chunk_text(self) -> None:
         reranker = _RecordingReranker()
@@ -331,6 +333,7 @@ class _BulkRepository:
                 "source_file": "Sample_MDL.xlsx",
                 "document_no": str(index),
                 "title": f"Doc {index}",
+                "text_content": f"Full text for doc {index}",
                 "bm25_rank": index,
                 "retrieval_rank": index,
                 "bm25_score": float(301 - index),

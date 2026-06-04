@@ -150,7 +150,6 @@ class MatchingService:
         row["Depth_Context"] = get_depth_context(source_row)
         row["Depth_Filter_Query"] = depth_filter_query
         row["Depth_Keywords"] = ", ".join(depth_terms)
-        row["Vector_Terms"] = ", ".join(depth_terms)
         row["Depth_Filter_Terms"] = ", ".join(depth_terms)
         row["Keyword_Filter_Query"] = keyword_filter_query
         row["Semantic_Query"] = semantic_query

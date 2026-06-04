@@ -110,6 +110,7 @@ class MDLSearchRepository:
                node.study_survey AS study_survey,
                node.others AS others,
                node.deliverable AS deliverable,
+               node.text_content AS text_content,
                score AS semantic_score
         ORDER BY score DESC
         LIMIT $limit

@@ -157,6 +157,7 @@ def _format_json_candidate(candidate: Candidate, rank: int) -> dict[str, Any]:
         "study_survey": _json_safe_value(candidate.get("study_survey")),
         "others": _json_safe_value(candidate.get("others")),
         "deliverable": _json_safe_value(candidate.get("deliverable")),
+        "text_content": _json_safe_value(candidate.get("text_content")),
         "bm25_score": candidate.get("bm25_score"),
         "keyword_rrf_score": candidate.get("keyword_rrf_score"),
         "keyword_score": candidate.get("keyword_score"),

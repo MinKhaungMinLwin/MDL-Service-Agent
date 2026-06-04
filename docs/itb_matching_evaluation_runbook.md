@@ -55,6 +55,14 @@ uv run itb-match --retrieval-mode semantic --cross-encoder-query-mode structured
 uv run itb-match --retrieval-mode hybrid --cross-encoder-query-mode structured --source-file "R&N_MDL.xlsx" --output-dir output/current_test_env/matching_structured
 ```
 
+These commands write to the project-scoped folder:
+
+```text
+output/current_test_env/matching_structured/R_N_MDL/keyword/
+output/current_test_env/matching_structured/R_N_MDL/semantic/
+output/current_test_env/matching_structured/R_N_MDL/hybrid/
+```
+
 Full-chunk R_N_MDL:
 
 ```powershell
@@ -106,7 +114,7 @@ Structured R_N_MDL:
 ```powershell
 uv run itb-eval-matching `
   --ground-truth output/current_test_env/evaluation/ground_truth/R_N_MDL_ground_truth_final.csv `
-  --matching-dir output/current_test_env/matching_structured `
+  --matching-dir output/current_test_env/matching_structured/R_N_MDL `
   --output-dir output/current_test_env/evaluation/matching/R_N_MDL_structured `
   --sections 6 7
 ```
