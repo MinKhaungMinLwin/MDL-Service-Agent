@@ -1,13 +1,13 @@
 """Process-level memoized resources for the generate workflow.
 
-The CCPP guide schedule, validation rules, BM25 index and semantic embedding
-indexes are derived from static data files that do not change between requests.
-Rebuilding them per request costs ~13s; this module caches them by file
-(path, mtime) so a long-running server pays the build cost once.
+The CCPP guide schedule, validation rules, BM25 index and semantic embedding indexes
+are derived from static data files that do not change between requests. Rebuilding them
+per request costs ~13s; this module caches them by file (path, mtime) — or by the
+identity of an already-cached object — so a long-running server pays the build cost once.
 
-All cached objects are read-only after construction (RuleTable's internal match
-cache is safe and beneficial to share across requests), so sharing them between
-concurrent requests is safe. A lock guards cache population only.
+All cached objects are read-only after construction (RuleMatcher's internal match cache
+is safe and beneficial to share across requests), so sharing them between concurrent
+requests is safe. A lock guards cache population only.
 """
 
 from __future__ import annotations
@@ -17,17 +17,19 @@ from threading import Lock
 
 from loguru import logger
 
-from schedule_service.generate.activity_matching.ccpp_schedule_loader import load_schedule_activities
-from schedule_service.generate.activity_matching.keyword_search import BM25Index
-from schedule_service.generate.activity_matching.semantic_search import SemanticIndex
-from schedule_service.generate.rule_matching.rule_loader import RuleTable
-from schedule_service.generate.rule_matching.rule_semantic import RuleSemanticIndex
-from schedule_service.models import ScheduleActivity
+from schedule_service.generate.activity.lexical import BM25Index
+from schedule_service.generate.activity.loader import load_schedule_activities
+from schedule_service.generate.activity.models import ScheduleActivity
+from schedule_service.generate.activity.semantic import SemanticIndex
+from schedule_service.generate.rule.lexical import RuleLexicalIndex
+from schedule_service.generate.rule.loader import load_rules
+from schedule_service.generate.rule.matcher import RuleMatcher
+from schedule_service.generate.rule.semantic import RuleSemanticIndex
 
 _lock = Lock()
 _activities: dict[tuple[str, float], list[ScheduleActivity]] = {}
 _bm25: dict[int, BM25Index] = {}
-_rule_tables: dict[tuple[str, float], RuleTable | None] = {}
+_rule_matchers: dict[tuple[str, float], RuleMatcher | None] = {}
 _activity_semantic: dict[int, SemanticIndex] = {}
 _rule_semantic: dict[int, RuleSemanticIndex] = {}
 
@@ -65,19 +67,19 @@ def get_bm25_index(activities: list[ScheduleActivity]) -> BM25Index:
         return cached
 
 
-def get_rule_table(rule_path: Path) -> RuleTable | None:
-    """Load (memoized) the validation rule table; None when the file is missing."""
+def get_rule_matcher(rule_path: Path) -> RuleMatcher | None:
+    """Load (memoized) the validation rule matcher; None when the file is missing."""
     if not rule_path.exists():
         logger.info("Validation rule file not found: {} — date ranges will be skipped", rule_path)
         return None
     key = _file_key(rule_path)
     with _lock:
-        if key not in _rule_tables:
-            logger.info("Resource cache MISS — loading rule table: {}", rule_path)
-            table = RuleTable.load(rule_path)
-            logger.info("Loaded {} validation rules from {}", len(table.rules), rule_path)
-            _rule_tables[key] = table
-        return _rule_tables[key]
+        if key not in _rule_matchers:
+            logger.info("Resource cache MISS — loading rules + matcher: {}", rule_path)
+            rules = load_rules(rule_path)
+            logger.info("Loaded {} validation rules from {}", len(rules), rule_path)
+            _rule_matchers[key] = RuleMatcher(RuleLexicalIndex(rules))
+        return _rule_matchers[key]
 
 
 def get_activity_semantic_index(activities: list[ScheduleActivity], cache_dir: Path) -> SemanticIndex:
@@ -92,18 +94,18 @@ def get_activity_semantic_index(activities: list[ScheduleActivity], cache_dir: P
         return cached
 
 
-def get_rule_semantic_index(rule_table: RuleTable, cache_dir: Path) -> RuleSemanticIndex:
-    """Build (memoized) the rule semantic embedding index, keyed by rule table identity.
+def get_rule_semantic_index(matcher: RuleMatcher, cache_dir: Path) -> RuleSemanticIndex:
+    """Build (memoized) the rule semantic embedding index, keyed by matcher identity.
 
-    The index aligns with this RuleTable's rule list (same objects), so
-    match_with_embedding's id(rule) → row mapping stays valid across requests.
+    The index aligns with this matcher's rule list (same objects), so
+    match_with_embedding's rule → row mapping stays valid across requests.
     """
-    key = id(rule_table)
+    key = id(matcher)
     with _lock:
         cached = _rule_semantic.get(key)
         if cached is None:
             logger.info("Resource cache MISS — building rule semantic index")
-            cached = RuleSemanticIndex.build(rule_table.rules, cache_dir)
+            cached = RuleSemanticIndex.build(matcher.rules, cache_dir)
             _rule_semantic[key] = cached
         return cached
 
@@ -113,6 +115,6 @@ def clear() -> None:
     with _lock:
         _activities.clear()
         _bm25.clear()
-        _rule_tables.clear()
+        _rule_matchers.clear()
         _activity_semantic.clear()
         _rule_semantic.clear()

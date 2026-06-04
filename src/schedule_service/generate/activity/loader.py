@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 
 from common.text_normalizer import build_schedule_target_text
-from schedule_service.models import ScheduleActivity
+from schedule_service.generate.activity.models import ScheduleActivity
 
 DEFAULT_SCHEDULE_PATH = Path("data/schedule_service/processed/ccpp_guide_schedule_260527_clean.json")
 

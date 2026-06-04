@@ -9,8 +9,8 @@ from fastapi import APIRouter, HTTPException, Query
 from loguru import logger
 
 from schedule_service.candidate.candidate_extractor import extract_candidates
-from schedule_service.generate.activity_matching.ccpp_schedule_loader import DEFAULT_SCHEDULE_PATH
-from schedule_service.generate.resource_cache import get_schedule_activities
+from schedule_service.generate._shared.resource_cache import get_schedule_activities
+from schedule_service.generate.activity.loader import DEFAULT_SCHEDULE_PATH
 from schedule_service.generate.schedule_generator import generate_schedule_file
 
 router = APIRouter(prefix="/schedule", tags=["schedule"])
@@ -99,7 +99,7 @@ def schedule_generate(
     if ntp_date:
         logger.info("NTP date: {}", ntp_date)
 
-    from schedule_service.generate.rule_matching.rule_loader import DEFAULT_RULE_PATH
+    from schedule_service.generate.rule.loader import DEFAULT_RULE_PATH
     rule_path = _existing_path(rule_csv) if rule_csv else DEFAULT_RULE_PATH
     if rule_csv:
         logger.info("Using custom rule file: {}", rule_path)

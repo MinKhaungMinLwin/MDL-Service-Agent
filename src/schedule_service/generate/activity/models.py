@@ -1,4 +1,4 @@
-"""Shared schedule service models."""
+"""Data models for CCPP guide schedule activity matching."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class ScheduleActivity:
-    """Clean schedule activity used for retrieval and generation."""
+    """Clean schedule activity used for retrieval and FA/FC date anchoring."""
 
     activity_id: str
     activity_name: str
@@ -26,7 +26,7 @@ class ScheduleActivity:
 
 @dataclass(frozen=True)
 class Candidate:
-    """Ranked candidate schedule activity."""
+    """Ranked candidate schedule activity (BM25 + semantic + RRF)."""
 
     activity: ScheduleActivity
     bm25_rank: int | None
