@@ -102,6 +102,19 @@ class MatchingServiceTest(unittest.TestCase):
 
         self.assertIn("Others: Fresh Air Intake", text)
 
+    def test_cross_encoder_candidate_text_includes_full_text_content(self) -> None:
+        text = build_candidate_text(
+            {
+                "title": "GENERAL ARRANGEMENT",
+                "text_content": "This document covers the fresh air intake routing and interface points.",
+            }
+        )
+
+        self.assertIn(
+            "Text Content: This document covers the fresh air intake routing and interface points.",
+            text,
+        )
+
     def test_matching_setup_recreates_stale_fulltext_index(self) -> None:
         conn = _RecordingConnection(index_properties=["title", "text_content"])
 
