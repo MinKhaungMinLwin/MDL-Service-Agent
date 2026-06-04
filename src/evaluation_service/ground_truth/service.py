@@ -6,7 +6,6 @@ import csv
 import hashlib
 import json
 import random
-import re
 import time
 from collections.abc import Callable, Iterator
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -22,7 +21,6 @@ from common.llm_json import parse_json_output
 PROMPTS_DIR = Path(__file__).resolve().parent / "prompts"
 DEFAULT_POSITIVE_JUDGE_PROMPT_PATH = PROMPTS_DIR / "matching_positive_judge.md"
 DEFAULT_VERIFY_PROMPT_PATH = PROMPTS_DIR / "matching_relevance_verify.md"
-DEFAULT_AUDIT_PROMPT_PATH = PROMPTS_DIR / "matching_ground_truth_audit.md"
 GROUND_TRUTH_HEADER = [
     "section",
     "chunk_id",
@@ -40,21 +38,6 @@ HIGH_PRECISION_HEADER = [
     *GROUND_TRUTH_HEADER,
     "final_relevance",
     "label_status",
-]
-AUDIT_HEADER = [
-    "section",
-    "chunk_id",
-    "mdl_doc_id",
-    "judgment_id",
-    "audit_status",
-    "audit_relevance",
-    "reason",
-]
-AUDIT_REVIEW_HEADER = [
-    *HIGH_PRECISION_HEADER,
-    "audit_status",
-    "audit_relevance",
-    "audit_reason",
 ]
 MDL_CANDIDATE_FIELDS = (
     "doc_id",
@@ -380,195 +363,6 @@ class GroundTruthService:
         )
 
 
-@dataclass(frozen=True)
-class AuditConfig:
-    """Runtime settings for auditing final matching ground truth."""
-
-    model: str
-    sections: tuple[str, ...] = ("6", "7")
-    batch_size: int = 5
-    llm_retries: int = 2
-    max_concurrency: int = 1
-    max_rows: int = 0
-    node_label: str = "TestMDLDocument"
-    batch_delay_seconds: float = 0.5
-
-    def __post_init__(self) -> None:
-        if not self.model:
-            raise ValueError("model is required")
-        if not self.sections:
-            raise ValueError("at least one section is required")
-        if self.batch_size <= 0:
-            raise ValueError("batch_size must be positive")
-        if self.llm_retries < 0:
-            raise ValueError("llm_retries cannot be negative")
-        if self.max_concurrency <= 0:
-            raise ValueError("max_concurrency must be positive")
-        if self.max_rows < 0:
-            raise ValueError("max_rows cannot be negative")
-        if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", self.node_label):
-            raise ValueError(f"Invalid Neo4j identifier: {self.node_label}")
-        if self.batch_delay_seconds < 0:
-            raise ValueError("batch_delay_seconds cannot be negative")
-
-
-@dataclass(frozen=True)
-class _AuditTask:
-    order: int
-    batch_index: int
-    batch_count: int
-    payloads: list[dict[str, Any]]
-
-
-class GroundTruthAuditService:
-    """Audit final positive ground-truth rows with an LLM."""
-
-    def __init__(
-        self,
-        config: AuditConfig,
-        client: Any,
-        repository: Any,
-        audit_prompt: str,
-        sleep: Callable[[float], None] = time.sleep,
-    ) -> None:
-        self.config = config
-        self.client = client
-        self.repository = repository
-        self.audit_prompt = audit_prompt
-        self.sleep = sleep
-
-    def audit_to_file(
-        self,
-        ground_truth_path: Path,
-        extract_dir: Path,
-        output_path: Path,
-        audited_ground_truth_path: Path | None = None,
-        suspicious_path: Path | None = None,
-    ) -> None:
-        """Audit final ground-truth rows and write audit and optional filtered CSVs."""
-        rows = load_positive_ground_truth_rows((ground_truth_path,))
-        rows = [
-            row
-            for row in rows
-            if str(row.get("section") or "").strip() in self.config.sections
-        ]
-        if self.config.max_rows:
-            rows = rows[: self.config.max_rows]
-        itb_rows = load_itb_rows(extract_dir, self.config.sections)
-        mdl_docs = self.repository.load_by_doc_ids(_ground_truth_doc_ids(rows))
-        payloads, unresolved_rows = build_audit_payloads(rows, itb_rows, mdl_docs)
-        audit_rows = [
-            {
-                "section": row["section"],
-                "chunk_id": row["chunk_id"],
-                "mdl_doc_id": row["mdl_doc_id"],
-                "judgment_id": f"{row['section']}:{row['chunk_id']}:{row['mdl_doc_id']}",
-                "audit_status": "unresolved",
-                "audit_relevance": "",
-                "reason": "Could not resolve ITB or MDL content from the supplied artifacts.",
-            }
-            for row in unresolved_rows
-        ]
-        logger.info(
-            "Ground truth audit will process {} rows with LLM and {} unresolved rows",
-            len(payloads),
-            len(unresolved_rows),
-        )
-        audit_rows.extend(self._audit_payloads(payloads))
-        audit_rows = sorted(audit_rows, key=_audit_row_sort_key)
-        _write_csv(output_path, AUDIT_HEADER, audit_rows)
-        logger.info("Saved ground-truth audit report: {}", output_path)
-        if audited_ground_truth_path is not None or suspicious_path is not None:
-            audited_rows, suspicious_rows = build_audited_ground_truth_rows(rows, audit_rows)
-            if audited_ground_truth_path is not None:
-                _write_high_precision_rows(audited_ground_truth_path, audited_rows)
-                logger.info("Saved {} audited ground-truth rows: {}", len(audited_rows), audited_ground_truth_path)
-            if suspicious_path is not None:
-                _write_csv(suspicious_path, AUDIT_REVIEW_HEADER, suspicious_rows)
-                logger.info(
-                    "Saved {} suspicious ground-truth rows for review: {}",
-                    len(suspicious_rows),
-                    suspicious_path,
-                )
-
-    def _audit_payloads(self, payloads: list[dict[str, Any]]) -> list[dict[str, Any]]:
-        tasks = [
-            _AuditTask(index, index, len(_chunked(payloads, self.config.batch_size)), payloads_chunk)
-            for index, payloads_chunk in enumerate(_chunked(payloads, self.config.batch_size), start=1)
-        ]
-        rows = []
-        for _order, resolved in self._run_audit_tasks(tasks):
-            rows.extend(resolved)
-        return rows
-
-    def _run_audit_tasks(self, tasks: list[_AuditTask]) -> Iterator[tuple[int, list[dict[str, Any]]]]:
-        if self.config.max_concurrency == 1:
-            for task in tasks:
-                yield task.order, self._run_audit_task(task)
-                self.sleep(self.config.batch_delay_seconds)
-            return
-
-        with ThreadPoolExecutor(max_workers=self.config.max_concurrency) as executor:
-            futures = {executor.submit(self._run_audit_task, task): task for task in tasks}
-            for future in as_completed(futures):
-                task = futures[future]
-                yield task.order, future.result()
-
-    def _run_audit_task(self, task: _AuditTask) -> list[dict[str, Any]]:
-        logger.info(
-            "Auditing ground-truth batch {}/{} ({} row{})",
-            task.batch_index,
-            task.batch_count,
-            len(task.payloads),
-            _plural(task.payloads),
-        )
-        return _run_with_retries(
-            lambda: _resolve_audit_rows(
-                task.payloads,
-                _run_llm_batch(self.client, self.config.model, self.audit_prompt, "ground_truth_rows", task.payloads),
-            ),
-            retries=self.config.llm_retries,
-            sleep=self.sleep,
-            delay_seconds=self.config.batch_delay_seconds,
-            description=f"audit batch {task.batch_index}/{task.batch_count}",
-        )
-
-
-class MDLGroundTruthRepository:
-    """Load MDL document context from Neo4j for ground-truth auditing."""
-
-    def __init__(self, conn: Any, node_label: str = "TestMDLDocument") -> None:
-        if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", node_label):
-            raise ValueError(f"Invalid Neo4j identifier: {node_label}")
-        self.conn = conn
-        self.node_label = node_label
-
-    def load_by_doc_ids(self, doc_ids: list[str]) -> dict[str, dict[str, Any]]:
-        """Load MDL documents keyed by doc_id."""
-        if not doc_ids:
-            return {}
-        with self.conn.session() as session:
-            records = session.run(
-                f"""
-                MATCH (n:{self.node_label})
-                WHERE n.doc_id IN $doc_ids
-                RETURN n.doc_id AS doc_id,
-                       n.source_file AS source_file,
-                       n.document_no AS document_no,
-                       n.title AS title,
-                       n.system AS system,
-                       n.equipment AS equipment,
-                       n.building AS building,
-                       n.study_survey AS study_survey,
-                       n.others AS others,
-                       n.deliverable AS deliverable,
-                       n.text_content AS text_content
-                """,
-                doc_ids=doc_ids,
-            )
-            return {str(record["doc_id"]): dict(record) for record in records}
-
-
 def load_itb_rows(extract_dir: Path, sections: tuple[str, ...]) -> dict[str, dict[str, Any]]:
     """Load extracted ITB rows keyed by section and chunk ID."""
     rows_by_key = {}
@@ -637,69 +431,6 @@ def build_candidate_pool(
         pool["candidates"] = candidates
         pools.append(pool)
     return pools
-
-
-def build_audit_payloads(
-    ground_truth_rows: list[dict[str, Any]],
-    itb_rows: dict[str, dict[str, Any]],
-    mdl_docs: dict[str, dict[str, Any]],
-) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    """Build LLM audit payloads from final ground-truth rows."""
-    payloads = []
-    unresolved_rows = []
-    for row in ground_truth_rows:
-        section = str(row.get("section") or "").strip()
-        chunk_id = str(row.get("chunk_id") or "").strip()
-        doc_id = str(row.get("mdl_doc_id") or "").strip()
-        itb = itb_rows.get(f"{section}:{chunk_id}")
-        mdl = mdl_docs.get(doc_id)
-        if not section or not chunk_id or not doc_id or itb is None or mdl is None:
-            unresolved_rows.append(row)
-            continue
-        payloads.append(
-            {
-                "judgment_id": f"{section}:{chunk_id}:{doc_id}",
-                "section": section,
-                "chunk_id": chunk_id,
-                "mdl_doc_id": doc_id,
-                "itb": _build_audit_itb(section, chunk_id, itb),
-                "mdl": _build_llm_mdl(mdl),
-                "current_label": {
-                    "relevance": row.get("relevance", ""),
-                    "final_relevance": row.get("final_relevance", ""),
-                    "label_status": row.get("label_status", ""),
-                },
-            }
-        )
-    return payloads, unresolved_rows
-
-
-def build_audited_ground_truth_rows(
-    ground_truth_rows: list[dict[str, Any]],
-    audit_rows: list[dict[str, Any]],
-) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    """Split audited ground truth into kept ok rows and suspicious review rows."""
-    audit_by_key = {
-        _ground_truth_row_key(row): row
-        for row in audit_rows
-    }
-    ok_rows = []
-    suspicious_rows = []
-    for row in ground_truth_rows:
-        audit = audit_by_key.get(_ground_truth_row_key(row), {})
-        status = str(audit.get("audit_status") or "").strip().lower()
-        if status == "ok":
-            ok_rows.append({field: row.get(field, "") for field in HIGH_PRECISION_HEADER})
-        elif status == "suspicious":
-            suspicious_rows.append(
-                {
-                    **{field: row.get(field, "") for field in HIGH_PRECISION_HEADER},
-                    "audit_status": status,
-                    "audit_relevance": audit.get("audit_relevance", ""),
-                    "audit_reason": audit.get("reason", ""),
-                }
-            )
-    return _dedupe_ground_truth_rows(ok_rows), suspicious_rows
 
 
 def iter_judge_pairs(pools: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -918,37 +649,6 @@ def _run_llm_batch(
     return results
 
 
-def _resolve_audit_rows(payloads: list[dict[str, Any]], results: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    payload_by_id = {payload["judgment_id"]: payload for payload in payloads}
-    result_by_id = {}
-    for result in results:
-        judgment_id = str(result.get("judgment_id") or "").strip()
-        if judgment_id in payload_by_id and judgment_id not in result_by_id:
-            result_by_id[judgment_id] = result
-    missing_ids = [payload["judgment_id"] for payload in payloads if payload["judgment_id"] not in result_by_id]
-    if missing_ids:
-        raise LLMResponseError(f"LLM response missing audit rows: {', '.join(missing_ids)}")
-    return [
-        _normalize_audit_row(payload_by_id[judgment_id], result_by_id[judgment_id])
-        for judgment_id in payload_by_id
-    ]
-
-
-def _normalize_audit_row(payload: dict[str, Any], result: dict[str, Any]) -> dict[str, Any]:
-    status = str(result.get("audit_status") or "").strip().lower()
-    if status not in {"ok", "suspicious", "remove"}:
-        status = "suspicious"
-    return {
-        "section": payload["section"],
-        "chunk_id": payload["chunk_id"],
-        "mdl_doc_id": payload["mdl_doc_id"],
-        "judgment_id": payload["judgment_id"],
-        "audit_status": status,
-        "audit_relevance": _clamp_int(result.get("audit_relevance", 0), 0, 3),
-        "reason": str(result.get("reason") or "").strip(),
-    }
-
-
 def _max_completion_tokens(payloads: list[dict[str, Any]]) -> int:
     result_count = sum(
         len(payload.get("candidates", [])) or len(payload.get("positive_candidates", [])) or 1
@@ -959,31 +659,6 @@ def _max_completion_tokens(payloads: list[dict[str, Any]]) -> int:
 
 def _candidate_count(pools: list[dict[str, Any]]) -> int:
     return sum(len(pool.get("candidates", [])) for pool in pools)
-
-
-def _ground_truth_doc_ids(rows: list[dict[str, Any]]) -> list[str]:
-    doc_ids = []
-    seen = set()
-    for row in rows:
-        doc_id = str(row.get("mdl_doc_id") or "").strip()
-        if doc_id and doc_id not in seen:
-            seen.add(doc_id)
-            doc_ids.append(doc_id)
-    return doc_ids
-
-
-def _build_audit_itb(section: str, chunk_id: str, itb_row: dict[str, Any]) -> dict[str, Any]:
-    text = itb_row.get("Chunk Text", "")
-    return _compact_context(
-        {
-            "chunk_id": chunk_id,
-            "section": itb_row.get("Section", section),
-            "hierarchy_context": itb_row.get("Hierarchy Context", ""),
-            "depths": _build_itb_depths(itb_row, {}),
-            "keywords": itb_row.get("Keywords", ""),
-            "chunk_text": text,
-        }
-    )
 
 
 def _build_llm_itb(itb: dict[str, Any]) -> dict[str, Any]:
@@ -1009,26 +684,6 @@ def _compact_context(row: dict[str, Any]) -> dict[str, Any]:
         for key, value in row.items()
         if value not in ("", None, {}) and value != []
     }
-
-
-def _write_csv(path: Path, header: list[str], rows: list[dict[str, Any]]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with open(path, "w", newline="", encoding="utf-8-sig") as file:
-        writer = csv.DictWriter(file, fieldnames=header, extrasaction="ignore")
-        writer.writeheader()
-        writer.writerows(rows)
-
-
-def _audit_row_sort_key(row: dict[str, Any]) -> tuple[tuple[int, int | str], str, str]:
-    return (
-        _section_sort_key(str(row.get("section") or "")),
-        str(row.get("chunk_id") or ""),
-        str(row.get("mdl_doc_id") or ""),
-    )
-
-
-def _section_sort_key(section: str) -> tuple[int, int | str]:
-    return (0, int(section)) if section.isdigit() else (1, section)
 
 
 def _normalize_positive_ground_truth_row(row: dict[str, Any]) -> dict[str, Any] | None:

@@ -1,6 +1,6 @@
 # ITB Matching Evaluation Runbook
 
-Scope: run after ITB extract, only sections 6 and 7.
+Scope: run after ITB extract, only sections 6 and 7, benchmark on `R_N_MDL`.
 
 Keep:
 
@@ -12,7 +12,7 @@ output/current_test_env/itb_extract/output_itb_section7_focused.csv
 Flow:
 
 ```text
-matching -> build ground truth -> audit ground truth -> evaluate
+matching (R_N_MDL) -> build ground truth -> evaluate
 ```
 
 ## Matching
@@ -63,59 +63,59 @@ uv run itb-match --retrieval-mode semantic --source-file "R&N_MDL.xlsx"
 uv run itb-match --retrieval-mode hybrid --source-file "R&N_MDL.xlsx"
 ```
 
+R_N_MDL outputs:
+
+```text
+output/current_test_env/matching/R_N_MDL/keyword/
+output/current_test_env/matching/R_N_MDL/semantic/
+output/current_test_env/matching/R_N_MDL/hybrid/
+```
+
 ## Ground Truth
 
 Build:
 
 ```powershell
-uv run itb-eval-build-ground-truth --sections 6 7 --resume
-```
-
-Audit:
-
-```powershell
-uv run itb-eval-audit-ground-truth --sections 6 7
+uv run itb-eval-build-ground-truth `
+  --sections 6 7 `
+  --matching-dir output/current_test_env/matching/R_N_MDL `
+  --final-ground-truth output/current_test_env/evaluation/ground_truth/R_N_MDL_ground_truth_final.csv `
+  --max-concurrency 5
 ```
 
 Use this file for evaluation:
 
 ```text
-output/current_test_env/evaluation/ground_truth/itb_mdl_matching_ground_truth_final.csv
-```
-
-Suspicious rows are here for manual review:
-
-```text
-output/current_test_env/evaluation/ground_truth/itb_mdl_matching_ground_truth_suspicious.csv
+output/current_test_env/evaluation/ground_truth/R_N_MDL_ground_truth_final.csv
 ```
 
 ## Evaluate
 
-Full-chunk all-projects:
+Full-chunk R_N_MDL:
 
 ```powershell
 uv run itb-eval-matching `
-  --ground-truth output/current_test_env/evaluation/ground_truth/itb_mdl_matching_ground_truth_final.csv `
-  --matching-dir output/current_test_env/matching `
-  --output-dir output/current_test_env/evaluation/matching/full_chunk_all_projects `
+  --ground-truth output/current_test_env/evaluation/ground_truth/R_N_MDL_ground_truth_final.csv `
+  --matching-dir output/current_test_env/matching/R_N_MDL `
+  --output-dir output/current_test_env/evaluation/matching/R_N_MDL `
   --sections 6 7
 ```
 
-Structured all-projects:
+Structured R_N_MDL:
 
 ```powershell
 uv run itb-eval-matching `
-  --ground-truth output/current_test_env/evaluation/ground_truth/itb_mdl_matching_ground_truth_final.csv `
+  --ground-truth output/current_test_env/evaluation/ground_truth/R_N_MDL_ground_truth_final.csv `
   --matching-dir output/current_test_env/matching_structured `
-  --output-dir output/current_test_env/evaluation/matching/structured_all_projects `
+  --output-dir output/current_test_env/evaluation/matching/R_N_MDL_structured `
   --sections 6 7
 ```
 
 Compare:
 
 ```text
-output/current_test_env/evaluation/matching/full_chunk_all_projects/summary.csv
-output/current_test_env/evaluation/matching/structured_all_projects/summary.csv
+output/current_test_env/evaluation/matching/R_N_MDL/summary.csv
+output/current_test_env/evaluation/matching/R_N_MDL_structured/summary.csv
 ```
 
 Key metrics:

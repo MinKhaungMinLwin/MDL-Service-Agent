@@ -1,0 +1,77 @@
+{
+  "ground_truth_path": "output\\current_test_env\\evaluation\\ground_truth\\R_N_MDL_ground_truth_final.csv",
+  "matching_dir": "output\\current_test_env\\matching\\R_N_MDL",
+  "modes": [
+    "keyword",
+    "semantic",
+    "hybrid"
+  ],
+  "sections": [
+    "6",
+    "7"
+  ],
+  "queries": 19,
+  "relevance_threshold": 3,
+  "output_limit": 20,
+  "retrieval_limit": 100,
+  "summaries": [
+    {
+      "mode": "keyword",
+      "stage": "cross_encoder",
+      "queries": 113,
+      "positive_queries": 19,
+      "positive_query_coverage": 0.168141592920354,
+      "hit_rate_at_20": 0.42105263157894735,
+      "judged_at_20": 0.036918282548476455,
+      "recall_at_20": 0.39348370927318294
+    },
+    {
+      "mode": "keyword",
+      "stage": "retrieval",
+      "queries": 113,
+      "positive_queries": 19,
+      "positive_query_coverage": 0.168141592920354,
+      "judged_at_100": 0.032128472201714026,
+      "recall_at_100": 0.39348370927318294
+    },
+    {
+      "mode": "semantic",
+      "stage": "cross_encoder",
+      "queries": 113,
+      "positive_queries": 19,
+      "positive_query_coverage": 0.168141592920354,
+      "hit_rate_at_20": 0.7894736842105263,
+      "judged_at_20": 0.02566371681415929,
+      "recall_at_20": 0.7266696152145069
+    },
+    {
+      "mode": "semantic",
+      "stage": "retrieval",
+      "queries": 113,
+      "positive_queries": 19,
+      "positive_query_coverage": 0.168141592920354,
+      "judged_at_100": 0.007345132743362832,
+      "recall_at_100": 0.9423558897243107
+    },
+    {
+      "mode": "hybrid",
+      "stage": "cross_encoder",
+      "queries": 113,
+      "positive_queries": 19,
+      "positive_query_coverage": 0.168141592920354,
+      "hit_rate_at_20": 0.8421052631578947,
+      "judged_at_20": 0.025663716814159295,
+      "recall_at_20": 0.7767949284977149
+    },
+    {
+      "mode": "hybrid",
+      "stage": "retrieval",
+      "queries": 113,
+      "positive_queries": 19,
+      "positive_query_coverage": 0.168141592920354,
+      "judged_at_100": 0.007345132743362832,
+      "recall_at_100": 0.9899749373433584
+    }
+  ],
+  "skipped_stages": []
+}

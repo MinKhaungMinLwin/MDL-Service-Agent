@@ -1,0 +1,77 @@
+{
+  "ground_truth_path": "output\\current_test_env\\evaluation\\ground_truth\\all_projects_ground_truth_final.csv",
+  "matching_dir": "output\\current_test_env\\matching_all_projects",
+  "modes": [
+    "keyword",
+    "semantic",
+    "hybrid"
+  ],
+  "sections": [
+    "6",
+    "7"
+  ],
+  "queries": 26,
+  "relevance_threshold": 3,
+  "output_limit": 20,
+  "retrieval_limit": 100,
+  "summaries": [
+    {
+      "mode": "keyword",
+      "stage": "cross_encoder",
+      "queries": 113,
+      "positive_queries": 26,
+      "positive_query_coverage": 0.23008849557522124,
+      "hit_rate_at_20": 0.4230769230769231,
+      "judged_at_20": 0.027963917525773197,
+      "recall_at_20": 0.3121794871794872
+    },
+    {
+      "mode": "keyword",
+      "stage": "retrieval",
+      "queries": 113,
+      "positive_queries": 26,
+      "positive_query_coverage": 0.23008849557522124,
+      "judged_at_100": 0.016445425078673796,
+      "recall_at_100": 0.3121794871794872
+    },
+    {
+      "mode": "semantic",
+      "stage": "cross_encoder",
+      "queries": 113,
+      "positive_queries": 26,
+      "positive_query_coverage": 0.23008849557522124,
+      "hit_rate_at_20": 0.8461538461538461,
+      "judged_at_20": 0.032300884955752215,
+      "recall_at_20": 0.7272893772893773
+    },
+    {
+      "mode": "semantic",
+      "stage": "retrieval",
+      "queries": 113,
+      "positive_queries": 26,
+      "positive_query_coverage": 0.23008849557522124,
+      "judged_at_100": 0.008318584070796461,
+      "recall_at_100": 0.8507326007326007
+    },
+    {
+      "mode": "hybrid",
+      "stage": "cross_encoder",
+      "queries": 113,
+      "positive_queries": 26,
+      "positive_query_coverage": 0.23008849557522124,
+      "hit_rate_at_20": 0.9615384615384616,
+      "judged_at_20": 0.03672566371681416,
+      "recall_at_20": 0.8589743589743589
+    },
+    {
+      "mode": "hybrid",
+      "stage": "retrieval",
+      "queries": 113,
+      "positive_queries": 26,
+      "positive_query_coverage": 0.23008849557522124,
+      "judged_at_100": 0.008672566371681416,
+      "recall_at_100": 0.9587912087912088
+    }
+  ],
+  "skipped_stages": []
+}
