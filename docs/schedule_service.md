@@ -62,7 +62,7 @@
 
 ## Validation Rule — Structure and How to Read
 
-File: `data/schedule_sources/rules/validation_rule.csv` (semicolon-delimited, 5918 rows)
+File: `data/schedule_service/processed/validation_rule_clean.csv` (semicolon-delimited)
 
 ```
 Priority ; Item                  ; MDL Document Keyword              ; Activity Keyword ; Pur. ; Validation Time
@@ -79,23 +79,32 @@ Priority ; Item                  ; MDL Document Keyword              ; Activity 
 
 **`Pur.` → `sub_type` mapping:**
 ```
-fa / ap / fa/fi  → "FA"
-fi / if / ifi    → "FI"
-as built / unmatch → "SKIP"  ← document does not need scheduling
-unknown value    → "SKIP"    ← default when unable to map
+fa / ap / fa/fi      → "FA"
+fi / if / ifi / ifr  → "FI"
+as built / unmatch   → "SKIP"  ← document does not need scheduling
+empty Pur.           → inferred from VT formula: FA if it has an FA/FC rule,
+                        else SKIP  (2896 rules rely on this)
+other value          → "SKIP"
 ```
 
-**Match algorithm (Jaccard):**
+**Hybrid match (mandatory — `match_with_embedding`):** the only rule-matching path.
+There is no token-only fallback. It fuses a length-normalized token recall with a cosine
+similarity from `RuleSemanticIndex` (embedded `doc_keyword + item_name`):
 ```python
-score = |kw_tokens ∩ doc_tokens| / |kw_tokens|
-# threshold = 0.5 — best score wins, ties broken by lowest priority
+token_score = |kw_tokens ∩ doc_tokens| / max(|kw_tokens|, 3)
+hybrid = token_score·(1 − w) + semantic·w          # w = semantic_weight, default 0.3
+final  = hybrid · priority_weight[priority]         # 1.0 / 0.85 / 0.70 ; threshold 0.2
+# max(…, 3) penalizes 1–2-token generic rules ("GENERATOR", "P&ID")
+# requires minimum token overlap (no pure-semantic false positives)
+# ties: prefer rule whose item_name tokens appear in the query, then lowest priority
+# inverted token index narrows 5918 rules → ~30–100 candidates before scoring
 ```
 
 ---
 
 ## CCPP Guide Schedule — Structure and Anchor Date
 
-File: `data/schedule_sources/processed/ccpp_guide_schedule_260527_clean.json` (4039 activities)
+File: `data/schedule_service/processed/ccpp_guide_schedule_260527_clean.json` (4039 activities)
 
 ```json
 {
@@ -120,12 +129,13 @@ Example: real_NTP = 2024-03-01
   "2007-05-01" → "2024-04-17"
 ```
 
-**Anchor date selection** (`activity_base_date_policy.csv`):
+**Anchor date selection** (`resolve_anchor_date`, keyword heuristic in `activity/matcher.py`):
 ```
-activity keyword contains "transportation/delivery/fob/manufacturing"
+rule.activity_keywords ∩ {transportation, delivery, fob, manufacturing, fo b}
   → use activity.finish_date
 otherwise
   → use activity.start_date
+(falls back to the other date when the preferred one is empty, then applies NTP shift)
 ```
 
 ---
@@ -140,7 +150,7 @@ Validation rule needs:      MDL candidate provides:
 
 CCPP schedule needs:        MDL candidate provides:
   search query       →    Equipment + System + Deliverable + Title
-                          → BM25.score() → top-1 activity
+                          → BM25 + semantic + RRF → top-1 activity
 
 Date engine needs:          source:
   sub_type           ←    Validation rule
