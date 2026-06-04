@@ -59,12 +59,10 @@ class MatchingEvaluationTest(unittest.TestCase):
         row_by_query = {row["query_id"]: row for row in rows}
         self.assertEqual(row_by_query["7:chunk-1"]["recall_at_20"], 1.0)
         self.assertEqual(row_by_query["7:chunk-1"]["hit_rate_at_20"], 1.0)
-        self.assertEqual(row_by_query["7:chunk-1"]["judged_at_20"], 0.75)
         self.assertIsNone(row_by_query["7:chunk-2"]["recall_at_20"])
         self.assertIsNone(row_by_query["7:chunk-2"]["hit_rate_at_20"])
         self.assertEqual(summary["queries"], 2)
         self.assertEqual(summary["positive_queries"], 1)
-        self.assertEqual(summary["positive_query_coverage"], 0.5)
         self.assertEqual(summary["hit_rate_at_20"], 1.0)
 
     def test_retrieval_metrics_measure_recall_before_cross_encoder(self) -> None:
@@ -83,10 +81,9 @@ class MatchingEvaluationTest(unittest.TestCase):
         self.assertEqual(row_by_query["7:chunk-1"]["recall_at_100"], 1.0)
         self.assertIsNone(row_by_query["7:chunk-2"]["recall_at_100"])
         self.assertEqual(summary["recall_at_100"], 1.0)
-        self.assertEqual(summary["judged_at_100"], 0.75)
-        self.assertEqual(summary["positive_query_coverage"], 0.5)
+        self.assertEqual(summary["positive_queries"], 1)
 
-    def test_positive_query_coverage_uses_matching_queries_as_denominator(self) -> None:
+    def test_positive_queries_use_matching_queries_as_denominator(self) -> None:
         summary, rows = evaluate_cross_encoder(
             qrels={"7:chunk-1": {"A": 3}},
             rankings={
@@ -98,7 +95,6 @@ class MatchingEvaluationTest(unittest.TestCase):
         row_by_query = {row["query_id"]: row for row in rows}
         self.assertEqual(summary["queries"], 2)
         self.assertEqual(summary["positive_queries"], 1)
-        self.assertEqual(summary["positive_query_coverage"], 0.5)
         self.assertIsNone(row_by_query["7:chunk-2"]["recall_at_20"])
         self.assertIsNone(row_by_query["7:chunk-2"]["hit_rate_at_20"])
 
@@ -134,7 +130,6 @@ class MatchingEvaluationTest(unittest.TestCase):
         self.assertEqual(report["retrieval_limit"], 100)
         self.assertEqual(report["skipped_stages"][0]["stage"], "retrieval")
         self.assertEqual(summary_rows[0]["hit_rate_at_20"], "1.0")
-        self.assertEqual(summary_rows[0]["positive_query_coverage"], "1.0")
 
 
 def _write_ground_truth(path: Path, rows: list[dict[str, str]]) -> None:

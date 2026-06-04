@@ -21,12 +21,9 @@ SUMMARY_HEADER = [
     "stage",
     "queries",
     "positive_queries",
-    "positive_query_coverage",
     "recall_at_20",
     "hit_rate_at_20",
-    "judged_at_20",
     "recall_at_100",
-    "judged_at_100",
 ]
 QUERY_HEADER = [
     "mode",
@@ -34,9 +31,7 @@ QUERY_HEADER = [
     "query_id",
     "recall_at_20",
     "hit_rate_at_20",
-    "judged_at_20",
     "recall_at_100",
-    "judged_at_100",
 ]
 
 

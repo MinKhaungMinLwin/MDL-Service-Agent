@@ -114,7 +114,6 @@ Defaults:
 - input matching JSON files: `output/current_test_env/matching/<retrieval-mode>`
 - input ground truth: `output/current_test_env/evaluation/ground_truth/itb_mdl_matching_ground_truth_final.csv`
 - output reports: `output/current_test_env/evaluation/matching`
-- retrieval stage metrics: `recall_at_100` and `judged_at_100`
-- cross-encoder stage metrics: `recall_at_20`, `hit_rate_at_20`, and `judged_at_20`
-- all stages report `positive_query_coverage`
+- retrieval stage metric: `recall_at_100`
+- cross-encoder stage metrics: `recall_at_20` and `hit_rate_at_20`
 - recall uses `relevance_threshold=3`, recorded once in `report.json`
