@@ -24,6 +24,13 @@ from schedule_service.generate.activity_matching.keyword_search import BM25Index
 from schedule_service.generate.activity_matching.reranker import rrf_candidates
 from schedule_service.generate.activity_matching.semantic_search import SemanticIndex
 from schedule_service.generate.date_computation.date_range_engine import DateRange, compute_date_range
+from schedule_service.generate.embedding_cache import embed_texts_cached
+from schedule_service.generate.resource_cache import (
+    get_activity_semantic_index,
+    get_bm25_index,
+    get_rule_semantic_index,
+    get_rule_table,
+)
 from schedule_service.generate.rule_matching.rule_loader import DEFAULT_RULE_PATH, RuleTable, ValidationRule
 from schedule_service.models import ScheduleActivity
 from schedule_service.normalizer import equipment_to_abbr, normalize_deliverable
@@ -114,10 +121,9 @@ def generate_schedule_file(
     else:
         _log("No NTP date provided — using guide schedule template dates")
 
-    rule_table = _load_rule_table(rule_path)
+    rule_table = get_rule_table(rule_path)
 
-    _log(f"Building BM25 index for {len(schedule_activities)} schedule activities")
-    bm25 = BM25Index([a.target_text for a in schedule_activities])
+    bm25 = get_bm25_index(schedule_activities)
 
     # 1. Resolve the validation rule for every row (semantic hybrid or token).
     rules = _resolve_rules(rows, rule_table, semantic_cache_dir, semantic_weight)
@@ -179,8 +185,7 @@ def _resolve_activities(
     activity query is rule-boosted via _build_activity_query.
     """
     if use_semantic_activities:
-        _log("Building semantic activity index ...")
-        semantic_index = SemanticIndex.build(activities, activity_cache_dir)
+        semantic_index = get_activity_semantic_index(activities, activity_cache_dir)
         return _match_activities_semantic(rows, activities, bm25, semantic_index, rules)
     return [
         _bm25_top1_activity(row, rule, activities, bm25)
@@ -208,9 +213,8 @@ def _match_rules_semantic(
 ) -> list[ValidationRule | None]:
     """Batch-embed all rule queries and return hybrid-matched rules for each row."""
     from common.embedding_client import AzureEmbeddingService
-    from schedule_service.generate.rule_matching.rule_semantic import RuleSemanticIndex
 
-    semantic_index = RuleSemanticIndex.build(rule_table.rules, cache_dir)
+    semantic_index = get_rule_semantic_index(rule_table, cache_dir)
 
     # Compute (rule_query, title) for every row — same logic as _format_schedule_row
     query_pairs: list[tuple[str, str]] = []
@@ -225,7 +229,7 @@ def _match_rules_semantic(
     import numpy as np
 
     service = AzureEmbeddingService()
-    raw_embeddings = service.embed_texts(unique_queries)
+    raw_embeddings = embed_texts_cached(service, unique_queries)
 
     # Bulk matmul: (n_unique, dims) @ (dims, n_rules) → (n_unique, n_rules)
     # L2-normalise query matrix rows so dot-product == cosine similarity
@@ -341,7 +345,7 @@ def _match_activities_semantic(
     _log(f"Semantic activity matching: embedding {len(unique_queries)} unique queries for {len(rows)} rows")
 
     service = AzureEmbeddingService()
-    raw_embeddings = service.embed_texts(unique_queries)
+    raw_embeddings = embed_texts_cached(service, unique_queries)
 
     # One matrix multiply: (n_unique_queries, dims) @ (dims, n_activities) → (n_unique_queries, n_activities)
     query_matrix = np.array(raw_embeddings, dtype=np.float32)
@@ -424,16 +428,6 @@ def _format_schedule_row(
         "date_range_confidence": f"{dr.confidence:.2f}" if dr.confidence else "",
         "ntp_shift_days": shift_days if shift_days else "",
     }
-
-
-def _load_rule_table(path: Path) -> RuleTable | None:
-    """Load rule table; return None if file is missing (graceful degradation)."""
-    if not path.exists():
-        _log(f"Validation rule file not found: {path} — date ranges will be skipped")
-        return None
-    table = RuleTable.load(path)
-    _log(f"Loaded {len(table.rules)} validation rules from {path}")
-    return table
 
 
 def _resolve_anchor_date(

@@ -288,6 +288,7 @@ def _classify_candidates(
     from common.config import required_env
     from common.openai_client import build_azure_openai_client
     from mdl_service.classification import DEFAULT_CLASSIFICATION_PROMPT_PATH, MDLClassifier, load_system_prompt
+    from schedule_service.candidate.llm_classify_cache import LLMClassifyCache
 
     t_import = time.perf_counter()
 
@@ -297,17 +298,36 @@ def _classify_candidates(
     if skipped:
         logger.info("LLM classify: skipping {} candidates already fully extracted by regex", skipped)
 
+    # Apply disk-cached classifications; only un-cached titles hit the LLM.
+    cache = LLMClassifyCache()
+    to_send: list[dict[str, Any]] = []
+    cache_hits = 0
+    for c in need_llm:
+        hit = cache.get(c["title"])
+        if hit:
+            for field, value in hit.items():
+                if value and not c.get(field):
+                    c[field] = value
+            cache_hits += 1
+        else:
+            to_send.append(c)
+    if cache_hits:
+        logger.info("LLM classify: {} of {} titles served from disk cache", cache_hits, len(need_llm))
+
     timing: dict[str, Any] = {
         "llm_enabled": True,
         "llm_import_s": 0.0,
         "llm_classify_s": 0.0,
         "llm_candidates_skipped": skipped,
-        "llm_candidates_sent": len(need_llm),
+        "llm_cache_hits": cache_hits,
+        "llm_candidates_sent": len(to_send),
         "llm_batches": 0,
     }
 
-    if not need_llm:
+    if not to_send:
         return timing
+
+    need_llm = to_send
 
     client = build_azure_openai_client("AZURE_OPENAI_API_VERSION", "2024-08-01-preview")
     model = required_env("AZURE_OPENAI_CHAT_DEPLOYMENT")
@@ -345,7 +365,9 @@ def _classify_candidates(
                     candidate["system"] = result.system
                 if result.deliverable:
                     candidate["deliverable"] = result.deliverable
+                cache.put(candidate["title"], candidate)
 
+    cache.save()
     timing["llm_classify_s"] = round(time.perf_counter() - t_classify, 3)
     return timing
 

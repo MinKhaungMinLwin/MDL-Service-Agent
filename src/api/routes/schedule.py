@@ -9,10 +9,8 @@ from fastapi import APIRouter, HTTPException, Query
 from loguru import logger
 
 from schedule_service.candidate.candidate_extractor import extract_candidates
-from schedule_service.generate.activity_matching.ccpp_schedule_loader import (
-    DEFAULT_SCHEDULE_PATH,
-    load_schedule_activities,
-)
+from schedule_service.generate.activity_matching.ccpp_schedule_loader import DEFAULT_SCHEDULE_PATH
+from schedule_service.generate.resource_cache import get_schedule_activities
 from schedule_service.generate.schedule_generator import generate_schedule_file
 
 router = APIRouter(prefix="/schedule", tags=["schedule"])
@@ -106,7 +104,7 @@ def schedule_generate(
     if rule_csv:
         logger.info("Using custom rule file: {}", rule_path)
 
-    schedule_activities = load_schedule_activities(DEFAULT_SCHEDULE_PATH)
+    schedule_activities = get_schedule_activities(DEFAULT_SCHEDULE_PATH)
     semantic_cache_dir = CACHE_DIR / "rule_semantic_cache" if use_semantic_rules else None
     xlsx_path, json_path = generate_schedule_file(
         input_csv=input_path,
