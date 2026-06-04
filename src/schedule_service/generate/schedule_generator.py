@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import csv
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -62,6 +63,18 @@ _DELIVERABLE_PHASE_BOOST: dict[str, str] = {
 }
 
 
+@dataclass(frozen=True)
+class MatchContext:
+    """The validation rule and CCPP guide schedule activity resolved for one MDL row.
+
+    Produced up-front by _resolve_rules + _resolve_activities so that
+    _format_schedule_row only renders output and never re-runs matching.
+    """
+
+    rule: ValidationRule | None
+    activity: ScheduleActivity
+
+
 def generate_schedule_file(
     input_csv: Path,
     schedule_activities: list[ScheduleActivity],
@@ -106,32 +119,21 @@ def generate_schedule_file(
     _log(f"Building BM25 index for {len(schedule_activities)} schedule activities")
     bm25 = BM25Index([a.target_text for a in schedule_activities])
 
-    # Pre-match rules (semantic or token-based — needed before activity matching for phase-boost)
-    pre_matched_rules: list[ValidationRule | None] | None = None
-    if semantic_cache_dir and rule_table:
-        pre_matched_rules = _match_rules_semantic(rows, rule_table, semantic_cache_dir, semantic_weight)
-    elif use_semantic_activities and rule_table:
-        pre_matched_rules = _token_match_rules(rows, rule_table)
+    # 1. Resolve the validation rule for every row (semantic hybrid or token).
+    rules = _resolve_rules(rows, rule_table, semantic_cache_dir, semantic_weight)
 
-    # Pre-match activities via BM25 + semantic + RRF
-    pre_matched_activities: list[ScheduleActivity] | None = None
-    if use_semantic_activities:
-        _log("Building semantic activity index ...")
-        activity_cache_dir = activity_cache_dir or output_dir / "activity_semantic_cache"
-        semantic_activity_index = SemanticIndex.build(schedule_activities, activity_cache_dir)
-        rules_for_activity = pre_matched_rules if pre_matched_rules is not None else [None] * len(rows)
-        pre_matched_activities = _match_activities_semantic(
-            rows, schedule_activities, bm25, semantic_activity_index, rules_for_activity
-        )
+    # 2. Resolve the CCPP activity for every row (BM25, or BM25+semantic+RRF), rule-boosted.
+    activities = _resolve_activities(
+        rows, schedule_activities, bm25, rules,
+        use_semantic_activities=use_semantic_activities,
+        activity_cache_dir=activity_cache_dir or output_dir / "activity_semantic_cache",
+    )
 
+    # 3. Render output rows from the resolved matches.
+    contexts = [MatchContext(rule=r, activity=a) for r, a in zip(rules, activities, strict=True)]
     output_rows = [
-        _format_schedule_row(
-            row, schedule_activities, bm25, rule_table, shift_days,
-            pre_matched_rule=pre_matched_rules[i] if pre_matched_rules is not None else None,
-            use_pre_matched=pre_matched_rules is not None,
-            pre_matched_activity=pre_matched_activities[i] if pre_matched_activities is not None else None,
-        )
-        for i, row in enumerate(rows)
+        _format_schedule_row(row, ctx, shift_days)
+        for row, ctx in zip(rows, contexts, strict=True)
     ]
 
     output_stem = _output_stem(input_csv)
@@ -141,6 +143,61 @@ def generate_schedule_file(
         output_stem = f"{output_stem}_limit{limit}"
     _log(f"Writing generated schedule with stem: {output_stem}")
     return write_schedule_outputs(output_dir, output_stem, output_rows)
+
+
+def _resolve_rules(
+    rows: list[dict[str, str]],
+    rule_table: RuleTable | None,
+    semantic_cache_dir: Path | None,
+    semantic_weight: float,
+) -> list[ValidationRule | None]:
+    """Resolve the validation rule for every row, one strategy per request.
+
+    - no rule table        → all None (graceful degradation)
+    - semantic cache dir    → hybrid token + embedding match
+    - otherwise             → token match (rule_query, then title fallback)
+    """
+    if rule_table is None:
+        return [None] * len(rows)
+    if semantic_cache_dir:
+        return _match_rules_semantic(rows, rule_table, semantic_cache_dir, semantic_weight)
+    return _token_match_rules(rows, rule_table)
+
+
+def _resolve_activities(
+    rows: list[dict[str, str]],
+    activities: list[ScheduleActivity],
+    bm25: BM25Index,
+    rules: list[ValidationRule | None],
+    *,
+    use_semantic_activities: bool,
+    activity_cache_dir: Path,
+) -> list[ScheduleActivity]:
+    """Resolve the CCPP guide schedule activity for every row.
+
+    Uses BM25 + semantic + RRF when enabled, else plain BM25 top-1. Either way the
+    activity query is rule-boosted via _build_activity_query.
+    """
+    if use_semantic_activities:
+        _log("Building semantic activity index ...")
+        semantic_index = SemanticIndex.build(activities, activity_cache_dir)
+        return _match_activities_semantic(rows, activities, bm25, semantic_index, rules)
+    return [
+        _bm25_top1_activity(row, rule, activities, bm25)
+        for row, rule in zip(rows, rules, strict=True)
+    ]
+
+
+def _bm25_top1_activity(
+    row: dict[str, str],
+    rule: ValidationRule | None,
+    activities: list[ScheduleActivity],
+    bm25: BM25Index,
+) -> ScheduleActivity:
+    """Return the single best activity by BM25 score for a rule-boosted query."""
+    bm25_scores = bm25.score(_build_activity_query(row, rule))
+    top_idx = max(range(len(bm25_scores)), key=lambda idx: bm25_scores[idx])
+    return activities[top_idx]
 
 
 def _match_rules_semantic(
@@ -311,20 +368,10 @@ def _match_activities_semantic(
 
 def _format_schedule_row(
     row: dict[str, str],
-    activities: list[ScheduleActivity],
-    bm25: BM25Index,
-    rule_table: RuleTable | None,
+    ctx: MatchContext,
     shift_days: int = 0,
-    *,
-    pre_matched_rule: ValidationRule | None = None,
-    use_pre_matched: bool = False,
-    pre_matched_activity: ScheduleActivity | None = None,
 ) -> dict[str, Any]:
-    """Format one generated schedule row with FA/FC date ranges.
-
-    When use_pre_matched=True, pre_matched_rule is used directly (may be None).
-    Otherwise token-based rule_table.match() is called (default behavior).
-    """
+    """Format one generated schedule row with FA/FC date ranges from a resolved match."""
     title = row.get("Title", "").strip()
     deliverable = row.get("Deliverable", "").strip()
     equipment = row.get("Equipment", "").strip()
@@ -332,27 +379,12 @@ def _format_schedule_row(
     building = row.get("Building", "").strip()
 
     rule_query = _build_rule_query(row)
-
-    # Match validation rule
-    rule: ValidationRule | None
-    if use_pre_matched:
-        rule = pre_matched_rule
-    elif rule_table:
-        rule = rule_table.match(rule_query) or rule_table.match(title)
-    else:
-        rule = None
+    rule = ctx.rule
+    activity = ctx.activity
 
     sub_type = rule.sub_type if rule else ""
     rule_name = rule.item_name if rule else ""
     vt_parsed: dict = rule.vt_parsed if rule else {}
-
-    # Match CCPP guide schedule activity
-    if pre_matched_activity is not None:
-        activity = pre_matched_activity
-    else:
-        bm25_scores = bm25.score(_build_activity_query(row, rule))
-        top_idx = max(range(len(bm25_scores)), key=lambda idx: bm25_scores[idx])
-        activity = activities[top_idx]
 
     # Compute FA/FC date ranges
     dr = DateRange()
