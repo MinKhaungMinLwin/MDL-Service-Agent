@@ -69,28 +69,6 @@ def schedule_generate(
             examples=["data/schedule_service/raw/mock_validation_rule.csv"],
         ),
     ] = "",
-    use_semantic_rules: Annotated[
-        bool,
-        Query(
-            description=(
-                "Use hybrid (token + embedding) scoring for rule matching. "
-                "Embeds all rule queries once per request; rule embeddings are cached on disk. "
-                "Improves matching for document types with no exact token overlap in validation rules. "
-                "Requires Azure OpenAI embedding credentials."
-            ),
-        ),
-    ] = False,
-    use_semantic_activities: Annotated[
-        bool,
-        Query(
-            description=(
-                "Use BM25 + semantic + RRF for CCPP guide schedule activity matching. "
-                "Embeds all activity queries once per request; activity embeddings are cached on disk. "
-                "Improves anchor-date accuracy vs BM25-only matching. "
-                "Requires Azure OpenAI embedding credentials."
-            ),
-        ),
-    ] = False,
     limit: ScheduleLimit = 0,
 ) -> dict[str, object]:
     """Generate FA/FC schedule date ranges from an MDL classified CSV."""
@@ -105,7 +83,6 @@ def schedule_generate(
         logger.info("Using custom rule file: {}", rule_path)
 
     schedule_activities = get_schedule_activities(DEFAULT_SCHEDULE_PATH)
-    semantic_cache_dir = CACHE_DIR / "rule_semantic_cache" if use_semantic_rules else None
     xlsx_path, json_path, timing = generate_schedule_file(
         input_csv=input_path,
         schedule_activities=schedule_activities,
@@ -113,8 +90,7 @@ def schedule_generate(
         rule_path=rule_path,
         limit=limit,
         ntp_date=ntp_date,
-        semantic_cache_dir=semantic_cache_dir,
-        use_semantic_activities=use_semantic_activities,
+        semantic_cache_dir=CACHE_DIR / "rule_semantic_cache",
         activity_cache_dir=CACHE_DIR / "activity_semantic_cache",
     )
     return _file_response("generated_schedule", input_path, xlsx_path, json_path, timing)

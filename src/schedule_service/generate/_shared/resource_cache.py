@@ -5,8 +5,7 @@ are derived from static data files that do not change between requests. Rebuildi
 per request costs ~13s; this module caches them by file (path, mtime) — or by the
 identity of an already-cached object — so a long-running server pays the build cost once.
 
-All cached objects are read-only after construction (RuleMatcher's internal match cache
-is safe and beneficial to share across requests), so sharing them between concurrent
+All cached objects are read-only after construction, so sharing them between concurrent
 requests is safe. A lock guards cache population only.
 """
 

@@ -1,8 +1,9 @@
 """Validation-rule matching: build the query, then select the best rule.
 
-Combines the lexical retrieval (rule.lexical.RuleLexicalIndex) with optional semantic
-similarity (rule.semantic.RuleSemanticIndex) and exposes a single entry point,
-`resolve_rules`, that returns one rule (or None) per input MDL row.
+Combines lexical retrieval (rule.lexical.RuleLexicalIndex) with semantic similarity
+(rule.semantic.RuleSemanticIndex) into a single hybrid score, and exposes one entry
+point, `resolve_rules`, that returns one rule (or None) per input MDL row. Semantic
+matching is mandatory — there is no token-only path.
 """
 
 from __future__ import annotations
@@ -36,41 +37,15 @@ def build_rule_query(row: dict[str, str]) -> str:
 
 
 class RuleMatcher:
-    """Selects the best validation rule for a query (token, or hybrid token+semantic)."""
+    """Selects the best validation rule for a query via hybrid token + semantic scoring."""
 
     def __init__(self, lexical: RuleLexicalIndex) -> None:
         self._lexical = lexical
-        # document+equipment → matched rule — cross-row cache for duplicate doc titles
-        self._cache: dict[str, ValidationRule | None] = {}
 
     @property
     def rules(self) -> list[ValidationRule]:
         """Loaded validation rules, in CSV order (parallel to semantic embeddings)."""
         return self._lexical.rules
-
-    def match(self, document: str, equipment: str = "") -> ValidationRule | None:
-        """Return the best matching rule by token recall. Cached per (document, equipment)."""
-        cache_key = f"{document}\x00{equipment}"
-        if cache_key in self._cache:
-            return self._cache[cache_key]
-
-        doc_tokens = self._lexical.query_tokens(document, equipment)
-        candidates = self._lexical.candidates(doc_tokens)
-
-        best_rule: ValidationRule | None = None
-        best_score = 0.0
-        for rule in candidates:
-            score = self._lexical.token_score(rule, doc_tokens)
-            if score < 0.4:
-                continue
-            if score > best_score:
-                best_score = score
-                best_rule = rule
-            elif score == best_score and best_rule:
-                best_rule = self._tiebreak(best_rule, rule, doc_tokens)
-
-        self._cache[cache_key] = best_rule
-        return best_rule
 
     def match_with_embedding(
         self,
@@ -129,29 +104,16 @@ def resolve_rules(
     semantic_index: RuleSemanticIndex | None,
     semantic_weight: float = 0.3,
 ) -> list[ValidationRule | None]:
-    """Resolve the validation rule for every row, one strategy per request.
+    """Resolve the validation rule for every row using mandatory hybrid token + semantic match.
 
-    - no matcher       → all None (graceful degradation when the rule file is missing)
-    - semantic_index   → hybrid token + embedding match
-    - otherwise        → token match (rule_query, then title fallback)
+    - no matcher → all None (graceful degradation when the rule file is missing)
+    - otherwise  → hybrid token + embedding match (semantic_index is required)
     """
     if matcher is None:
         return [None] * len(rows)
-    if semantic_index is not None:
-        return _match_rules_semantic(rows, matcher, semantic_index, semantic_weight)
-    return _token_match_rules(rows, matcher)
-
-
-def _token_match_rules(
-    rows: list[dict[str, str]], matcher: RuleMatcher
-) -> list[ValidationRule | None]:
-    """Token-based rule match for every row (rule_query, then title fallback)."""
-    results: list[ValidationRule | None] = []
-    for row in rows:
-        rule_query = build_rule_query(row)
-        title = row.get("Title", "").strip()
-        results.append(matcher.match(rule_query) or matcher.match(title))
-    return results
+    if semantic_index is None:
+        raise ValueError("resolve_rules requires a semantic_index when a rule matcher is present")
+    return _match_rules_semantic(rows, matcher, semantic_index, semantic_weight)
 
 
 def _match_rules_semantic(

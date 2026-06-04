@@ -1,9 +1,10 @@
 """CCPP guide schedule activity matching: build the query, select the activity, resolve anchor.
 
-Combines lexical retrieval (activity.lexical.BM25Index) with optional semantic similarity
+Combines lexical retrieval (activity.lexical.BM25Index) with semantic similarity
 (activity.semantic.SemanticIndex) via reciprocal rank fusion, and exposes `resolve_activities`,
-which returns one activity per input MDL row. Activity queries are rule-boosted so a document's
-project phase (early design, delivery, commissioning, …) steers the BM25/RRF selection.
+which returns one activity per input MDL row. Semantic matching is mandatory. Activity queries
+are rule-boosted so a document's project phase (early design, delivery, commissioning, …)
+steers the BM25/RRF selection.
 """
 
 from __future__ import annotations
@@ -88,61 +89,15 @@ def resolve_activities(
     activities: list[ScheduleActivity],
     bm25: BM25Index,
     rules: list[ValidationRule | None],
-    semantic_index: SemanticIndex | None,
+    semantic_index: SemanticIndex,
 ) -> list[ScheduleActivity]:
     """Resolve the CCPP guide schedule activity for every row.
 
-    Uses BM25 + semantic + RRF when a semantic index is supplied, else plain BM25 top-1.
-    Either way the activity query is rule-boosted via build_activity_query.
-    Deduplicates BM25 queries across rows to avoid re-scoring identical queries.
+    Always uses BM25 + semantic + RRF for activity matching.
+    The activity query is rule-boosted via build_activity_query.
+    Deduplicates queries across rows to avoid re-scoring identical queries.
     """
-    if semantic_index is not None:
-        return _match_activities_semantic(rows, activities, bm25, semantic_index, rules)
-    return _match_activities_bm25_deduplicated(rows, activities, bm25, rules)
-
-
-def _bm25_top1_activity(
-    row: dict[str, str],
-    rule: ValidationRule | None,
-    activities: list[ScheduleActivity],
-    bm25: BM25Index,
-) -> ScheduleActivity:
-    """Return the single best activity by BM25 score for a rule-boosted query."""
-    query = build_activity_query(row, rule)
-    bm25_scores = bm25.score(query)
-    top_idx = max(range(len(bm25_scores)), key=lambda idx: bm25_scores[idx])
-    return activities[top_idx]
-
-
-def _match_activities_bm25_deduplicated(
-    rows: list[dict[str, str]],
-    activities: list[ScheduleActivity],
-    bm25: BM25Index,
-    rules: list[ValidationRule | None],
-) -> list[ScheduleActivity]:
-    """Match activities using BM25, deduplicating queries across rows to avoid re-scoring.
-
-    If many rows have the same Equipment/System/Deliverable, they generate identical queries.
-    This function scores each unique query once and reuses the result.
-    """
-    activity_queries = [build_activity_query(row, rule) for row, rule in zip(rows, rules, strict=True)]
-    unique_queries = list(dict.fromkeys(activity_queries))
-
-    if len(unique_queries) < len(activity_queries):
-        logger.info(
-            "BM25 activity matching: {} unique queries for {} rows (dedup saved {} re-scores)",
-            len(unique_queries), len(rows), len(activity_queries) - len(unique_queries),
-        )
-
-    # Score each unique query exactly once
-    query_scores = {q: bm25.score(q) for q in unique_queries}
-
-    results: list[ScheduleActivity] = []
-    for query in activity_queries:
-        bm25_scores = query_scores[query]
-        top_idx = max(range(len(bm25_scores)), key=lambda idx: bm25_scores[idx])
-        results.append(activities[top_idx])
-    return results
+    return _match_activities_semantic(rows, activities, bm25, semantic_index, rules)
 
 
 def _match_activities_semantic(

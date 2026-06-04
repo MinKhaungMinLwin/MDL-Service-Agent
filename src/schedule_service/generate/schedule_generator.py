@@ -58,20 +58,19 @@ def generate_schedule_file(
     ntp_date: str = "",
     semantic_cache_dir: Path | None = None,
     semantic_weight: float = 0.3,
-    use_semantic_activities: bool = False,
     activity_cache_dir: Path | None = None,
 ) -> tuple[Path, Path, dict[str, Any]]:
     """Generate FA/FC date ranges from an MDL classified CSV.
 
     Returns (xlsx_path, json_path, timing) where timing breaks down each processing phase.
+    Always uses hybrid (token + semantic) scoring for rule matching and BM25 + semantic + RRF for activity matching.
 
     Args:
-        ntp_date:           Real project NTP date in ISO format (e.g. "2024-01-15").
-                            Shifts all guide schedule template dates accordingly.
-        semantic_cache_dir: If provided, builds/loads a semantic rule index and uses
-                            hybrid (token + embedding) scoring for rule matching.
-        semantic_weight:    Weight of semantic score in hybrid rule scoring (0–1, default 0.3).
-        use_semantic_activities: If True, uses BM25 + semantic + RRF for activity matching.
+        ntp_date:             Real project NTP date in ISO format (e.g. "2024-01-15").
+                              Shifts all guide schedule template dates accordingly.
+        semantic_cache_dir:   Path to semantic cache directory for rule embeddings.
+        semantic_weight:      Weight of semantic score in hybrid rule scoring (0–1, default 0.3).
+        activity_cache_dir:   Path to semantic cache directory for activity embeddings.
     """
     import time
 
@@ -99,23 +98,15 @@ def generate_schedule_file(
 
     t_load = time.perf_counter()
 
-    # 1. Resolve the validation rule for every row (semantic hybrid or token).
-    rule_semantic_index = (
-        get_rule_semantic_index(rule_matcher, semantic_cache_dir)
-        if semantic_cache_dir and rule_matcher
-        else None
-    )
+    # 1. Resolve the validation rule for every row (always hybrid token + semantic).
+    rule_semantic_index = get_rule_semantic_index(rule_matcher, semantic_cache_dir) if rule_matcher else None
     rules = resolve_rules(rows, rule_matcher, rule_semantic_index, semantic_weight)
 
     t_rules = time.perf_counter()
 
-    # 2. Resolve the CCPP activity for every row (BM25, or BM25+semantic+RRF), rule-boosted.
-    activity_semantic_index = (
-        get_activity_semantic_index(
-            schedule_activities, activity_cache_dir or output_dir / "activity_semantic_cache"
-        )
-        if use_semantic_activities
-        else None
+    # 2. Resolve the CCPP activity for every row (always BM25 + semantic + RRF), rule-boosted.
+    activity_semantic_index = get_activity_semantic_index(
+        schedule_activities, activity_cache_dir or output_dir / "activity_semantic_cache"
     )
     activities = resolve_activities(rows, schedule_activities, bm25, rules, activity_semantic_index)
 
@@ -265,12 +256,14 @@ def main() -> None:
     activities = load_schedule_activities(args.schedule)
     _log(f"Loaded {len(activities)} schedule activities")
     for input_csv in args.inputs:
-        xlsx_path, json_path = generate_schedule_file(
+        xlsx_path, json_path, _timing = generate_schedule_file(
             input_csv=input_csv,
             schedule_activities=activities,
             output_dir=args.output_dir,
             limit=args.limit,
             ntp_date=args.ntp_date,
+            semantic_cache_dir=args.output_dir / "rule_semantic_cache",
+            activity_cache_dir=args.output_dir / "activity_semantic_cache",
         )
         logger.info("Wrote generated schedule workbook: {}", xlsx_path)
         logger.info("Wrote generated schedule JSON: {}", json_path)
