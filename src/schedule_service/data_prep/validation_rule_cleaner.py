@@ -29,8 +29,8 @@ from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill
 from openpyxl.utils import get_column_letter
 
-DEFAULT_INPUT = Path("data/schedule_sources/rules/validation_rule.csv")
-DEFAULT_OUTPUT_DIR = Path("data/schedule_sources/rules")
+DEFAULT_INPUT = Path("data/schedule_service/raw/validation_rule.csv")
+DEFAULT_OUTPUT_DIR = Path("data/schedule_service/raw")
 DEFAULT_OUTPUT_STEM = "validation_rule_clean"
 
 # Columns that must NEVER be modified

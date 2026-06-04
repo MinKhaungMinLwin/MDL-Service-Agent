@@ -22,7 +22,7 @@ from typing import TYPE_CHECKING
 from loguru import logger
 
 if TYPE_CHECKING:
-    from schedule_service.rule_loader import ValidationRule
+    from schedule_service.generate.rule_matching.rule_loader import ValidationRule
 
 _CACHE_FILENAME = "validation_rule_embeddings.json"
 

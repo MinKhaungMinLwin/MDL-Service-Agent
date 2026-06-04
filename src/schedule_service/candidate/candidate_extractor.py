@@ -16,6 +16,9 @@ from typing import Any
 from loguru import logger
 
 from schedule_service.normalizer import (
+    extract_deliverable as _extract_deliverable_fn,
+)
+from schedule_service.normalizer import (
     extract_equipment_from_title as _extract_equipment_from_title_fn,
 )
 from schedule_service.normalizer import (
@@ -24,71 +27,7 @@ from schedule_service.normalizer import (
 
 DEFAULT_SCORE_THRESHOLD = 0.75
 DEFAULT_TOP_N = 5          # how many Matched_Doc_N per row to consider
-DEFAULT_OUTPUT_DIR = Path("output/schedule_service")
-
-# Known deliverable keywords to extract from title (longest/most specific first)
-_DELIVERABLE_KEYWORDS: list[str] = [
-    # P&ID variants
-    "P&I DIAGRAM", "P&ID", "PIPING AND INSTRUMENTATION DIAGRAM", "PIPING & INSTRUMENTATION DRAWING",
-    # Arrangement / Layout
-    "GENERAL ARRANGEMENT DRAWING", "GENERAL ARRANGEMENT", "GA DRAWING",
-    "PIPING ARRANGEMENT DRAWING", "ARRANGEMENT DRAWING", "ARRANGEMENT",
-    "LAYOUT DRAWING", "LAYOUT",
-    # Electrical / Control diagrams (longest first to avoid partial match)
-    "ELECTRICAL CONTROL LOGIC DIAGRAM",
-    "FUNCTIONAL LOOP DIAGRAM",
-    "CONTROL LOOP DIAGRAM",
-    "CONTROL LOGIC DIAGRAM",
-    "SINGLE LINE DIAGRAM",
-    "SCHEMATIC DIAGRAM",
-    "WIRING DIAGRAM",
-    "LOGIC DIAGRAM",
-    # Calculation variants
-    "SIZING CALCULATION", "CALCULATION SHEET", "DESIGN CALCULATION", "CALCULATION",
-    # Data sheet variants
-    "TECHNICAL DATA SHEET", "TECHNICAL DATASHEET", "DATA SHEET", "DATASHEET",
-    # Drawings
-    "OUTLINE DRAWING", "ISOMETRIC DRAWING", "DETAIL DRAWING", "SECTIONAL DRAWING",
-    "PIPING ISO DRAWING", "ELEVATION", "PLAN & SECTION", "PLAN AND SECTION",
-    "DRAWING",
-    # Specification / Criteria / Requirements
-    "TECHNICAL SPECIFICATIONS", "TECHNICAL SPECIFICATION", "SPECIFICATION",
-    "DESIGN CRITERIA", "CRITERIA",
-    "DESIGN REQUIREMENTS", "REQUIREMENTS",
-    # Manuals
-    "OPERATION & MAINTENANCE MANUAL", "ASSEMBLY MANUAL", "MANUAL",
-    # Descriptions / Overviews
-    "SYSTEM DESCRIPTION", "CONTROL DESCRIPTION", "CONTROL PHILOSOPHY",
-    "OVERVIEW", "SUMMARY",
-    # Lists / Schedules / Databases
-    "INSTRUMENT LIST", "VALVE LIST", "CABLE SCHEDULE", "SCHEDULE",
-    "LIST", "DATABASE",
-    # Test / Procedure
-    "TEST PROCEDURE", "TEST REPORT", "TEST",
-    "PROCEDURE",
-    # Reports / Studies
-    "STUDY REPORT", "DESIGN REPORT", "HAZARDOUS AREA CLASSIFICATION",
-    "REPORT", "STUDY",
-    # Models / Curves
-    "MODEL", "PERFORMANCE CURVE", "PERFORMANCE DATA", "CURVES", "CURVE",
-    # Schematics
-    "SCHEMATICS", "SCHEMATIC",
-    # Notes / Plans
-    "GENERAL NOTES", "NOTES",
-    "PLAN",
-    # Other
-    "FOUNDATION AND LOADING DATA",
-    "OPERATIONAL DATA",
-    "SETTINGS",
-    "ISOMETRIC",
-    "ASSEMBLY",
-    "OUTLINE",
-    "SECTION",
-    "DETAIL",
-    "DIAGRAM",
-    "DATA",
-]
-
+DEFAULT_OUTPUT_DIR = Path("output/schedule_service/candidates")
 
 
 def extract_candidates(
@@ -280,11 +219,7 @@ def _extract_score(raw: str) -> float:
 
 def _extract_deliverable(title: str) -> str:
     """Extract deliverable type from a document title."""
-    title_upper = title.upper()
-    for kw in _DELIVERABLE_KEYWORDS:
-        if kw in title_upper:
-            return kw
-    return ""
+    return _extract_deliverable_fn(title)
 
 
 def _normalize_equipment(raw: str) -> str:

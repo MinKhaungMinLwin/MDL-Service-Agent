@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import csv
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -15,26 +16,31 @@ from datetime import date, timedelta
 
 from loguru import logger
 
-from schedule_service.date_range_engine import DateRange, compute_date_range
+from schedule_service.generate.activity_matching.ccpp_schedule_loader import (
+    DEFAULT_SCHEDULE_PATH,
+    load_schedule_activities,
+)
+from schedule_service.generate.activity_matching.keyword_search import BM25Index
+from schedule_service.generate.activity_matching.reranker import rrf_candidates
+from schedule_service.generate.activity_matching.semantic_search import SemanticIndex
+from schedule_service.generate.date_computation.date_range_engine import DateRange, compute_date_range
+from schedule_service.generate.rule_matching.rule_loader import DEFAULT_RULE_PATH, RuleTable, ValidationRule
 from schedule_service.models import ScheduleActivity
-from schedule_service.normalizer import equipment_to_abbr
+from schedule_service.normalizer import equipment_to_abbr, normalize_deliverable
 from schedule_service.output_writer import write_schedule_outputs
-from schedule_service.rule_loader import DEFAULT_RULE_PATH, RuleTable, ValidationRule
-from schedule_service.schedule_loader import DEFAULT_SCHEDULE_PATH, load_schedule_activities
-from schedule_service.search.keyword_search import BM25Index
-from schedule_service.search.reranker import rrf_candidates
-from schedule_service.search.semantic_search import SemanticIndex
 
-DEFAULT_OUTPUT_DIR = Path("output/schedule_service")
+DEFAULT_OUTPUT_DIR = Path("output/schedule_service/generate")
 
 # All dates in the CCPP guide schedule are relative to this template NTP
 TEMPLATE_NTP = date(2007, 3, 1)
 
-# Activity keywords that indicate finish_date should be used as anchor
+# --- Activity-phase steering (query-time retrieval logic, not data normalization) ---
+
+# Activity keywords that indicate the activity finish_date should be the VT anchor.
 _FINISH_DATE_KEYWORDS = {"transportation", "delivery", "fob", "manufacturing", "fo b"}
 
-# Maps rule activity_keywords → BM25 phase-boost terms to steer activity selection
-# to the correct project phase (early design, delivery, commissioning, etc.)
+# Rule activity_keywords → BM25 phase-boost terms, steering activity selection
+# to the correct project phase (early design, delivery, commissioning, etc.).
 _ACTIVITY_KW_BOOST: dict[str, str] = {
     "p.o":           "P.O Procurement",
     "po":            "P.O Procurement",
@@ -47,8 +53,8 @@ _ACTIVITY_KW_BOOST: dict[str, str] = {
     "commissioning": "commissioning test",
 }
 
-# Phase terms injected by deliverable type — takes priority over rule's activity_keywords
-# boost so that a wrong rule match cannot pull activity selection to the wrong project phase.
+# Deliverable type → BM25 phase-boost terms. Takes priority over the rule's keyword
+# boost so a wrong rule match cannot pull activity selection to the wrong phase.
 _DELIVERABLE_PHASE_BOOST: dict[str, str] = {
     "DESIGN CRITERIA":    "Design Criteria engineering",
     "SYSTEM DESCRIPTION": "System Description P&ID",
@@ -56,40 +62,17 @@ _DELIVERABLE_PHASE_BOOST: dict[str, str] = {
     "OVERVIEW":           "System Description overview",
 }
 
-# Map MDL Deliverable values to terms used in validation_rule.csv keywords
-_DELIVERABLE_NORM: dict[str, str] = {
-    "P&I DIAGRAM": "P&ID",
-    "P&I DRAWING": "P&ID",
-    "P&ID": "P&ID",
-    "PIPING & INSTRUMENTATION DRAWING": "P&ID",
-    "PIPING AND INSTRUMENTATION DRAWING": "P&ID",
-    "PIPING AND INSTRUMENTATION DIAGRAM": "P&ID",
-    "GENERAL ARRANGEMENT": "General Arrangement Drawing",
-    "GA": "General Arrangement Drawing",
-    "GA DRAWING": "General Arrangement Drawing",
-    "ARRANGEMENT DRAWING": "General Arrangement Drawing",
-    "LAYOUT": "Layout Drawing",
-    "LAYOUT DRAWING": "Layout Drawing",
-    "CALCULATION": "Calculation sheet",
-    "SIZING CALCULATION": "Calculation sheet",
-    "TECHNICAL SPECIFICATION": "Technical Specification",
-    "SPECIFICATION": "Technical Specification",
-    "DATA SHEET": "Data Sheet",
-    "DATASHEET": "Data Sheet",
-    "OUTLINE DRAWING": "Outline Drawing",
-    "SINGLE LINE DIAGRAM": "Single Line Diagram",
-    "SLD": "Single Line Diagram",
-    "DETAIL": "Detail Drawing",
-    "DETAIL DRAWING": "Detail Drawing",
-    "ELEVATION": "Elevation Drawing",
-    "DIAGRAM": "Diagram",
-    "ISOMETRIC": "Isometric Drawing",
-    "ISOMETRIC DRAWING": "Isometric Drawing",
-    "FOUNDATION AND LOADING DATA": "Foundation and Loading Data",
-    "SYSTEM DESCRIPTION": "System Description",
-    "PLAN": "Plan",
-    "SCHEDULE": "Schedule",
-}
+
+@dataclass(frozen=True)
+class MatchContext:
+    """The validation rule and CCPP guide schedule activity resolved for one MDL row.
+
+    Produced up-front by _resolve_rules + _resolve_activities so that
+    _format_schedule_row only renders output and never re-runs matching.
+    """
+
+    rule: ValidationRule | None
+    activity: ScheduleActivity
 
 
 def generate_schedule_file(
@@ -100,8 +83,9 @@ def generate_schedule_file(
     limit: int = 0,
     ntp_date: str = "",
     semantic_cache_dir: Path | None = None,
-    semantic_weight: float = 0.5,
+    semantic_weight: float = 0.3,
     use_semantic_activities: bool = False,
+    activity_cache_dir: Path | None = None,
 ) -> tuple[Path, Path]:
     """Generate FA/FC date ranges from an MDL classified CSV.
 
@@ -111,7 +95,9 @@ def generate_schedule_file(
         semantic_cache_dir: If provided, builds/loads a semantic rule index and uses
                             hybrid (token + embedding) scoring for rule matching.
                             Embeddings are cached under this directory.
-        semantic_weight:    Weight of semantic score in hybrid scoring (0–1, default 0.5).
+        semantic_weight:    Weight of semantic score in hybrid scoring (0–1, default 0.3).
+                            Kept low so the 76 WTS rules can't semantically dominate
+                            generic queries that have weak token overlap.
     """
     _log(f"Reading MDL classified CSV: {input_csv}")
     rows = _read_csv(input_csv)
@@ -133,32 +119,21 @@ def generate_schedule_file(
     _log(f"Building BM25 index for {len(schedule_activities)} schedule activities")
     bm25 = BM25Index([a.target_text for a in schedule_activities])
 
-    # Pre-match rules (semantic or token-based — needed before activity matching for phase-boost)
-    pre_matched_rules: list[ValidationRule | None] | None = None
-    if semantic_cache_dir and rule_table:
-        pre_matched_rules = _match_rules_semantic(rows, rule_table, semantic_cache_dir, semantic_weight)
-    elif use_semantic_activities and rule_table:
-        pre_matched_rules = _token_match_rules(rows, rule_table)
+    # 1. Resolve the validation rule for every row (semantic hybrid or token).
+    rules = _resolve_rules(rows, rule_table, semantic_cache_dir, semantic_weight)
 
-    # Pre-match activities via BM25 + semantic + RRF
-    pre_matched_activities: list[ScheduleActivity] | None = None
-    if use_semantic_activities:
-        _log("Building semantic activity index ...")
-        activity_cache_dir = output_dir / "activity_semantic_cache"
-        semantic_activity_index = SemanticIndex.build(schedule_activities, activity_cache_dir)
-        rules_for_activity = pre_matched_rules if pre_matched_rules is not None else [None] * len(rows)
-        pre_matched_activities = _match_activities_semantic(
-            rows, schedule_activities, bm25, semantic_activity_index, rules_for_activity
-        )
+    # 2. Resolve the CCPP activity for every row (BM25, or BM25+semantic+RRF), rule-boosted.
+    activities = _resolve_activities(
+        rows, schedule_activities, bm25, rules,
+        use_semantic_activities=use_semantic_activities,
+        activity_cache_dir=activity_cache_dir or output_dir / "activity_semantic_cache",
+    )
 
+    # 3. Render output rows from the resolved matches.
+    contexts = [MatchContext(rule=r, activity=a) for r, a in zip(rules, activities, strict=True)]
     output_rows = [
-        _format_schedule_row(
-            row, schedule_activities, bm25, rule_table, shift_days,
-            pre_matched_rule=pre_matched_rules[i] if pre_matched_rules is not None else None,
-            use_pre_matched=pre_matched_rules is not None,
-            pre_matched_activity=pre_matched_activities[i] if pre_matched_activities is not None else None,
-        )
-        for i, row in enumerate(rows)
+        _format_schedule_row(row, ctx, shift_days)
+        for row, ctx in zip(rows, contexts, strict=True)
     ]
 
     output_stem = _output_stem(input_csv)
@@ -170,6 +145,61 @@ def generate_schedule_file(
     return write_schedule_outputs(output_dir, output_stem, output_rows)
 
 
+def _resolve_rules(
+    rows: list[dict[str, str]],
+    rule_table: RuleTable | None,
+    semantic_cache_dir: Path | None,
+    semantic_weight: float,
+) -> list[ValidationRule | None]:
+    """Resolve the validation rule for every row, one strategy per request.
+
+    - no rule table        → all None (graceful degradation)
+    - semantic cache dir    → hybrid token + embedding match
+    - otherwise             → token match (rule_query, then title fallback)
+    """
+    if rule_table is None:
+        return [None] * len(rows)
+    if semantic_cache_dir:
+        return _match_rules_semantic(rows, rule_table, semantic_cache_dir, semantic_weight)
+    return _token_match_rules(rows, rule_table)
+
+
+def _resolve_activities(
+    rows: list[dict[str, str]],
+    activities: list[ScheduleActivity],
+    bm25: BM25Index,
+    rules: list[ValidationRule | None],
+    *,
+    use_semantic_activities: bool,
+    activity_cache_dir: Path,
+) -> list[ScheduleActivity]:
+    """Resolve the CCPP guide schedule activity for every row.
+
+    Uses BM25 + semantic + RRF when enabled, else plain BM25 top-1. Either way the
+    activity query is rule-boosted via _build_activity_query.
+    """
+    if use_semantic_activities:
+        _log("Building semantic activity index ...")
+        semantic_index = SemanticIndex.build(activities, activity_cache_dir)
+        return _match_activities_semantic(rows, activities, bm25, semantic_index, rules)
+    return [
+        _bm25_top1_activity(row, rule, activities, bm25)
+        for row, rule in zip(rows, rules, strict=True)
+    ]
+
+
+def _bm25_top1_activity(
+    row: dict[str, str],
+    rule: ValidationRule | None,
+    activities: list[ScheduleActivity],
+    bm25: BM25Index,
+) -> ScheduleActivity:
+    """Return the single best activity by BM25 score for a rule-boosted query."""
+    bm25_scores = bm25.score(_build_activity_query(row, rule))
+    top_idx = max(range(len(bm25_scores)), key=lambda idx: bm25_scores[idx])
+    return activities[top_idx]
+
+
 def _match_rules_semantic(
     rows: list[dict[str, str]],
     rule_table: RuleTable,
@@ -178,23 +208,14 @@ def _match_rules_semantic(
 ) -> list[ValidationRule | None]:
     """Batch-embed all rule queries and return hybrid-matched rules for each row."""
     from common.embedding_client import AzureEmbeddingService
-    from schedule_service.rule_semantic import RuleSemanticIndex
+    from schedule_service.generate.rule_matching.rule_semantic import RuleSemanticIndex
 
-    semantic_index = RuleSemanticIndex.build(rule_table._rules, cache_dir)
+    semantic_index = RuleSemanticIndex.build(rule_table.rules, cache_dir)
 
     # Compute (rule_query, title) for every row — same logic as _format_schedule_row
     query_pairs: list[tuple[str, str]] = []
     for row in rows:
-        deliverable = row.get("Deliverable", "").strip()
-        equipment = row.get("Equipment", "").strip()
-        system = row.get("System", "").strip()
-        building = row.get("Building", "").strip()
-        title = row.get("Title", "").strip()
-        norm_del = _normalize_deliverable(deliverable)
-        scope = equipment or system or building
-        abbr_scope = equipment_to_abbr(scope)
-        rule_query = f"{norm_del} for {abbr_scope}" if abbr_scope else norm_del
-        query_pairs.append((rule_query, title))
+        query_pairs.append((_build_rule_query(row), row.get("Title", "").strip()))
 
     # Deduplicate queries to minimise embedding API calls
     all_queries = [q for pair in query_pairs for q in pair]
@@ -231,25 +252,59 @@ def _match_rules_semantic(
     return results
 
 
+def _build_rule_query(row: dict[str, str]) -> str:
+    """Build the validation-rule match query: normalize(Deliverable) + 'for' + abbreviated scope.
+
+    Single source of truth — used for both pre-matching (semantic/token) and the
+    per-row format step so the query string can never drift between passes.
+    """
+    norm_del = normalize_deliverable(row.get("Deliverable", "").strip())
+    scope = (
+        row.get("Equipment", "").strip()
+        or row.get("System", "").strip()
+        or row.get("Building", "").strip()
+    )
+    abbr_scope = equipment_to_abbr(scope)
+    return f"{norm_del} for {abbr_scope}" if abbr_scope else norm_del
+
+
 def _build_activity_query(row: dict[str, str], rule: ValidationRule | None) -> str:
     """Build a BM25/RRF query for activity matching, with optional rule phase-boost."""
     equipment = row.get("Equipment", "").strip()
     system = row.get("System", "").strip()
     title = row.get("Title", "").strip()
-    norm_del = _normalize_deliverable(row.get("Deliverable", "").strip())
+    norm_del = normalize_deliverable(row.get("Deliverable", "").strip())
     query = " ".join(p for p in [equipment, system, norm_del, title] if p)
 
-    # Deliverable-type phase boost takes priority: prevents a wrong rule match from
-    # injecting incorrect phase terms (e.g. "P.O Procurement" for Design Criteria docs).
-    del_upper = row.get("Deliverable", "").strip().upper()
-    deliverable_boost = _DELIVERABLE_PHASE_BOOST.get(del_upper, "")
+    # Deliverable-type phase boost takes priority over the rule's keyword boost.
+    deliverable_boost = _deliverable_phase_boost(row.get("Deliverable", "").strip())
     if deliverable_boost:
         query = f"{query} {deliverable_boost}"
     elif rule:
-        boost = _phase_boost(rule.activity_keywords)
+        boost = _activity_keyword_boost(rule.activity_keywords)
         if boost:
             query = f"{query} {boost}"
     return query
+
+
+def _deliverable_phase_boost(deliverable: str) -> str:
+    """BM25 phase-boost terms implied by the deliverable type ("" if none)."""
+    return _DELIVERABLE_PHASE_BOOST.get(deliverable.strip().upper(), "")
+
+
+def _activity_keyword_boost(activity_keywords: list[str]) -> str:
+    """BM25 phase-boost terms derived from a rule's activity_keywords ("" if none)."""
+    terms = [
+        _ACTIVITY_KW_BOOST[kw.lower().strip()]
+        for kw in activity_keywords
+        if kw.lower().strip() in _ACTIVITY_KW_BOOST
+    ]
+    return " ".join(terms)
+
+
+def _uses_finish_anchor(activity_keywords: list[str]) -> bool:
+    """True if a rule's activity keywords indicate finish_date should anchor the VT formula."""
+    return bool({k.lower() for k in activity_keywords} & _FINISH_DATE_KEYWORDS)
 
 
 def _token_match_rules(
@@ -258,15 +313,8 @@ def _token_match_rules(
     """Token-based rule match for every row (used to build activity queries when semantic rules disabled)."""
     results: list[ValidationRule | None] = []
     for row in rows:
-        deliverable = row.get("Deliverable", "").strip()
-        equipment = row.get("Equipment", "").strip()
-        system = row.get("System", "").strip()
-        building = row.get("Building", "").strip()
+        rule_query = _build_rule_query(row)
         title = row.get("Title", "").strip()
-        norm_del = _normalize_deliverable(deliverable)
-        scope = equipment or system or building
-        abbr_scope = equipment_to_abbr(scope)
-        rule_query = f"{norm_del} for {abbr_scope}" if abbr_scope else norm_del
         results.append(rule_table.match(rule_query) or rule_table.match(title))
     return results
 
@@ -320,52 +368,23 @@ def _match_activities_semantic(
 
 def _format_schedule_row(
     row: dict[str, str],
-    activities: list[ScheduleActivity],
-    bm25: BM25Index,
-    rule_table: RuleTable | None,
+    ctx: MatchContext,
     shift_days: int = 0,
-    *,
-    pre_matched_rule: ValidationRule | None = None,
-    use_pre_matched: bool = False,
-    pre_matched_activity: ScheduleActivity | None = None,
 ) -> dict[str, Any]:
-    """Format one generated schedule row with FA/FC date ranges.
-
-    When use_pre_matched=True, pre_matched_rule is used directly (may be None).
-    Otherwise token-based rule_table.match() is called (default behavior).
-    """
+    """Format one generated schedule row with FA/FC date ranges from a resolved match."""
     title = row.get("Title", "").strip()
     deliverable = row.get("Deliverable", "").strip()
     equipment = row.get("Equipment", "").strip()
     system = row.get("System", "").strip()
     building = row.get("Building", "").strip()
 
-    # Build rule match string: normalize(Deliverable) + "for" + abbreviated scope.
-    norm_del = _normalize_deliverable(deliverable)
-    scope = equipment or system or building
-    abbr_scope = equipment_to_abbr(scope)
-    rule_query = f"{norm_del} for {abbr_scope}" if abbr_scope else norm_del
-
-    # Match validation rule
-    rule: ValidationRule | None
-    if use_pre_matched:
-        rule = pre_matched_rule
-    elif rule_table:
-        rule = rule_table.match(rule_query) or rule_table.match(title)
-    else:
-        rule = None
+    rule_query = _build_rule_query(row)
+    rule = ctx.rule
+    activity = ctx.activity
 
     sub_type = rule.sub_type if rule else ""
     rule_name = rule.item_name if rule else ""
     vt_parsed: dict = rule.vt_parsed if rule else {}
-
-    # Match CCPP guide schedule activity
-    if pre_matched_activity is not None:
-        activity = pre_matched_activity
-    else:
-        bm25_scores = bm25.score(_build_activity_query(row, rule))
-        top_idx = max(range(len(bm25_scores)), key=lambda idx: bm25_scores[idx])
-        activity = activities[top_idx]
 
     # Compute FA/FC date ranges
     dr = DateRange()
@@ -413,7 +432,7 @@ def _load_rule_table(path: Path) -> RuleTable | None:
         _log(f"Validation rule file not found: {path} — date ranges will be skipped")
         return None
     table = RuleTable.load(path)
-    _log(f"Loaded {len(table._rules)} validation rules from {path}")
+    _log(f"Loaded {len(table.rules)} validation rules from {path}")
     return table
 
 
@@ -424,9 +443,12 @@ def _resolve_anchor_date(
     shift_days: int = 0,
 ) -> date | None:
     """Pick start_date or finish_date as anchor, then apply NTP shift."""
-    kws_lower = {k.lower() for k in rule.activity_keywords}
-    use_finish = bool(kws_lower & _FINISH_DATE_KEYWORDS)
+    use_finish = _uses_finish_anchor(rule.activity_keywords)
     date_str = finish_date_str if use_finish else start_date_str
+    if not date_str:
+        # Fallback to the other date when the preferred anchor is empty
+        # (e.g. MPS "Issue" activities have no start_date but do have finish_date).
+        date_str = start_date_str if use_finish else finish_date_str
     if not date_str:
         return None
     try:
@@ -445,17 +467,6 @@ def _compute_shift(ntp_date: str) -> int:
     except ValueError:
         logger.warning("Invalid ntp_date '{}' — using template dates", ntp_date)
         return 0
-
-
-def _phase_boost(activity_keywords: list[str]) -> str:
-    """Return BM25 boost terms derived from rule activity_keywords."""
-    terms = [_ACTIVITY_KW_BOOST[kw.lower().strip()] for kw in activity_keywords
-             if kw.lower().strip() in _ACTIVITY_KW_BOOST]
-    return " ".join(terms)
-
-
-def _normalize_deliverable(deliverable: str) -> str:
-    return _DELIVERABLE_NORM.get(deliverable.strip().upper(), deliverable.strip())
 
 
 def _fmt_date(d: date | None) -> str:

@@ -1,11 +1,18 @@
-"""Central equipment name normalizer for CCPP schedule service.
+"""Central pre-processing layer for data normalization in the CCPP schedule service.
 
-Single source of truth for all equipment name mappings used across:
+Single source of truth for normalizing the raw data sources (CCPP guide schedule,
+validation rules, MDL candidates) into canonical forms *before* they enter the
+matching pipeline. Covers two data dimensions:
+
+Equipment names:
 - candidate_extractor: raw Matched_Doc_N strings → canonical name
 - schedule_generator: canonical name → abbreviation (rule_query construction)
 - rule_loader: full-name tokens → abbreviation (query token expansion)
 
-Changing a mapping here propagates to all three consumers automatically.
+Deliverable names:
+- schedule_generator: raw MDL Deliverable → validation_rule.csv keyword form
+
+Changing a mapping here propagates to all consumers automatically.
 """
 
 from __future__ import annotations
@@ -134,6 +141,113 @@ FULL_NAME_TO_ABBR_TOKENS: list[tuple[frozenset[str], str]] = [
     (frozenset({"balance", "plant"}),                       "bop"),
 ]
 
+# ---------------------------------------------------------------------------
+# 5. Raw MDL Deliverable value → term used in validation_rule.csv keywords
+#    Used by schedule_generator when building the rule_query string so that
+#    "P&I DIAGRAM" matches P&ID-keyed rules, "GA" matches General Arrangement, etc.
+# ---------------------------------------------------------------------------
+_DELIVERABLE_TO_RULE_KEYWORD: dict[str, str] = {
+    "P&I DIAGRAM": "P&ID",
+    "P&I DRAWING": "P&ID",
+    "P&ID": "P&ID",
+    "PIPING & INSTRUMENTATION DRAWING": "P&ID",
+    "PIPING AND INSTRUMENTATION DRAWING": "P&ID",
+    "PIPING AND INSTRUMENTATION DIAGRAM": "P&ID",
+    "GENERAL ARRANGEMENT": "General Arrangement Drawing",
+    "GA": "General Arrangement Drawing",
+    "GA DRAWING": "General Arrangement Drawing",
+    "ARRANGEMENT DRAWING": "General Arrangement Drawing",
+    "LAYOUT": "Layout Drawing",
+    "LAYOUT DRAWING": "Layout Drawing",
+    "CALCULATION": "Calculation sheet",
+    "SIZING CALCULATION": "Calculation sheet",
+    "TECHNICAL SPECIFICATION": "Technical Specification",
+    "SPECIFICATION": "Technical Specification",
+    "DATA SHEET": "Data Sheet",
+    "DATASHEET": "Data Sheet",
+    "OUTLINE DRAWING": "Outline Drawing",
+    "SINGLE LINE DIAGRAM": "Single Line Diagram",
+    "SLD": "Single Line Diagram",
+    "DETAIL": "Detail Drawing",
+    "DETAIL DRAWING": "Detail Drawing",
+    "ELEVATION": "Elevation Drawing",
+    "DIAGRAM": "Diagram",
+    "ISOMETRIC": "Isometric Drawing",
+    "ISOMETRIC DRAWING": "Isometric Drawing",
+    "FOUNDATION AND LOADING DATA": "Foundation and Loading Data",
+    "SYSTEM DESCRIPTION": "System Description",
+    "PLAN": "Plan",
+    "SCHEDULE": "Schedule",
+}
+
+# ---------------------------------------------------------------------------
+# 6. Ordered scan for deliverable-type keywords in raw document text
+#    Longest / most specific first to avoid partial matches.
+#    Used by candidate_extractor to extract the deliverable type from a raw
+#    Matched_Doc_N title (or equipment prefix) parsed from ITB matching output.
+# ---------------------------------------------------------------------------
+_DELIVERABLE_SCAN_KEYWORDS: list[str] = [
+    # P&ID variants
+    "P&I DIAGRAM", "P&ID", "PIPING AND INSTRUMENTATION DIAGRAM", "PIPING & INSTRUMENTATION DRAWING",
+    # Arrangement / Layout
+    "GENERAL ARRANGEMENT DRAWING", "GENERAL ARRANGEMENT", "GA DRAWING",
+    "PIPING ARRANGEMENT DRAWING", "ARRANGEMENT DRAWING", "ARRANGEMENT",
+    "LAYOUT DRAWING", "LAYOUT",
+    # Electrical / Control diagrams (longest first to avoid partial match)
+    "ELECTRICAL CONTROL LOGIC DIAGRAM",
+    "FUNCTIONAL LOOP DIAGRAM",
+    "CONTROL LOOP DIAGRAM",
+    "CONTROL LOGIC DIAGRAM",
+    "SINGLE LINE DIAGRAM",
+    "SCHEMATIC DIAGRAM",
+    "WIRING DIAGRAM",
+    "LOGIC DIAGRAM",
+    # Calculation variants
+    "SIZING CALCULATION", "CALCULATION SHEET", "DESIGN CALCULATION", "CALCULATION",
+    # Data sheet variants
+    "TECHNICAL DATA SHEET", "TECHNICAL DATASHEET", "DATA SHEET", "DATASHEET",
+    # Drawings
+    "OUTLINE DRAWING", "ISOMETRIC DRAWING", "DETAIL DRAWING", "SECTIONAL DRAWING",
+    "PIPING ISO DRAWING", "ELEVATION", "PLAN & SECTION", "PLAN AND SECTION",
+    "DRAWING",
+    # Specification / Criteria / Requirements
+    "TECHNICAL SPECIFICATIONS", "TECHNICAL SPECIFICATION", "SPECIFICATION",
+    "DESIGN CRITERIA", "CRITERIA",
+    "DESIGN REQUIREMENTS", "REQUIREMENTS",
+    # Manuals
+    "OPERATION & MAINTENANCE MANUAL", "ASSEMBLY MANUAL", "MANUAL",
+    # Descriptions / Overviews
+    "SYSTEM DESCRIPTION", "CONTROL DESCRIPTION", "CONTROL PHILOSOPHY",
+    "OVERVIEW", "SUMMARY",
+    # Lists / Schedules / Databases
+    "INSTRUMENT LIST", "VALVE LIST", "CABLE SCHEDULE", "SCHEDULE",
+    "LIST", "DATABASE",
+    # Test / Procedure
+    "TEST PROCEDURE", "TEST REPORT", "TEST",
+    "PROCEDURE",
+    # Reports / Studies
+    "STUDY REPORT", "DESIGN REPORT", "HAZARDOUS AREA CLASSIFICATION",
+    "REPORT", "STUDY",
+    # Models / Curves
+    "MODEL", "PERFORMANCE CURVE", "PERFORMANCE DATA", "CURVES", "CURVE",
+    # Schematics
+    "SCHEMATICS", "SCHEMATIC",
+    # Notes / Plans
+    "GENERAL NOTES", "NOTES",
+    "PLAN",
+    # Other
+    "FOUNDATION AND LOADING DATA",
+    "OPERATIONAL DATA",
+    "SETTINGS",
+    "ISOMETRIC",
+    "ASSEMBLY",
+    "OUTLINE",
+    "SECTION",
+    "DETAIL",
+    "DIAGRAM",
+    "DATA",
+]
+
 
 # ---------------------------------------------------------------------------
 # Public API
@@ -155,6 +269,28 @@ def extract_equipment_from_title(title: str) -> str:
     for keyword, canonical in EQUIPMENT_SCAN:
         if keyword in upper:
             return canonical
+    return ""
+
+
+def normalize_deliverable(deliverable: str) -> str:
+    """Map a raw MDL Deliverable value to the term used in validation_rule.csv keywords.
+
+    Falls back to the trimmed input unchanged when no mapping is defined.
+    """
+    return _DELIVERABLE_TO_RULE_KEYWORD.get(deliverable.strip().upper(), deliverable.strip())
+
+
+def extract_deliverable(text: str) -> str:
+    """Scan raw document text for a known deliverable-type keyword.
+
+    Returns the first (longest/most specific) matching keyword, or "" if none found.
+    Applied to both the parsed title and any equipment prefix that may itself be a
+    document type masquerading as equipment.
+    """
+    upper = text.upper()
+    for keyword in _DELIVERABLE_SCAN_KEYWORDS:
+        if keyword in upper:
+            return keyword
     return ""
 
 
