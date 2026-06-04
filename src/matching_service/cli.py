@@ -11,7 +11,7 @@ from loguru import logger
 from common.embedding_client import AzureEmbeddingService
 from common.neo4j_client import Neo4jConnection
 from matching_service.models import MatchingConfig
-from matching_service.ranking import CrossEncoderReranker
+from matching_service.ranking import create_reranker
 from matching_service.repository import MDLSearchRepository
 from matching_service.service import MatchingService
 
@@ -56,6 +56,12 @@ def match(argv: list[str] | None = None) -> None:
         type=int,
         default=int(os.getenv("ITB_CROSS_ENCODER_BATCH_SIZE", "32")),
     )
+    parser.add_argument(
+        "--reranker-backend",
+        choices=["auto", "sentence_transformers", "transformers"],
+        default=os.getenv("ITB_RERANKER_BACKEND", "auto").strip().lower(),
+        help="Reranker implementation backend used to score query-document pairs.",
+    )
     args = parser.parse_args(argv)
 
     config = MatchingConfig(
@@ -68,9 +74,10 @@ def match(argv: list[str] | None = None) -> None:
     output_dir = _scoped_output_dir(args.output_dir, config.source_files) / args.retrieval_mode
     files_to_process = _files_to_process(args.inputs, args.outputs, DEFAULT_INPUT_DIR, output_dir)
     embedding_service = AzureEmbeddingService() if config.retrieval_mode in {"semantic", "hybrid"} else None
-    cross_encoder_reranker = CrossEncoderReranker(
+    cross_encoder_reranker = create_reranker(
         args.cross_encoder_model,
         batch_size=args.cross_encoder_batch_size,
+        backend=args.reranker_backend,
     )
 
     output_dir.mkdir(parents=True, exist_ok=True)

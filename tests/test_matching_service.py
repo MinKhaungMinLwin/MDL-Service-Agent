@@ -19,7 +19,12 @@ from matching_service.query import (
     build_semantic_query,
     get_keyword_terms,
 )
-from matching_service.ranking import CrossEncoderReranker, build_candidate_text
+from matching_service.ranking import (
+    CrossEncoderReranker,
+    TransformersSequenceClassificationReranker,
+    build_candidate_text,
+    resolve_reranker_backend,
+)
 from matching_service.repository import MDLSearchRepository
 from matching_service.retrieval import DepthRetriever
 from matching_service.service import MatchingService
@@ -114,6 +119,36 @@ class MatchingServiceTest(unittest.TestCase):
             "Text Content: This document covers the fresh air intake routing and interface points.",
             text,
         )
+
+    def test_auto_reranker_backend_preserves_current_default(self) -> None:
+        self.assertEqual(
+            resolve_reranker_backend("cross-encoder/ms-marco-MiniLM-L6-v2", "auto"),
+            "sentence_transformers",
+        )
+        self.assertEqual(
+            resolve_reranker_backend("BAAI/bge-reranker-v2-m3", "auto"),
+            "transformers",
+        )
+
+    def test_transformers_reranker_scores_candidates_with_shared_contract(self) -> None:
+        reranker = object.__new__(TransformersSequenceClassificationReranker)
+        reranker.batch_size = 2
+        reranker.tokenizer = _FakeTokenizer()
+        reranker.model = _FakeSequenceClassificationModel()
+        reranker.device = None
+        reranker._torch = _FakeTorch()
+
+        reranked = reranker.rerank(
+            "HVAC",
+            [
+                {"doc_id": "A", "retrieval_rank": 1, "title": "General HVAC"},
+                {"doc_id": "B", "retrieval_rank": 2, "title": "Fresh Air Intake"},
+                {"doc_id": "C", "retrieval_rank": 3, "title": "Building Services"},
+            ],
+            top_k=2,
+        )
+
+        self.assertEqual([(item["doc_id"], item["final_rank"]) for item in reranked], [("B", 1), ("C", 2)])
 
     def test_matching_setup_recreates_stale_fulltext_index(self) -> None:
         conn = _RecordingConnection(index_properties=["title", "text_content"])
@@ -361,6 +396,53 @@ class _BulkRepository:
 class _FakeCrossEncoderModel:
     def predict(self, pairs, batch_size: int, show_progress_bar: bool) -> list[float]:
         return [0.25, 0.95, 0.50]
+
+
+class _FakeTokenizer:
+    def __call__(self, queries, candidates, padding: bool, truncation: bool, return_tensors: str):
+        return {"queries": queries, "candidates": candidates}
+
+
+class _FakeSequenceClassificationModel:
+    def __init__(self) -> None:
+        self.config = type("Config", (), {"num_labels": 1})()
+
+    def __call__(self, **encoded_inputs):
+        candidates = encoded_inputs["candidates"]
+        score_map = {
+            "Title: General HVAC": 0.25,
+            "Title: Fresh Air Intake": 0.95,
+            "Title: Building Services": 0.50,
+        }
+        logits = [[score_map[candidate]] for candidate in candidates]
+        return type("Output", (), {"logits": _FakeTensor(logits)})()
+
+
+class _FakeTensor:
+    def __init__(self, values):
+        self.values = values
+
+    def detach(self):
+        return self
+
+    def cpu(self):
+        return self
+
+    def tolist(self):
+        return self.values
+
+
+class _FakeNoGrad:
+    def __enter__(self):
+        return None
+
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+        pass
+
+
+class _FakeTorch:
+    def no_grad(self):
+        return _FakeNoGrad()
 
 
 class _RecordingReranker:
