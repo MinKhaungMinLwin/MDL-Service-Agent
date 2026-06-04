@@ -133,5 +133,87 @@ def _safe_scope_name(value: str) -> str:
     return "".join(character if character.isalnum() else "_" for character in value).strip("_") or "project"
 
 
+def rerank_existing(argv: list[str] | None = None) -> None:
+    """Rerank existing structured matching outputs with a different reranker model."""
+    parser = argparse.ArgumentParser(description="Rerank existing matching JSON artifacts.")
+    parser.add_argument("--input", action="append", type=Path, dest="inputs")
+    parser.add_argument("--output", action="append", type=Path, dest="outputs")
+    parser.add_argument("--input-dir", type=Path, required=True)
+    parser.add_argument("--output-dir", type=Path, required=True)
+    parser.add_argument("--retrieval-candidates", type=int, default=int(os.getenv("ITB_RETRIEVAL_CANDIDATES", "100")))
+    parser.add_argument("--output-limit", type=int, default=int(os.getenv("ITB_OUTPUT_LIMIT", "20")))
+    parser.add_argument(
+        "--cross-encoder-query-mode",
+        choices=["structured", "full_chunk"],
+        default=os.getenv("ITB_CROSS_ENCODER_QUERY_MODE", "full_chunk").strip().lower(),
+    )
+    parser.add_argument(
+        "--cross-encoder-model",
+        default=os.getenv("ITB_CROSS_ENCODER_MODEL", DEFAULT_CROSS_ENCODER_MODEL),
+    )
+    parser.add_argument(
+        "--cross-encoder-batch-size",
+        type=int,
+        default=int(os.getenv("ITB_CROSS_ENCODER_BATCH_SIZE", "32")),
+    )
+    parser.add_argument(
+        "--reranker-backend",
+        choices=["auto", "sentence_transformers", "transformers"],
+        default=os.getenv("ITB_RERANKER_BACKEND", "auto").strip().lower(),
+    )
+    args = parser.parse_args(argv)
+
+    config = MatchingConfig(
+        retrieval_mode="hybrid",
+        retrieval_candidate_limit=args.retrieval_candidates,
+        output_limit=args.output_limit,
+        cross_encoder_query_mode=args.cross_encoder_query_mode,
+    )
+    files_to_process = _json_files_to_process(args.inputs, args.outputs, args.input_dir, args.output_dir)
+    reranker = create_reranker(
+        args.cross_encoder_model,
+        batch_size=args.cross_encoder_batch_size,
+        backend=args.reranker_backend,
+    )
+    service = MatchingService(
+        repository=None,
+        cross_encoder_reranker=reranker,
+        config=config,
+        embedding_service=None,
+    )
+    args.output_dir.mkdir(parents=True, exist_ok=True)
+    for input_path, output_path in files_to_process:
+        if input_path.exists():
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            service.rerank_json_file(input_path, output_path)
+        else:
+            logger.warning("Structured matching file not found: {}", input_path)
+
+
+def _json_files_to_process(
+    inputs: list[Path] | None,
+    outputs: list[Path] | None,
+    input_dir: Path,
+    output_dir: Path,
+) -> list[tuple[Path, Path]]:
+    if inputs:
+        if outputs and len(outputs) != len(inputs):
+            raise ValueError("--output must be provided once per --input")
+        return [
+            (input_path, outputs[index] if outputs else output_dir / input_path.with_suffix(".csv").name)
+            for index, input_path in enumerate(inputs)
+        ]
+    return [
+        (
+            input_dir / "output_match_all_projects_section6.json",
+            output_dir / "output_match_all_projects_section6.csv",
+        ),
+        (
+            input_dir / "output_match_all_projects_section7.json",
+            output_dir / "output_match_all_projects_section7.csv",
+        ),
+    ]
+
+
 if __name__ == "__main__":
     match()

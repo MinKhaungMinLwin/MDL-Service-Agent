@@ -73,7 +73,6 @@ class EvaluationConfig:
     model: str
     sections: tuple[str, ...] = ("6", "7")
     modes: tuple[str, ...] = ("keyword", "semantic", "hybrid")
-    pool_top_k: int = 20
     llm_retries: int = 2
     max_concurrency: int = 1
     max_itb_chunks: int = 0
@@ -89,8 +88,6 @@ class EvaluationConfig:
             raise ValueError("at least one retrieval mode is required")
         if any(mode not in {"keyword", "semantic", "hybrid"} for mode in self.modes):
             raise ValueError("modes must contain only keyword, semantic, or hybrid")
-        if self.pool_top_k <= 0:
-            raise ValueError("pool_top_k must be positive")
         if self.llm_retries < 0:
             raise ValueError("llm_retries cannot be negative")
         if self.max_concurrency <= 0:
@@ -147,7 +144,7 @@ class GroundTruthService:
         """Build a candidate pool from existing matching artifacts."""
         itb_rows = limit_itb_rows(load_itb_rows(extract_dir, self.config.sections), self.config.max_itb_chunks)
         matching_records = load_matching_records(matching_dir, self.config.sections, self.config.modes)
-        pools = build_candidate_pool(itb_rows, matching_records, self.config.pool_top_k)
+        pools = build_candidate_pool(itb_rows, matching_records)
         if pool_path is not None:
             write_json(pool_path, pools)
         logger.info(
@@ -403,7 +400,6 @@ def load_matching_records(
 def build_candidate_pool(
     itb_rows: dict[str, dict[str, Any]],
     records_by_source: dict[tuple[str, str], list[dict[str, Any]]],
-    top_k: int,
 ) -> list[dict[str, Any]]:
     """Merge and deduplicate top MDL candidates from each retrieval mode."""
     pools_by_key: dict[str, dict[str, Any]] = {}
@@ -416,7 +412,7 @@ def build_candidate_pool(
                 continue
             pool = pools_by_key.setdefault(key, _build_pool_record(section, record, itb_row))
             candidates_by_id = pool.pop("_candidates_by_id")
-            for candidate in record.get("candidates", [])[:top_k]:
+            for candidate in record.get("candidates", []):
                 candidate_key = _candidate_key(candidate)
                 if not candidate_key:
                     continue
