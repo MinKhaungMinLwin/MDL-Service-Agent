@@ -60,8 +60,10 @@ def generate_schedule_file(
     semantic_weight: float = 0.3,
     use_semantic_activities: bool = False,
     activity_cache_dir: Path | None = None,
-) -> tuple[Path, Path]:
+) -> tuple[Path, Path, dict[str, Any]]:
     """Generate FA/FC date ranges from an MDL classified CSV.
+
+    Returns (xlsx_path, json_path, timing) where timing breaks down each processing phase.
 
     Args:
         ntp_date:           Real project NTP date in ISO format (e.g. "2024-01-15").
@@ -71,6 +73,10 @@ def generate_schedule_file(
         semantic_weight:    Weight of semantic score in hybrid rule scoring (0–1, default 0.3).
         use_semantic_activities: If True, uses BM25 + semantic + RRF for activity matching.
     """
+    import time
+
+    t0 = time.perf_counter()
+
     _log(f"Reading MDL classified CSV: {input_csv}")
     rows = _read_csv(input_csv)
     original_count = len(rows)
@@ -79,6 +85,8 @@ def generate_schedule_file(
         _log(f"Limit enabled: processing first {len(rows)} of {original_count} rows")
     if not rows:
         raise ValueError(f"No rows found in {input_csv}")
+
+    t_read = time.perf_counter()
 
     shift_days = _compute_shift(ntp_date)
     if shift_days:
@@ -89,6 +97,8 @@ def generate_schedule_file(
     rule_matcher = get_rule_matcher(rule_path)
     bm25 = get_bm25_index(schedule_activities)
 
+    t_load = time.perf_counter()
+
     # 1. Resolve the validation rule for every row (semantic hybrid or token).
     rule_semantic_index = (
         get_rule_semantic_index(rule_matcher, semantic_cache_dir)
@@ -96,6 +106,8 @@ def generate_schedule_file(
         else None
     )
     rules = resolve_rules(rows, rule_matcher, rule_semantic_index, semantic_weight)
+
+    t_rules = time.perf_counter()
 
     # 2. Resolve the CCPP activity for every row (BM25, or BM25+semantic+RRF), rule-boosted.
     activity_semantic_index = (
@@ -107,6 +119,8 @@ def generate_schedule_file(
     )
     activities = resolve_activities(rows, schedule_activities, bm25, rules, activity_semantic_index)
 
+    t_activities = time.perf_counter()
+
     # 3. Render output rows from the resolved matches.
     contexts = [MatchContext(rule=r, activity=a) for r, a in zip(rules, activities, strict=True)]
     output_rows = [
@@ -114,13 +128,37 @@ def generate_schedule_file(
         for row, ctx in zip(rows, contexts, strict=True)
     ]
 
+    t_format = time.perf_counter()
+
     output_stem = _output_stem(input_csv)
     if ntp_date:
         output_stem = f"{output_stem}_ntp{ntp_date}"
     if limit > 0:
         output_stem = f"{output_stem}_limit{limit}"
     _log(f"Writing generated schedule with stem: {output_stem}")
-    return write_schedule_outputs(output_dir, output_stem, output_rows)
+    xlsx_path, json_path = write_schedule_outputs(output_dir, output_stem, output_rows)
+
+    t_end = time.perf_counter()
+
+    timing: dict[str, Any] = {
+        "csv_read_s": round(t_read - t0, 3),
+        "loader_setup_s": round(t_load - t_read, 3),
+        "rule_resolution_s": round(t_rules - t_load, 3),
+        "activity_resolution_s": round(t_activities - t_rules, 3),
+        "format_s": round(t_format - t_activities, 3),
+        "write_s": round(t_end - t_format, 3),
+        "total_s": round(t_end - t0, 3),
+        "rows_processed": len(rows),
+        "use_semantic_rules": bool(rule_semantic_index),
+        "use_semantic_activities": bool(activity_semantic_index),
+    }
+    logger.info(
+        "Timing — read: {csv_read_s}s | loader: {loader_setup_s}s"
+        " | rules: {rule_resolution_s}s | activities: {activity_resolution_s}s"
+        " | format: {format_s}s | write: {write_s}s | total: {total_s}s",
+        **timing,
+    )
+    return xlsx_path, json_path, timing
 
 
 def _format_schedule_row(

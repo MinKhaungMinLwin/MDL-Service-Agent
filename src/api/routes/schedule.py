@@ -106,7 +106,7 @@ def schedule_generate(
 
     schedule_activities = get_schedule_activities(DEFAULT_SCHEDULE_PATH)
     semantic_cache_dir = CACHE_DIR / "rule_semantic_cache" if use_semantic_rules else None
-    xlsx_path, json_path = generate_schedule_file(
+    xlsx_path, json_path, timing = generate_schedule_file(
         input_csv=input_path,
         schedule_activities=schedule_activities,
         output_dir=GENERATE_DIR,
@@ -117,7 +117,7 @@ def schedule_generate(
         use_semantic_activities=use_semantic_activities,
         activity_cache_dir=CACHE_DIR / "activity_semantic_cache",
     )
-    return _file_response("generated_schedule", input_path, xlsx_path, json_path)
+    return _file_response("generated_schedule", input_path, xlsx_path, json_path, timing)
 
 
 @router.post(
@@ -184,9 +184,15 @@ def schedule_candidates(
     }
 
 
-def _file_response(kind: str, input_path: Path, xlsx_path: Path, json_path: Path) -> dict[str, object]:
+def _file_response(
+    kind: str,
+    input_path: Path,
+    xlsx_path: Path,
+    json_path: Path,
+    timing: dict | None = None,
+) -> dict[str, object]:
     """Build the API response for schedule service file outputs."""
-    return {
+    result: dict[str, object] = {
         "kind": kind,
         "input_path": str(input_path),
         "output_dir": str(xlsx_path.parent),
@@ -195,6 +201,9 @@ def _file_response(kind: str, input_path: Path, xlsx_path: Path, json_path: Path
             "xlsx": str(xlsx_path),
         },
     }
+    if timing:
+        result["timing"] = timing
+    return result
 
 
 def _existing_path(value: str) -> Path:

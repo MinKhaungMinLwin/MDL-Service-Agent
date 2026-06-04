@@ -94,13 +94,11 @@ def resolve_activities(
 
     Uses BM25 + semantic + RRF when a semantic index is supplied, else plain BM25 top-1.
     Either way the activity query is rule-boosted via build_activity_query.
+    Deduplicates BM25 queries across rows to avoid re-scoring identical queries.
     """
     if semantic_index is not None:
         return _match_activities_semantic(rows, activities, bm25, semantic_index, rules)
-    return [
-        _bm25_top1_activity(row, rule, activities, bm25)
-        for row, rule in zip(rows, rules, strict=True)
-    ]
+    return _match_activities_bm25_deduplicated(rows, activities, bm25, rules)
 
 
 def _bm25_top1_activity(
@@ -110,9 +108,41 @@ def _bm25_top1_activity(
     bm25: BM25Index,
 ) -> ScheduleActivity:
     """Return the single best activity by BM25 score for a rule-boosted query."""
-    bm25_scores = bm25.score(build_activity_query(row, rule))
+    query = build_activity_query(row, rule)
+    bm25_scores = bm25.score(query)
     top_idx = max(range(len(bm25_scores)), key=lambda idx: bm25_scores[idx])
     return activities[top_idx]
+
+
+def _match_activities_bm25_deduplicated(
+    rows: list[dict[str, str]],
+    activities: list[ScheduleActivity],
+    bm25: BM25Index,
+    rules: list[ValidationRule | None],
+) -> list[ScheduleActivity]:
+    """Match activities using BM25, deduplicating queries across rows to avoid re-scoring.
+
+    If many rows have the same Equipment/System/Deliverable, they generate identical queries.
+    This function scores each unique query once and reuses the result.
+    """
+    activity_queries = [build_activity_query(row, rule) for row, rule in zip(rows, rules, strict=True)]
+    unique_queries = list(dict.fromkeys(activity_queries))
+
+    if len(unique_queries) < len(activity_queries):
+        logger.info(
+            "BM25 activity matching: {} unique queries for {} rows (dedup saved {} re-scores)",
+            len(unique_queries), len(rows), len(activity_queries) - len(unique_queries),
+        )
+
+    # Score each unique query exactly once
+    query_scores = {q: bm25.score(q) for q in unique_queries}
+
+    results: list[ScheduleActivity] = []
+    for query in activity_queries:
+        bm25_scores = query_scores[query]
+        top_idx = max(range(len(bm25_scores)), key=lambda idx: bm25_scores[idx])
+        results.append(activities[top_idx])
+    return results
 
 
 def _match_activities_semantic(
@@ -122,7 +152,10 @@ def _match_activities_semantic(
     semantic_index: SemanticIndex,
     rules: list[ValidationRule | None],
 ) -> list[ScheduleActivity]:
-    """Batch-embed activity queries and return the RRF top-1 activity for each row."""
+    """Batch-embed activity queries and return the RRF top-1 activity for each row.
+
+    Deduplicates both embedding and BM25 scoring to avoid redundant computation.
+    """
     import numpy as np
 
     from common.embedding_client import AzureEmbeddingService
@@ -141,9 +174,12 @@ def _match_activities_semantic(
     all_semantic_scores = semantic_index.score_matrix(np.array(raw_embeddings, dtype=np.float32))
     query_to_idx = {q: i for i, q in enumerate(unique_queries)}
 
+    # Deduplicate BM25 scoring: score each unique query once
+    query_bm25_scores = {q: bm25.score(q) for q in unique_queries}
+
     results: list[ScheduleActivity] = []
     for query in activity_queries:
-        bm25_scores = bm25.score(query)
+        bm25_scores = query_bm25_scores[query]
         semantic_scores = all_semantic_scores[query_to_idx[query]].tolist()
         candidates = rrf_candidates(
             activities=activities,
