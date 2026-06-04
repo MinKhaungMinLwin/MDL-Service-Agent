@@ -9,10 +9,8 @@ from fastapi import APIRouter, HTTPException, Query
 from loguru import logger
 
 from schedule_service.candidate.candidate_extractor import extract_candidates
-from schedule_service.generate.activity_matching.ccpp_schedule_loader import (
-    DEFAULT_SCHEDULE_PATH,
-    load_schedule_activities,
-)
+from schedule_service.generate._shared.resource_cache import get_schedule_activities
+from schedule_service.generate.activity.loader import DEFAULT_SCHEDULE_PATH
 from schedule_service.generate.schedule_generator import generate_schedule_file
 
 router = APIRouter(prefix="/schedule", tags=["schedule"])
@@ -71,28 +69,6 @@ def schedule_generate(
             examples=["data/schedule_service/raw/mock_validation_rule.csv"],
         ),
     ] = "",
-    use_semantic_rules: Annotated[
-        bool,
-        Query(
-            description=(
-                "Use hybrid (token + embedding) scoring for rule matching. "
-                "Embeds all rule queries once per request; rule embeddings are cached on disk. "
-                "Improves matching for document types with no exact token overlap in validation rules. "
-                "Requires Azure OpenAI embedding credentials."
-            ),
-        ),
-    ] = False,
-    use_semantic_activities: Annotated[
-        bool,
-        Query(
-            description=(
-                "Use BM25 + semantic + RRF for CCPP guide schedule activity matching. "
-                "Embeds all activity queries once per request; activity embeddings are cached on disk. "
-                "Improves anchor-date accuracy vs BM25-only matching. "
-                "Requires Azure OpenAI embedding credentials."
-            ),
-        ),
-    ] = False,
     limit: ScheduleLimit = 0,
 ) -> dict[str, object]:
     """Generate FA/FC schedule date ranges from an MDL classified CSV."""
@@ -101,25 +77,23 @@ def schedule_generate(
     if ntp_date:
         logger.info("NTP date: {}", ntp_date)
 
-    from schedule_service.generate.rule_matching.rule_loader import DEFAULT_RULE_PATH
+    from schedule_service.generate.rule.loader import DEFAULT_RULE_PATH
     rule_path = _existing_path(rule_csv) if rule_csv else DEFAULT_RULE_PATH
     if rule_csv:
         logger.info("Using custom rule file: {}", rule_path)
 
-    schedule_activities = load_schedule_activities(DEFAULT_SCHEDULE_PATH)
-    semantic_cache_dir = CACHE_DIR / "rule_semantic_cache" if use_semantic_rules else None
-    xlsx_path, json_path = generate_schedule_file(
+    schedule_activities = get_schedule_activities(DEFAULT_SCHEDULE_PATH)
+    xlsx_path, json_path, timing = generate_schedule_file(
         input_csv=input_path,
         schedule_activities=schedule_activities,
         output_dir=GENERATE_DIR,
         rule_path=rule_path,
         limit=limit,
         ntp_date=ntp_date,
-        semantic_cache_dir=semantic_cache_dir,
-        use_semantic_activities=use_semantic_activities,
+        semantic_cache_dir=CACHE_DIR / "rule_semantic_cache",
         activity_cache_dir=CACHE_DIR / "activity_semantic_cache",
     )
-    return _file_response("generated_schedule", input_path, xlsx_path, json_path)
+    return _file_response("generated_schedule", input_path, xlsx_path, json_path, timing)
 
 
 @router.post(
@@ -186,9 +160,15 @@ def schedule_candidates(
     }
 
 
-def _file_response(kind: str, input_path: Path, xlsx_path: Path, json_path: Path) -> dict[str, object]:
+def _file_response(
+    kind: str,
+    input_path: Path,
+    xlsx_path: Path,
+    json_path: Path,
+    timing: dict | None = None,
+) -> dict[str, object]:
     """Build the API response for schedule service file outputs."""
-    return {
+    result: dict[str, object] = {
         "kind": kind,
         "input_path": str(input_path),
         "output_dir": str(xlsx_path.parent),
@@ -197,6 +177,9 @@ def _file_response(kind: str, input_path: Path, xlsx_path: Path, json_path: Path
             "xlsx": str(xlsx_path),
         },
     }
+    if timing:
+        result["timing"] = timing
+    return result
 
 
 def _existing_path(value: str) -> Path:
