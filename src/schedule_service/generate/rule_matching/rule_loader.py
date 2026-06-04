@@ -7,10 +7,10 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from schedule_service.generate.rule_matching.vt_parser import parse_validation_time
 from schedule_service.normalizer import expand_query_tokens as _expand_query_tokens
-from schedule_service.vt_parser import parse_validation_time
 
-DEFAULT_RULE_PATH = Path("data/schedule_sources/rules/validation_rule_clean.csv")
+DEFAULT_RULE_PATH = Path("data/schedule_service/processed/validation_rule_clean.csv")
 
 _TOKEN_RE = re.compile(r"[a-z0-9&]+")
 _MIN_TOKEN_LEN = 2
@@ -54,7 +54,7 @@ class ValidationRule:
         object.__setattr__(self, "_item_tokens", frozenset(item_tokens))
 
     def describe(self) -> str:
-        from schedule_service.vt_parser import describe
+        from schedule_service.generate.rule_matching.vt_parser import describe
 
         return describe(self.vt_parsed)
 
@@ -79,6 +79,11 @@ class RuleTable:
         self._rule_to_idx: dict[int, int] = {id(r): i for i, r in enumerate(rules)}
         # document+equipment → matched rule — cross-row cache for duplicate doc titles
         self._cache: dict[str, ValidationRule | None] = {}
+
+    @property
+    def rules(self) -> list[ValidationRule]:
+        """Loaded validation rules, in CSV order (parallel to semantic embeddings)."""
+        return self._rules
 
     def _build_index(self) -> dict[str, list[int]]:
         index: dict[str, list[int]] = {}
