@@ -222,7 +222,7 @@ class ITBServiceTest(unittest.TestCase):
         self.assertEqual(token_rows[0]["Chunk Count"], "1")
         self.assertEqual(token_rows[0]["Chunk IDs"], "chunk-1")
         self.assertEqual(token_rows[0]["Total Tokens"], "30")
-        self.assertEqual(token_rows[0]["Avg Total Tokens Per Chunk"], "30.0")
+        self.assertNotIn("Avg Total Tokens Per Chunk", token_rows[0])
         self.assertEqual(client.prompts, ["extract prompt", "verify prompt"])
 
     def test_service_marks_missing_model_results_for_review(self) -> None:
@@ -294,9 +294,8 @@ class ITBServiceTest(unittest.TestCase):
                 encoding="utf-8",
             )
             (base / "tokens.csv").write_text(
-                "\ufeffDocument,Batch Index,Chunk Count,Chunk IDs,Pages,Prompt Tokens,Completion Tokens,Total Tokens,"
-                "Avg Prompt Tokens Per Chunk,Avg Completion Tokens Per Chunk,Avg Total Tokens Per Chunk\n"
-                "R&N_ITB,1,1,chunk-1,97,1,1,2,1.0,1.0,2.0\n",
+                "\ufeffDocument,Batch Index,Chunk Count,Chunk IDs,Pages,Prompt Tokens,Completion Tokens,Total Tokens\n"
+                "R&N_ITB,1,1,chunk-1,97,1,1,2\n",
                 encoding="utf-8",
             )
             count = service.extract_to_files(

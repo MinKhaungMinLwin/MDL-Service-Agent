@@ -81,21 +81,15 @@ def build_token_row(
 ) -> list[Any]:
     """Build one token usage row for a single LLM batch request."""
     chunk_count = len(chunks)
-    prompt_tokens = token_usage.get("prompt_tokens", 0)
-    completion_tokens = token_usage.get("completion_tokens", 0)
-    total_tokens = token_usage.get("total_tokens", 0)
     return [
         document_name,
         batch_index,
         chunk_count,
         ";".join(as_text(chunk.get("chunk_id")) for chunk in chunks if as_text(chunk.get("chunk_id"))),
         _batch_pages(chunks),
-        prompt_tokens,
-        completion_tokens,
-        total_tokens,
-        _average_tokens(prompt_tokens, chunk_count),
-        _average_tokens(completion_tokens, chunk_count),
-        _average_tokens(total_tokens, chunk_count),
+        token_usage.get("prompt_tokens", 0),
+        token_usage.get("completion_tokens", 0),
+        token_usage.get("total_tokens", 0),
     ]
 
 
@@ -216,12 +210,6 @@ def _batch_pages(chunks: list[dict[str, Any]]) -> str:
     for chunk in chunks:
         pages.extend(str(page) for page in chunk.get("page_num", []))
     return ", ".join(dict.fromkeys(pages))
-
-
-def _average_tokens(token_count: int, chunk_count: int) -> float:
-    if chunk_count <= 0:
-        return 0
-    return round(token_count / chunk_count, 2)
 
 
 def _candidate_value(extraction: dict[str, Any]) -> str:

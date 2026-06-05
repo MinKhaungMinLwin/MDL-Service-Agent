@@ -1,0 +1,148 @@
+﻿Document,Batch Index,Chunk Count,Chunk IDs,Pages,Prompt Tokens,Completion Tokens,Total Tokens
+R&N_ITB,1,5,test_temp_R&N_ITB_chunk_218;test_temp_R&N_ITB_chunk_219;test_temp_R&N_ITB_chunk_220;test_temp_R&N_ITB_chunk_221;test_temp_R&N_ITB_chunk_222,"18, 20, 21",4264,970,5234
+R&N_ITB,2,5,test_temp_R&N_ITB_chunk_223;test_temp_R&N_ITB_chunk_224;test_temp_R&N_ITB_chunk_225;test_temp_R&N_ITB_chunk_226;test_temp_R&N_ITB_chunk_227,"21, 22, 23",4489,1178,5667
+R&N_ITB,3,5,test_temp_R&N_ITB_chunk_228;test_temp_R&N_ITB_chunk_229;test_temp_R&N_ITB_chunk_230;test_temp_R&N_ITB_chunk_231;test_temp_R&N_ITB_chunk_232,"23, 24, 25, 26",5010,1271,6281
+R&N_ITB,4,5,test_temp_R&N_ITB_chunk_233;test_temp_R&N_ITB_chunk_234;test_temp_R&N_ITB_chunk_236;test_temp_R&N_ITB_chunk_237;test_temp_R&N_ITB_chunk_238,"27, 28, 29",4580,845,5425
+R&N_ITB,5,5,test_temp_R&N_ITB_chunk_239;test_temp_R&N_ITB_chunk_240;test_temp_R&N_ITB_chunk_241;test_temp_R&N_ITB_chunk_242;test_temp_R&N_ITB_chunk_243,"29, 30, 31",4394,758,5152
+R&N_ITB,6,5,test_temp_R&N_ITB_chunk_244;test_temp_R&N_ITB_chunk_245;test_temp_R&N_ITB_chunk_246;test_temp_R&N_ITB_chunk_247;test_temp_R&N_ITB_chunk_248,"31, 32",4580,792,5372
+R&N_ITB,7,5,test_temp_R&N_ITB_chunk_249;test_temp_R&N_ITB_chunk_250;test_temp_R&N_ITB_chunk_251;test_temp_R&N_ITB_chunk_252;test_temp_R&N_ITB_chunk_253,"32, 33, 34",4709,1151,5860
+R&N_ITB,8,5,test_temp_R&N_ITB_chunk_254;test_temp_R&N_ITB_chunk_255;test_temp_R&N_ITB_chunk_256;test_temp_R&N_ITB_chunk_257;test_temp_R&N_ITB_chunk_258,"34, 35",4499,1044,5543
+R&N_ITB,9,5,test_temp_R&N_ITB_chunk_259;test_temp_R&N_ITB_chunk_260;test_temp_R&N_ITB_chunk_261;test_temp_R&N_ITB_chunk_262;test_temp_R&N_ITB_chunk_263,"35, 36",3859,816,4675
+R&N_ITB,10,5,test_temp_R&N_ITB_chunk_264;test_temp_R&N_ITB_chunk_265;test_temp_R&N_ITB_chunk_266;test_temp_R&N_ITB_chunk_267;test_temp_R&N_ITB_chunk_268,"36, 37, 38",4669,1082,5751
+R&N_ITB,11,5,test_temp_R&N_ITB_chunk_269;test_temp_R&N_ITB_chunk_270;test_temp_R&N_ITB_chunk_271;test_temp_R&N_ITB_chunk_272;test_temp_R&N_ITB_chunk_273,"38, 39",4459,946,5405
+R&N_ITB,12,5,test_temp_R&N_ITB_chunk_274;test_temp_R&N_ITB_chunk_276;test_temp_R&N_ITB_chunk_277;test_temp_R&N_ITB_chunk_278;test_temp_R&N_ITB_chunk_279,"39, 40",3917,721,4638
+R&N_ITB,13,5,test_temp_R&N_ITB_chunk_280;test_temp_R&N_ITB_chunk_282;test_temp_R&N_ITB_chunk_283;test_temp_R&N_ITB_chunk_284;test_temp_R&N_ITB_chunk_285,"40, 42, 43, 44, 45",5721,1300,7021
+R&N_ITB,14,5,test_temp_R&N_ITB_chunk_286;test_temp_R&N_ITB_chunk_287;test_temp_R&N_ITB_chunk_288;test_temp_R&N_ITB_chunk_289;test_temp_R&N_ITB_chunk_290,"45, 46, 47",5619,1475,7094
+R&N_ITB,15,5,test_temp_R&N_ITB_chunk_291;test_temp_R&N_ITB_chunk_292;test_temp_R&N_ITB_chunk_293;test_temp_R&N_ITB_chunk_294;test_temp_R&N_ITB_chunk_295,48,4145,952,5097
+R&N_ITB,16,5,test_temp_R&N_ITB_chunk_296;test_temp_R&N_ITB_chunk_297;test_temp_R&N_ITB_chunk_298;test_temp_R&N_ITB_chunk_299;test_temp_R&N_ITB_chunk_300,"48, 49, 50",4788,1244,6032
+R&N_ITB,17,5,test_temp_R&N_ITB_chunk_301;test_temp_R&N_ITB_chunk_302;test_temp_R&N_ITB_chunk_303;test_temp_R&N_ITB_chunk_304;test_temp_R&N_ITB_chunk_305,"50, 51, 52",5289,1041,6330
+R&N_ITB,18,5,test_temp_R&N_ITB_chunk_306;test_temp_R&N_ITB_chunk_307;test_temp_R&N_ITB_chunk_309;test_temp_R&N_ITB_chunk_310;test_temp_R&N_ITB_chunk_312,52,3808,922,4730
+R&N_ITB,19,5,test_temp_R&N_ITB_chunk_313;test_temp_R&N_ITB_chunk_314;test_temp_R&N_ITB_chunk_315;test_temp_R&N_ITB_chunk_316;test_temp_R&N_ITB_chunk_317,53,4244,1150,5394
+R&N_ITB,20,5,test_temp_R&N_ITB_chunk_318;test_temp_R&N_ITB_chunk_319;test_temp_R&N_ITB_chunk_320;test_temp_R&N_ITB_chunk_321;test_temp_R&N_ITB_chunk_322,"54, 55",4761,1038,5799
+R&N_ITB,21,5,test_temp_R&N_ITB_chunk_323;test_temp_R&N_ITB_chunk_324;test_temp_R&N_ITB_chunk_325;test_temp_R&N_ITB_chunk_326;test_temp_R&N_ITB_chunk_327,"55, 56",4633,1109,5742
+R&N_ITB,22,5,test_temp_R&N_ITB_chunk_328;test_temp_R&N_ITB_chunk_330;test_temp_R&N_ITB_chunk_331;test_temp_R&N_ITB_chunk_332;test_temp_R&N_ITB_chunk_333,"56, 57, 59, 60, 61",4920,1069,5989
+R&N_ITB,23,5,test_temp_R&N_ITB_chunk_334;test_temp_R&N_ITB_chunk_335;test_temp_R&N_ITB_chunk_336;test_temp_R&N_ITB_chunk_337;test_temp_R&N_ITB_chunk_338,"61, 62",4978,1094,6072
+R&N_ITB,24,5,test_temp_R&N_ITB_chunk_339;test_temp_R&N_ITB_chunk_340;test_temp_R&N_ITB_chunk_341;test_temp_R&N_ITB_chunk_342;test_temp_R&N_ITB_chunk_343,"63, 64, 65, 66",5336,1253,6589
+R&N_ITB,25,5,test_temp_R&N_ITB_chunk_344;test_temp_R&N_ITB_chunk_345;test_temp_R&N_ITB_chunk_346;test_temp_R&N_ITB_chunk_347;test_temp_R&N_ITB_chunk_348,"66, 67, 68",5187,1192,6379
+R&N_ITB,26,5,test_temp_R&N_ITB_chunk_349;test_temp_R&N_ITB_chunk_350;test_temp_R&N_ITB_chunk_351;test_temp_R&N_ITB_chunk_352;test_temp_R&N_ITB_chunk_353,"68, 69",4827,1193,6020
+R&N_ITB,27,5,test_temp_R&N_ITB_chunk_354;test_temp_R&N_ITB_chunk_355;test_temp_R&N_ITB_chunk_356;test_temp_R&N_ITB_chunk_357;test_temp_R&N_ITB_chunk_358,70,4101,1011,5112
+R&N_ITB,28,5,test_temp_R&N_ITB_chunk_359;test_temp_R&N_ITB_chunk_360;test_temp_R&N_ITB_chunk_361;test_temp_R&N_ITB_chunk_362;test_temp_R&N_ITB_chunk_363,"70, 71, 72",4736,1157,5893
+R&N_ITB,29,5,test_temp_R&N_ITB_chunk_364;test_temp_R&N_ITB_chunk_365;test_temp_R&N_ITB_chunk_366;test_temp_R&N_ITB_chunk_367;test_temp_R&N_ITB_chunk_368,"72, 73",4345,1089,5434
+R&N_ITB,30,5,test_temp_R&N_ITB_chunk_369;test_temp_R&N_ITB_chunk_370;test_temp_R&N_ITB_chunk_371;test_temp_R&N_ITB_chunk_372;test_temp_R&N_ITB_chunk_373,"73, 74, 75, 76",5366,1469,6835
+R&N_ITB,31,5,test_temp_R&N_ITB_chunk_374;test_temp_R&N_ITB_chunk_375;test_temp_R&N_ITB_chunk_376;test_temp_R&N_ITB_chunk_377;test_temp_R&N_ITB_chunk_378,"76, 77, 79",4200,1039,5239
+R&N_ITB,32,5,test_temp_R&N_ITB_chunk_379;test_temp_R&N_ITB_chunk_380;test_temp_R&N_ITB_chunk_381;test_temp_R&N_ITB_chunk_382;test_temp_R&N_ITB_chunk_383,"79, 80, 81",4848,1170,6018
+R&N_ITB,33,5,test_temp_R&N_ITB_chunk_384;test_temp_R&N_ITB_chunk_385;test_temp_R&N_ITB_chunk_386;test_temp_R&N_ITB_chunk_387;test_temp_R&N_ITB_chunk_388,"81, 82, 83",4775,1234,6009
+R&N_ITB,34,5,test_temp_R&N_ITB_chunk_389;test_temp_R&N_ITB_chunk_390;test_temp_R&N_ITB_chunk_391;test_temp_R&N_ITB_chunk_392;test_temp_R&N_ITB_chunk_393,"83, 84",4279,889,5168
+R&N_ITB,35,5,test_temp_R&N_ITB_chunk_394;test_temp_R&N_ITB_chunk_395;test_temp_R&N_ITB_chunk_396;test_temp_R&N_ITB_chunk_397;test_temp_R&N_ITB_chunk_398,"84, 85, 86",5196,1380,6576
+R&N_ITB,36,5,test_temp_R&N_ITB_chunk_399;test_temp_R&N_ITB_chunk_400;test_temp_R&N_ITB_chunk_401;test_temp_R&N_ITB_chunk_402;test_temp_R&N_ITB_chunk_403,"86, 87, 88",4606,1134,5740
+R&N_ITB,37,5,test_temp_R&N_ITB_chunk_404;test_temp_R&N_ITB_chunk_405;test_temp_R&N_ITB_chunk_408;test_temp_R&N_ITB_chunk_409;test_temp_R&N_ITB_chunk_410,"88, 89, 90",4557,906,5463
+R&N_ITB,38,5,test_temp_R&N_ITB_chunk_411;test_temp_R&N_ITB_chunk_412;test_temp_R&N_ITB_chunk_413;test_temp_R&N_ITB_chunk_414;test_temp_R&N_ITB_chunk_415,"90, 91, 92",5198,1307,6505
+R&N_ITB,39,5,test_temp_R&N_ITB_chunk_416;test_temp_R&N_ITB_chunk_417;test_temp_R&N_ITB_chunk_418;test_temp_R&N_ITB_chunk_419;test_temp_R&N_ITB_chunk_420,"92, 93, 94",6154,1839,7993
+R&N_ITB,40,5,test_temp_R&N_ITB_chunk_421;test_temp_R&N_ITB_chunk_422;test_temp_R&N_ITB_chunk_423;test_temp_R&N_ITB_chunk_424;test_temp_R&N_ITB_chunk_425,"94, 95",5358,1115,6473
+R&N_ITB,41,5,test_temp_R&N_ITB_chunk_426;test_temp_R&N_ITB_chunk_427;test_temp_R&N_ITB_chunk_428;test_temp_R&N_ITB_chunk_429;test_temp_R&N_ITB_chunk_430,"95, 96, 97, 98",5341,1259,6600
+R&N_ITB,42,5,test_temp_R&N_ITB_chunk_431;test_temp_R&N_ITB_chunk_432;test_temp_R&N_ITB_chunk_433;test_temp_R&N_ITB_chunk_434;test_temp_R&N_ITB_chunk_435,"98, 99, 100",5290,1340,6630
+R&N_ITB,43,5,test_temp_R&N_ITB_chunk_436;test_temp_R&N_ITB_chunk_437;test_temp_R&N_ITB_chunk_438;test_temp_R&N_ITB_chunk_439;test_temp_R&N_ITB_chunk_440,"100, 101",3850,953,4803
+R&N_ITB,44,5,test_temp_R&N_ITB_chunk_441;test_temp_R&N_ITB_chunk_442;test_temp_R&N_ITB_chunk_443;test_temp_R&N_ITB_chunk_444;test_temp_R&N_ITB_chunk_445,"101, 102, 103, 104",5692,1298,6990
+R&N_ITB,45,5,test_temp_R&N_ITB_chunk_446;test_temp_R&N_ITB_chunk_447;test_temp_R&N_ITB_chunk_448;test_temp_R&N_ITB_chunk_450;test_temp_R&N_ITB_chunk_451,"104, 105, 106",5742,1363,7105
+R&N_ITB,46,5,test_temp_R&N_ITB_chunk_452;test_temp_R&N_ITB_chunk_453;test_temp_R&N_ITB_chunk_454;test_temp_R&N_ITB_chunk_455;test_temp_R&N_ITB_chunk_456,"107, 108, 109",5391,1205,6596
+R&N_ITB,47,5,test_temp_R&N_ITB_chunk_457;test_temp_R&N_ITB_chunk_458;test_temp_R&N_ITB_chunk_459;test_temp_R&N_ITB_chunk_460;test_temp_R&N_ITB_chunk_461,"109, 110, 111",4819,1232,6051
+R&N_ITB,48,5,test_temp_R&N_ITB_chunk_462;test_temp_R&N_ITB_chunk_463;test_temp_R&N_ITB_chunk_464;test_temp_R&N_ITB_chunk_465;test_temp_R&N_ITB_chunk_466,"111, 112",5003,1155,6158
+R&N_ITB,49,5,test_temp_R&N_ITB_chunk_467;test_temp_R&N_ITB_chunk_468;test_temp_R&N_ITB_chunk_469;test_temp_R&N_ITB_chunk_470;test_temp_R&N_ITB_chunk_471,"113, 114, 115, 116",6250,1604,7854
+R&N_ITB,50,5,test_temp_R&N_ITB_chunk_472;test_temp_R&N_ITB_chunk_473;test_temp_R&N_ITB_chunk_474;test_temp_R&N_ITB_chunk_475;test_temp_R&N_ITB_chunk_476,"116, 117, 118",4901,1208,6109
+R&N_ITB,51,5,test_temp_R&N_ITB_chunk_477;test_temp_R&N_ITB_chunk_478;test_temp_R&N_ITB_chunk_479;test_temp_R&N_ITB_chunk_480;test_temp_R&N_ITB_chunk_481,"118, 119, 120",5083,1216,6299
+R&N_ITB,52,5,test_temp_R&N_ITB_chunk_482;test_temp_R&N_ITB_chunk_483;test_temp_R&N_ITB_chunk_484;test_temp_R&N_ITB_chunk_485;test_temp_R&N_ITB_chunk_486,"120, 121, 122",4485,1135,5620
+R&N_ITB,53,5,test_temp_R&N_ITB_chunk_487;test_temp_R&N_ITB_chunk_488;test_temp_R&N_ITB_chunk_489;test_temp_R&N_ITB_chunk_490;test_temp_R&N_ITB_chunk_491,"122, 123, 124",4837,1055,5892
+R&N_ITB,54,5,test_temp_R&N_ITB_chunk_492;test_temp_R&N_ITB_chunk_493;test_temp_R&N_ITB_chunk_494;test_temp_R&N_ITB_chunk_495;test_temp_R&N_ITB_chunk_496,"124, 125, 126, 127",6191,1726,7917
+R&N_ITB,55,5,test_temp_R&N_ITB_chunk_497;test_temp_R&N_ITB_chunk_498;test_temp_R&N_ITB_chunk_499;test_temp_R&N_ITB_chunk_500;test_temp_R&N_ITB_chunk_501,"127, 128, 129, 130",6034,1465,7499
+R&N_ITB,56,5,test_temp_R&N_ITB_chunk_502;test_temp_R&N_ITB_chunk_503;test_temp_R&N_ITB_chunk_504;test_temp_R&N_ITB_chunk_505;test_temp_R&N_ITB_chunk_507,"130, 131, 132, 133, 134",5724,1272,6996
+R&N_ITB,57,5,test_temp_R&N_ITB_chunk_509;test_temp_R&N_ITB_chunk_510;test_temp_R&N_ITB_chunk_511;test_temp_R&N_ITB_chunk_512;test_temp_R&N_ITB_chunk_513,"135, 136, 137",5120,1250,6370
+R&N_ITB,58,5,test_temp_R&N_ITB_chunk_514;test_temp_R&N_ITB_chunk_515;test_temp_R&N_ITB_chunk_516;test_temp_R&N_ITB_chunk_517;test_temp_R&N_ITB_chunk_518,"137, 138, 139",5310,1238,6548
+R&N_ITB,59,5,test_temp_R&N_ITB_chunk_519;test_temp_R&N_ITB_chunk_520;test_temp_R&N_ITB_chunk_521;test_temp_R&N_ITB_chunk_522;test_temp_R&N_ITB_chunk_523,"139, 140",4795,1526,6321
+R&N_ITB,60,5,test_temp_R&N_ITB_chunk_524;test_temp_R&N_ITB_chunk_525;test_temp_R&N_ITB_chunk_526;test_temp_R&N_ITB_chunk_527;test_temp_R&N_ITB_chunk_528,"140, 141, 142",5122,1381,6503
+R&N_ITB,61,5,test_temp_R&N_ITB_chunk_529;test_temp_R&N_ITB_chunk_530;test_temp_R&N_ITB_chunk_531;test_temp_R&N_ITB_chunk_532;test_temp_R&N_ITB_chunk_533,"142, 143, 144",5244,1256,6500
+R&N_ITB,62,5,test_temp_R&N_ITB_chunk_534;test_temp_R&N_ITB_chunk_535;test_temp_R&N_ITB_chunk_536;test_temp_R&N_ITB_chunk_537;test_temp_R&N_ITB_chunk_538,"144, 145",4044,962,5006
+R&N_ITB,63,5,test_temp_R&N_ITB_chunk_539;test_temp_R&N_ITB_chunk_540;test_temp_R&N_ITB_chunk_541;test_temp_R&N_ITB_chunk_542;test_temp_R&N_ITB_chunk_543,"145, 146",4393,1052,5445
+R&N_ITB,64,5,test_temp_R&N_ITB_chunk_544;test_temp_R&N_ITB_chunk_545;test_temp_R&N_ITB_chunk_546;test_temp_R&N_ITB_chunk_547;test_temp_R&N_ITB_chunk_548,"146, 147, 148",4411,999,5410
+R&N_ITB,65,5,test_temp_R&N_ITB_chunk_549;test_temp_R&N_ITB_chunk_550;test_temp_R&N_ITB_chunk_551;test_temp_R&N_ITB_chunk_552;test_temp_R&N_ITB_chunk_553,"148, 149",4830,1313,6143
+R&N_ITB,66,5,test_temp_R&N_ITB_chunk_554;test_temp_R&N_ITB_chunk_555;test_temp_R&N_ITB_chunk_556;test_temp_R&N_ITB_chunk_557;test_temp_R&N_ITB_chunk_558,"149, 150",3925,837,4762
+R&N_ITB,67,5,test_temp_R&N_ITB_chunk_559;test_temp_R&N_ITB_chunk_560;test_temp_R&N_ITB_chunk_561;test_temp_R&N_ITB_chunk_562;test_temp_R&N_ITB_chunk_563,"150, 151",4557,1117,5674
+R&N_ITB,68,5,test_temp_R&N_ITB_chunk_564;test_temp_R&N_ITB_chunk_565;test_temp_R&N_ITB_chunk_566;test_temp_R&N_ITB_chunk_567;test_temp_R&N_ITB_chunk_568,"151, 152",4291,1009,5300
+R&N_ITB,69,5,test_temp_R&N_ITB_chunk_569;test_temp_R&N_ITB_chunk_570;test_temp_R&N_ITB_chunk_571;test_temp_R&N_ITB_chunk_572;test_temp_R&N_ITB_chunk_573,"152, 153, 154, 155",5558,1301,6859
+R&N_ITB,70,5,test_temp_R&N_ITB_chunk_574;test_temp_R&N_ITB_chunk_575;test_temp_R&N_ITB_chunk_576;test_temp_R&N_ITB_chunk_577;test_temp_R&N_ITB_chunk_578,"155, 156",4655,1493,6148
+R&N_ITB,71,5,test_temp_R&N_ITB_chunk_579;test_temp_R&N_ITB_chunk_580;test_temp_R&N_ITB_chunk_581;test_temp_R&N_ITB_chunk_582;test_temp_R&N_ITB_chunk_583,"156, 157, 158",5241,1276,6517
+R&N_ITB,72,5,test_temp_R&N_ITB_chunk_584;test_temp_R&N_ITB_chunk_585;test_temp_R&N_ITB_chunk_586;test_temp_R&N_ITB_chunk_587;test_temp_R&N_ITB_chunk_588,"158, 159",4099,1006,5105
+R&N_ITB,73,5,test_temp_R&N_ITB_chunk_589;test_temp_R&N_ITB_chunk_590;test_temp_R&N_ITB_chunk_591;test_temp_R&N_ITB_chunk_592;test_temp_R&N_ITB_chunk_593,"159, 160, 161",4838,1138,5976
+R&N_ITB,74,5,test_temp_R&N_ITB_chunk_594;test_temp_R&N_ITB_chunk_595;test_temp_R&N_ITB_chunk_596;test_temp_R&N_ITB_chunk_597;test_temp_R&N_ITB_chunk_598,"161, 162",4331,1049,5380
+R&N_ITB,75,5,test_temp_R&N_ITB_chunk_599;test_temp_R&N_ITB_chunk_600;test_temp_R&N_ITB_chunk_601;test_temp_R&N_ITB_chunk_602;test_temp_R&N_ITB_chunk_603,"162, 163, 164, 165",5299,1263,6562
+R&N_ITB,76,5,test_temp_R&N_ITB_chunk_604;test_temp_R&N_ITB_chunk_605;test_temp_R&N_ITB_chunk_606;test_temp_R&N_ITB_chunk_607;test_temp_R&N_ITB_chunk_608,"165, 166, 167",5711,1341,7052
+R&N_ITB,77,5,test_temp_R&N_ITB_chunk_609;test_temp_R&N_ITB_chunk_610;test_temp_R&N_ITB_chunk_611;test_temp_R&N_ITB_chunk_612;test_temp_R&N_ITB_chunk_613,"167, 168, 169, 170",6413,1581,7994
+R&N_ITB,78,5,test_temp_R&N_ITB_chunk_614;test_temp_R&N_ITB_chunk_615;test_temp_R&N_ITB_chunk_616;test_temp_R&N_ITB_chunk_617;test_temp_R&N_ITB_chunk_618,"171, 172",5127,1328,6455
+R&N_ITB,79,5,test_temp_R&N_ITB_chunk_619;test_temp_R&N_ITB_chunk_620;test_temp_R&N_ITB_chunk_621;test_temp_R&N_ITB_chunk_622;test_temp_R&N_ITB_chunk_623,"173, 174, 175",5579,1259,6838
+R&N_ITB,80,5,test_temp_R&N_ITB_chunk_624;test_temp_R&N_ITB_chunk_625;test_temp_R&N_ITB_chunk_626;test_temp_R&N_ITB_chunk_627;test_temp_R&N_ITB_chunk_628,"175, 176, 177",5357,1294,6651
+R&N_ITB,81,5,test_temp_R&N_ITB_chunk_629;test_temp_R&N_ITB_chunk_630;test_temp_R&N_ITB_chunk_631;test_temp_R&N_ITB_chunk_632;test_temp_R&N_ITB_chunk_633,"177, 178, 179",5937,1528,7465
+R&N_ITB,82,5,test_temp_R&N_ITB_chunk_634;test_temp_R&N_ITB_chunk_635;test_temp_R&N_ITB_chunk_636;test_temp_R&N_ITB_chunk_637;test_temp_R&N_ITB_chunk_638,"180, 181",5331,1418,6749
+R&N_ITB,83,5,test_temp_R&N_ITB_chunk_639;test_temp_R&N_ITB_chunk_640;test_temp_R&N_ITB_chunk_641;test_temp_R&N_ITB_chunk_642;test_temp_R&N_ITB_chunk_643,"182, 183, 184",6137,1425,7562
+R&N_ITB,84,5,test_temp_R&N_ITB_chunk_644;test_temp_R&N_ITB_chunk_645;test_temp_R&N_ITB_chunk_646;test_temp_R&N_ITB_chunk_647;test_temp_R&N_ITB_chunk_648,"184, 185, 186",5255,1435,6690
+R&N_ITB,85,5,test_temp_R&N_ITB_chunk_649;test_temp_R&N_ITB_chunk_650;test_temp_R&N_ITB_chunk_651;test_temp_R&N_ITB_chunk_652;test_temp_R&N_ITB_chunk_653,"187, 188",5172,1343,6515
+R&N_ITB,86,5,test_temp_R&N_ITB_chunk_654;test_temp_R&N_ITB_chunk_655;test_temp_R&N_ITB_chunk_656;test_temp_R&N_ITB_chunk_657;test_temp_R&N_ITB_chunk_658,"189, 190, 191",5953,1838,7791
+R&N_ITB,87,5,test_temp_R&N_ITB_chunk_659;test_temp_R&N_ITB_chunk_660;test_temp_R&N_ITB_chunk_661;test_temp_R&N_ITB_chunk_662;test_temp_R&N_ITB_chunk_664,"191, 192, 193, 194",5203,1310,6513
+R&N_ITB,88,5,test_temp_R&N_ITB_chunk_665;test_temp_R&N_ITB_chunk_666;test_temp_R&N_ITB_chunk_667;test_temp_R&N_ITB_chunk_668;test_temp_R&N_ITB_chunk_669,"194, 195, 196, 197",5020,1253,6273
+R&N_ITB,89,5,test_temp_R&N_ITB_chunk_670;test_temp_R&N_ITB_chunk_671;test_temp_R&N_ITB_chunk_672;test_temp_R&N_ITB_chunk_673;test_temp_R&N_ITB_chunk_674,"197, 198, 199",4657,1301,5958
+R&N_ITB,90,5,test_temp_R&N_ITB_chunk_675;test_temp_R&N_ITB_chunk_676;test_temp_R&N_ITB_chunk_677;test_temp_R&N_ITB_chunk_678;test_temp_R&N_ITB_chunk_679,"199, 200, 201, 202",5977,1408,7385
+R&N_ITB,91,5,test_temp_R&N_ITB_chunk_680;test_temp_R&N_ITB_chunk_681;test_temp_R&N_ITB_chunk_682;test_temp_R&N_ITB_chunk_683;test_temp_R&N_ITB_chunk_684,"202, 203",4595,1203,5798
+R&N_ITB,92,5,test_temp_R&N_ITB_chunk_685;test_temp_R&N_ITB_chunk_686;test_temp_R&N_ITB_chunk_687;test_temp_R&N_ITB_chunk_688;test_temp_R&N_ITB_chunk_689,"204, 205",4693,1134,5827
+R&N_ITB,93,5,test_temp_R&N_ITB_chunk_690;test_temp_R&N_ITB_chunk_691;test_temp_R&N_ITB_chunk_692;test_temp_R&N_ITB_chunk_693;test_temp_R&N_ITB_chunk_694,"205, 206, 207, 208",4818,1352,6170
+R&N_ITB,94,5,test_temp_R&N_ITB_chunk_695;test_temp_R&N_ITB_chunk_696;test_temp_R&N_ITB_chunk_697;test_temp_R&N_ITB_chunk_698;test_temp_R&N_ITB_chunk_699,"208, 209, 210",5383,1317,6700
+R&N_ITB,95,5,test_temp_R&N_ITB_chunk_700;test_temp_R&N_ITB_chunk_701;test_temp_R&N_ITB_chunk_702;test_temp_R&N_ITB_chunk_703;test_temp_R&N_ITB_chunk_704,"210, 211, 212, 213, 214",5922,1747,7669
+R&N_ITB,96,5,test_temp_R&N_ITB_chunk_705;test_temp_R&N_ITB_chunk_706;test_temp_R&N_ITB_chunk_707;test_temp_R&N_ITB_chunk_708;test_temp_R&N_ITB_chunk_709,"214, 215",4230,1129,5359
+R&N_ITB,97,5,test_temp_R&N_ITB_chunk_710;test_temp_R&N_ITB_chunk_711;test_temp_R&N_ITB_chunk_712;test_temp_R&N_ITB_chunk_713;test_temp_R&N_ITB_chunk_714,"215, 216",4587,1136,5723
+R&N_ITB,98,5,test_temp_R&N_ITB_chunk_715;test_temp_R&N_ITB_chunk_716;test_temp_R&N_ITB_chunk_717;test_temp_R&N_ITB_chunk_718;test_temp_R&N_ITB_chunk_719,"216, 217, 218",4916,1284,6200
+R&N_ITB,99,5,test_temp_R&N_ITB_chunk_720;test_temp_R&N_ITB_chunk_721;test_temp_R&N_ITB_chunk_722;test_temp_R&N_ITB_chunk_723;test_temp_R&N_ITB_chunk_724,"218, 219, 220",4881,1200,6081
+R&N_ITB,100,5,test_temp_R&N_ITB_chunk_725;test_temp_R&N_ITB_chunk_726;test_temp_R&N_ITB_chunk_727;test_temp_R&N_ITB_chunk_728;test_temp_R&N_ITB_chunk_729,"220, 221",3985,979,4964
+R&N_ITB,101,5,test_temp_R&N_ITB_chunk_730;test_temp_R&N_ITB_chunk_731;test_temp_R&N_ITB_chunk_732;test_temp_R&N_ITB_chunk_733;test_temp_R&N_ITB_chunk_734,"221, 222",4552,1251,5803
+R&N_ITB,102,5,test_temp_R&N_ITB_chunk_735;test_temp_R&N_ITB_chunk_736;test_temp_R&N_ITB_chunk_737;test_temp_R&N_ITB_chunk_738;test_temp_R&N_ITB_chunk_740,"222, 223, 224",4479,1121,5600
+R&N_ITB,103,5,test_temp_R&N_ITB_chunk_741;test_temp_R&N_ITB_chunk_742;test_temp_R&N_ITB_chunk_743;test_temp_R&N_ITB_chunk_744;test_temp_R&N_ITB_chunk_745,"224, 225, 226",4936,1396,6332
+R&N_ITB,104,5,test_temp_R&N_ITB_chunk_746;test_temp_R&N_ITB_chunk_747;test_temp_R&N_ITB_chunk_748;test_temp_R&N_ITB_chunk_749;test_temp_R&N_ITB_chunk_750,"226, 227",5059,1443,6502
+R&N_ITB,105,5,test_temp_R&N_ITB_chunk_751;test_temp_R&N_ITB_chunk_752;test_temp_R&N_ITB_chunk_753;test_temp_R&N_ITB_chunk_754;test_temp_R&N_ITB_chunk_755,"227, 228, 229, 230",5747,1600,7347
+R&N_ITB,106,5,test_temp_R&N_ITB_chunk_756;test_temp_R&N_ITB_chunk_757;test_temp_R&N_ITB_chunk_758;test_temp_R&N_ITB_chunk_759;test_temp_R&N_ITB_chunk_760,"230, 231, 232",4782,1208,5990
+R&N_ITB,107,5,test_temp_R&N_ITB_chunk_761;test_temp_R&N_ITB_chunk_762;test_temp_R&N_ITB_chunk_763;test_temp_R&N_ITB_chunk_764;test_temp_R&N_ITB_chunk_765,"232, 233, 234, 235",5838,1556,7394
+R&N_ITB,108,5,test_temp_R&N_ITB_chunk_766;test_temp_R&N_ITB_chunk_767;test_temp_R&N_ITB_chunk_768;test_temp_R&N_ITB_chunk_769;test_temp_R&N_ITB_chunk_770,"235, 236",4267,1142,5409
+R&N_ITB,109,5,test_temp_R&N_ITB_chunk_771;test_temp_R&N_ITB_chunk_772;test_temp_R&N_ITB_chunk_773;test_temp_R&N_ITB_chunk_774;test_temp_R&N_ITB_chunk_775,"236, 237",5119,1576,6695
+R&N_ITB,110,5,test_temp_R&N_ITB_chunk_776;test_temp_R&N_ITB_chunk_777;test_temp_R&N_ITB_chunk_778;test_temp_R&N_ITB_chunk_779;test_temp_R&N_ITB_chunk_780,238,4332,1059,5391
+R&N_ITB,111,5,test_temp_R&N_ITB_chunk_781;test_temp_R&N_ITB_chunk_782;test_temp_R&N_ITB_chunk_783;test_temp_R&N_ITB_chunk_784;test_temp_R&N_ITB_chunk_785,239,4436,1113,5549
+R&N_ITB,112,5,test_temp_R&N_ITB_chunk_786;test_temp_R&N_ITB_chunk_787;test_temp_R&N_ITB_chunk_788;test_temp_R&N_ITB_chunk_789;test_temp_R&N_ITB_chunk_790,"239, 240, 241",4558,1186,5744
+R&N_ITB,113,5,test_temp_R&N_ITB_chunk_791;test_temp_R&N_ITB_chunk_792;test_temp_R&N_ITB_chunk_793;test_temp_R&N_ITB_chunk_794;test_temp_R&N_ITB_chunk_795,"241, 242",4235,1109,5344
+R&N_ITB,114,5,test_temp_R&N_ITB_chunk_796;test_temp_R&N_ITB_chunk_797;test_temp_R&N_ITB_chunk_798;test_temp_R&N_ITB_chunk_799;test_temp_R&N_ITB_chunk_800,"242, 243",4218,1149,5367
+R&N_ITB,115,5,test_temp_R&N_ITB_chunk_801;test_temp_R&N_ITB_chunk_802;test_temp_R&N_ITB_chunk_803;test_temp_R&N_ITB_chunk_804;test_temp_R&N_ITB_chunk_805,"243, 244",4905,1221,6126
+R&N_ITB,116,5,test_temp_R&N_ITB_chunk_806;test_temp_R&N_ITB_chunk_807;test_temp_R&N_ITB_chunk_808;test_temp_R&N_ITB_chunk_809;test_temp_R&N_ITB_chunk_810,"244, 245, 246",4543,1446,5989
+R&N_ITB,117,5,test_temp_R&N_ITB_chunk_811;test_temp_R&N_ITB_chunk_812;test_temp_R&N_ITB_chunk_813;test_temp_R&N_ITB_chunk_814;test_temp_R&N_ITB_chunk_815,"246, 247, 248",4820,1279,6099
+R&N_ITB,118,5,test_temp_R&N_ITB_chunk_816;test_temp_R&N_ITB_chunk_817;test_temp_R&N_ITB_chunk_818;test_temp_R&N_ITB_chunk_819;test_temp_R&N_ITB_chunk_820,"248, 249, 250",5303,1431,6734
+R&N_ITB,119,5,test_temp_R&N_ITB_chunk_821;test_temp_R&N_ITB_chunk_822;test_temp_R&N_ITB_chunk_823;test_temp_R&N_ITB_chunk_824;test_temp_R&N_ITB_chunk_825,"250, 251, 252",4575,1121,5696
+R&N_ITB,120,5,test_temp_R&N_ITB_chunk_826;test_temp_R&N_ITB_chunk_827;test_temp_R&N_ITB_chunk_828;test_temp_R&N_ITB_chunk_829;test_temp_R&N_ITB_chunk_830,"252, 253",4819,1401,6220
+R&N_ITB,121,5,test_temp_R&N_ITB_chunk_831;test_temp_R&N_ITB_chunk_832;test_temp_R&N_ITB_chunk_833;test_temp_R&N_ITB_chunk_834;test_temp_R&N_ITB_chunk_835,"253, 254",4253,1032,5285
+R&N_ITB,122,5,test_temp_R&N_ITB_chunk_836;test_temp_R&N_ITB_chunk_837;test_temp_R&N_ITB_chunk_838;test_temp_R&N_ITB_chunk_839;test_temp_R&N_ITB_chunk_840,"255, 256",4726,1125,5851
+R&N_ITB,123,5,test_temp_R&N_ITB_chunk_841;test_temp_R&N_ITB_chunk_842;test_temp_R&N_ITB_chunk_843;test_temp_R&N_ITB_chunk_844;test_temp_R&N_ITB_chunk_845,"256, 257, 258",5422,1339,6761
+R&N_ITB,124,5,test_temp_R&N_ITB_chunk_846;test_temp_R&N_ITB_chunk_847;test_temp_R&N_ITB_chunk_848;test_temp_R&N_ITB_chunk_849;test_temp_R&N_ITB_chunk_850,"258, 259",4910,1292,6202
+R&N_ITB,125,5,test_temp_R&N_ITB_chunk_851;test_temp_R&N_ITB_chunk_852;test_temp_R&N_ITB_chunk_853;test_temp_R&N_ITB_chunk_854;test_temp_R&N_ITB_chunk_856,"259, 260",4755,1205,5960
+R&N_ITB,126,5,test_temp_R&N_ITB_chunk_857;test_temp_R&N_ITB_chunk_858;test_temp_R&N_ITB_chunk_859;test_temp_R&N_ITB_chunk_860;test_temp_R&N_ITB_chunk_861,"261, 262",5166,1271,6437
+R&N_ITB,127,5,test_temp_R&N_ITB_chunk_863;test_temp_R&N_ITB_chunk_864;test_temp_R&N_ITB_chunk_865;test_temp_R&N_ITB_chunk_866;test_temp_R&N_ITB_chunk_867,"262, 263",4229,977,5206
+R&N_ITB,128,5,test_temp_R&N_ITB_chunk_868;test_temp_R&N_ITB_chunk_869;test_temp_R&N_ITB_chunk_870;test_temp_R&N_ITB_chunk_871;test_temp_R&N_ITB_chunk_872,"263, 264",4268,946,5214
+R&N_ITB,129,5,test_temp_R&N_ITB_chunk_873;test_temp_R&N_ITB_chunk_874;test_temp_R&N_ITB_chunk_875;test_temp_R&N_ITB_chunk_876;test_temp_R&N_ITB_chunk_877,"264, 265, 266",5151,1158,6309
+R&N_ITB,130,5,test_temp_R&N_ITB_chunk_878;test_temp_R&N_ITB_chunk_879;test_temp_R&N_ITB_chunk_880;test_temp_R&N_ITB_chunk_881;test_temp_R&N_ITB_chunk_884,"266, 267",4773,1130,5903
+R&N_ITB,131,5,test_temp_R&N_ITB_chunk_885;test_temp_R&N_ITB_chunk_886;test_temp_R&N_ITB_chunk_887;test_temp_R&N_ITB_chunk_888;test_temp_R&N_ITB_chunk_889,"267, 268",4250,976,5226
+R&N_ITB,132,5,test_temp_R&N_ITB_chunk_890;test_temp_R&N_ITB_chunk_891;test_temp_R&N_ITB_chunk_892;test_temp_R&N_ITB_chunk_893;test_temp_R&N_ITB_chunk_894,"268, 269, 270",5588,1338,6926
+R&N_ITB,133,5,test_temp_R&N_ITB_chunk_895;test_temp_R&N_ITB_chunk_896;test_temp_R&N_ITB_chunk_897;test_temp_R&N_ITB_chunk_898;test_temp_R&N_ITB_chunk_899,"270, 271",4332,951,5283
+R&N_ITB,134,5,test_temp_R&N_ITB_chunk_900;test_temp_R&N_ITB_chunk_901;test_temp_R&N_ITB_chunk_902;test_temp_R&N_ITB_chunk_903;test_temp_R&N_ITB_chunk_904,"271, 272",4007,927,4934
+R&N_ITB,135,5,test_temp_R&N_ITB_chunk_905;test_temp_R&N_ITB_chunk_906;test_temp_R&N_ITB_chunk_907;test_temp_R&N_ITB_chunk_908;test_temp_R&N_ITB_chunk_909,"272, 273",4375,1079,5454
+R&N_ITB,136,5,test_temp_R&N_ITB_chunk_910;test_temp_R&N_ITB_chunk_911;test_temp_R&N_ITB_chunk_912;test_temp_R&N_ITB_chunk_913;test_temp_R&N_ITB_chunk_914,"273, 274",4742,1034,5776
+R&N_ITB,137,5,test_temp_R&N_ITB_chunk_915;test_temp_R&N_ITB_chunk_916;test_temp_R&N_ITB_chunk_917;test_temp_R&N_ITB_chunk_918;test_temp_R&N_ITB_chunk_919,"274, 275, 276",4646,1131,5777
+R&N_ITB,138,5,test_temp_R&N_ITB_chunk_921;test_temp_R&N_ITB_chunk_922;test_temp_R&N_ITB_chunk_923;test_temp_R&N_ITB_chunk_924;test_temp_R&N_ITB_chunk_925,"276, 277, 278",5068,1103,6171
+R&N_ITB,139,5,test_temp_R&N_ITB_chunk_926;test_temp_R&N_ITB_chunk_927;test_temp_R&N_ITB_chunk_928;test_temp_R&N_ITB_chunk_929;test_temp_R&N_ITB_chunk_930,"278, 279, 280",5756,1198,6954
+R&N_ITB,140,5,test_temp_R&N_ITB_chunk_933;test_temp_R&N_ITB_chunk_934;test_temp_R&N_ITB_chunk_935;test_temp_R&N_ITB_chunk_936;test_temp_R&N_ITB_chunk_937,"281, 282, 283",4874,1086,5960
+R&N_ITB,141,5,test_temp_R&N_ITB_chunk_938;test_temp_R&N_ITB_chunk_939;test_temp_R&N_ITB_chunk_940;test_temp_R&N_ITB_chunk_941;test_temp_R&N_ITB_chunk_942,"283, 284, 285",5088,1240,6328
+R&N_ITB,142,5,test_temp_R&N_ITB_chunk_943;test_temp_R&N_ITB_chunk_944;test_temp_R&N_ITB_chunk_945;test_temp_R&N_ITB_chunk_946;test_temp_R&N_ITB_chunk_947,"285, 286, 287",4971,1201,6172
+R&N_ITB,143,5,test_temp_R&N_ITB_chunk_948;test_temp_R&N_ITB_chunk_949;test_temp_R&N_ITB_chunk_950;test_temp_R&N_ITB_chunk_951;test_temp_R&N_ITB_chunk_952,"288, 289, 290, 291, 292, 293",6016,1647,7663
+R&N_ITB,144,5,test_temp_R&N_ITB_chunk_953;test_temp_R&N_ITB_chunk_954;test_temp_R&N_ITB_chunk_957;test_temp_R&N_ITB_chunk_960;test_temp_R&N_ITB_chunk_961,"294, 295, 296",4592,1100,5692
+R&N_ITB,145,5,test_temp_R&N_ITB_chunk_962;test_temp_R&N_ITB_chunk_963;test_temp_R&N_ITB_chunk_964;test_temp_R&N_ITB_chunk_966;test_temp_R&N_ITB_chunk_967,"296, 297, 298, 299",5075,1249,6324
+R&N_ITB,146,5,test_temp_R&N_ITB_chunk_969;test_temp_R&N_ITB_chunk_970;test_temp_R&N_ITB_chunk_971;test_temp_R&N_ITB_chunk_972;test_temp_R&N_ITB_chunk_973,300,3933,977,4910
+R&N_ITB,147,5,test_temp_R&N_ITB_chunk_974;test_temp_R&N_ITB_chunk_975;test_temp_R&N_ITB_chunk_976;test_temp_R&N_ITB_chunk_977;test_temp_R&N_ITB_chunk_978,"300, 301",4100,986,5086

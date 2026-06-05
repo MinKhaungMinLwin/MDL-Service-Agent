@@ -37,9 +37,6 @@ TOKEN_HEADER = [
     "Prompt Tokens",
     "Completion Tokens",
     "Total Tokens",
-    "Avg Prompt Tokens Per Chunk",
-    "Avg Completion Tokens Per Chunk",
-    "Avg Total Tokens Per Chunk",
 ]
 REJECTED_HEADER = [
     "Document",
