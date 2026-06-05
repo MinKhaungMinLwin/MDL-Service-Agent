@@ -56,7 +56,6 @@ class EvaluationServiceTest(unittest.TestCase):
                 ("6", "keyword"): [_matching_record("chunk-1", [_candidate("A", 1.0), _candidate("B", 0.5)])],
                 ("6", "semantic"): [_matching_record("chunk-1", [_candidate("B", 0.9), _candidate("C", 0.8)])],
             },
-            top_k=2,
         )
         pairs = iter_judge_pairs(pools)
 
@@ -89,11 +88,28 @@ class EvaluationServiceTest(unittest.TestCase):
                     )
                 ],
             },
-            top_k=2,
         )
 
         self.assertEqual(len(pools[0]["candidates"]), 1)
         self.assertEqual(pools[0]["candidates"][0]["doc_id"], "A-1")
+
+    def test_pool_uses_all_matching_candidates_without_additional_top_k_cap(self) -> None:
+        pools = build_candidate_pool(
+            itb_rows={"6:chunk-1": {"Chunk Text": "Steam turbine foundation requirement"}},
+            records_by_source={
+                (
+                    "6",
+                    "hybrid",
+                ): [
+                    _matching_record(
+                        "chunk-1",
+                        [_candidate("A", 1.0), _candidate("B", 0.9), _candidate("C", 0.8)],
+                    )
+                ],
+            },
+        )
+
+        self.assertEqual([candidate["doc_id"] for candidate in pools[0]["candidates"]], ["A", "B", "C"])
 
     def test_service_selects_and_verifies_positive_rows(self) -> None:
         pools = build_candidate_pool(
@@ -101,7 +117,6 @@ class EvaluationServiceTest(unittest.TestCase):
             records_by_source={
                 ("7", "hybrid"): [_matching_record("chunk-1", [_candidate("A", 1.0), _candidate("B", 0.5)])],
             },
-            top_k=2,
         )
         pair_by_doc = {pair["mdl"]["doc_id"]: pair for pair in iter_judge_pairs(pools)}
         client = _ChatClient(
@@ -171,7 +186,6 @@ class EvaluationServiceTest(unittest.TestCase):
         pools = build_candidate_pool(
             itb_rows={"7:chunk-1": {"Chunk Text": "Cooling water requirement"}},
             records_by_source={("7", "hybrid"): [_matching_record("chunk-1", [_candidate("A", 1.0)])]},
-            top_k=1,
         )
         client = _ChatClient(
             [
@@ -262,7 +276,6 @@ class EvaluationServiceTest(unittest.TestCase):
             records_by_source={
                 ("7", "hybrid"): [_matching_record("chunk-1", [_candidate("A", 1.0), _candidate("B", 0.5)])],
             },
-            top_k=2,
         )
         pair_by_doc = {pair["mdl"]["doc_id"]: pair for pair in iter_judge_pairs(pools)}
         client = _ChatClient(
@@ -316,7 +329,6 @@ class EvaluationServiceTest(unittest.TestCase):
         pools = build_candidate_pool(
             itb_rows={"7:chunk-1": {"Chunk Text": "Cooling water requirement"}},
             records_by_source={("7", "hybrid"): [_matching_record("chunk-1", candidates)]},
-            top_k=4,
         )
         pairs = iter_judge_pairs(pools)
         service = GroundTruthService(

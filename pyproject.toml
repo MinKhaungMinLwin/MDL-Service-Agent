@@ -9,6 +9,7 @@ description = "Doosan MDL parsing and matching workspace"
 requires-python = ">=3.11"
 dependencies = [
     "docling>=2.0.0",
+    "einops>=0.8.0",
     "fastapi>=0.115.0",
     "loguru>=0.7.3",
     "neo4j>=5.28.0",
@@ -19,6 +20,7 @@ dependencies = [
     "pydantic>=2.11.3",
     "python-multipart>=0.0.20",
     "sentence-transformers>=5.0.0",
+    "transformers>=4.41.0,<5",
     "tqdm>=4.66.0",
     "uvicorn[standard]>=0.34.0",
 ]
@@ -33,6 +35,7 @@ mdl-classify = "mdl_service.cli:classify"
 mdl-ingest = "mdl_service.cli:ingest"
 itb-extract = "itb_service.cli:extract"
 itb-match = "matching_service.cli:match"
+itb-rerank-matching = "matching_service.cli:rerank_existing"
 itb-eval-build-ground-truth = "evaluation_service.ground_truth.cli:build_ground_truth"
 itb-eval-matching = "evaluation_service.matching_evaluation.cli:evaluate"
 

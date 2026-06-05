@@ -1,0 +1,33 @@
+{
+  "ground_truth_path": "output\\current_test_env\\evaluation\\ground_truth\\all_projects_ground_truth_final.csv",
+  "matching_dir": "output\\current_test_env\\experiments\\ce_compare\\all_projects_bge_m3\\matching",
+  "modes": [
+    "hybrid"
+  ],
+  "sections": [
+    "6",
+    "7"
+  ],
+  "queries": 113,
+  "relevance_threshold": 3,
+  "output_limit": 20,
+  "retrieval_limit": 100,
+  "summaries": [
+    {
+      "mode": "hybrid",
+      "stage": "cross_encoder",
+      "queries": 113,
+      "positive_queries": 26,
+      "hit_rate_at_20": 0.6923076923076923,
+      "recall_at_20": 0.47655677655677653
+    },
+    {
+      "mode": "hybrid",
+      "stage": "retrieval",
+      "queries": 113,
+      "positive_queries": 26,
+      "recall_at_100": 0.9587912087912088
+    }
+  ],
+  "skipped_stages": []
+}

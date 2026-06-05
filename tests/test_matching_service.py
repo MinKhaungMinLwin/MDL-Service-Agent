@@ -10,7 +10,7 @@ from pathlib import Path
 import pandas as pd
 
 from common.text_normalizer import expand_abbreviation_terms
-from matching_service.cli import _files_to_process, _scoped_output_dir
+from matching_service.cli import _files_to_process, _json_files_to_process, _scoped_output_dir
 from matching_service.models import MatchingConfig
 from matching_service.query import (
     build_cross_encoder_query,
@@ -226,6 +226,28 @@ class MatchingServiceTest(unittest.TestCase):
             Path("output/current_test_env/matching/R_N_MDL"),
         )
 
+    def test_rerank_json_paths_write_new_csv_outputs(self) -> None:
+        files = _json_files_to_process(
+            inputs=None,
+            outputs=None,
+            input_dir=Path("output/current_test_env/matching/hybrid"),
+            output_dir=Path("output/current_test_env/reranked/hybrid"),
+        )
+
+        self.assertEqual(
+            files,
+            [
+                (
+                    Path("output/current_test_env/matching/hybrid/output_match_all_projects_section6.json"),
+                    Path("output/current_test_env/reranked/hybrid/output_match_all_projects_section6.csv"),
+                ),
+                (
+                    Path("output/current_test_env/matching/hybrid/output_match_all_projects_section7.json"),
+                    Path("output/current_test_env/reranked/hybrid/output_match_all_projects_section7.csv"),
+                ),
+            ],
+        )
+
     def test_service_reranks_top_100_and_outputs_top_20(self) -> None:
         reranker = _RecordingReranker()
         service = MatchingService(
@@ -264,10 +286,97 @@ class MatchingServiceTest(unittest.TestCase):
         self.assertEqual(len(json_output[0]["retrieval_candidates"]), 100)
         self.assertEqual(
             json_output[0]["retrieval_candidates"][0],
-            {"rank": 1, "retrieval_rank": 1, "doc_id": "1"},
+            {
+                "rank": 1,
+                "retrieval_rank": 1,
+                "doc_id": "1",
+                "source_file": "Sample_MDL.xlsx",
+                "document_no": "1",
+                "title": "Doc 1",
+                "equipment": "",
+                "building": "",
+                "system": "",
+                "study_survey": "",
+                "others": "",
+                "deliverable": "",
+                "text_content": "Full text for doc 1",
+                "bm25_rank": 1,
+                "semantic_rank": None,
+                "bm25_score": 300.0,
+                "keyword_rrf_score": 0.03278688524590164,
+                "keyword_score": None,
+                "semantic_score": None,
+                "rrf_score": None,
+                "matched_terms": [],
+            },
         )
         self.assertEqual(len(json_output[0]["candidates"]), 20)
         self.assertEqual(json_output[0]["candidates"][0]["text_content"], "Full text for doc 1")
+
+    def test_service_can_rerank_existing_structured_output(self) -> None:
+        reranker = _RecordingReranker()
+        service = MatchingService(
+            repository=None,
+            cross_encoder_reranker=reranker,
+            config=MatchingConfig(retrieval_mode="hybrid", cross_encoder_query_mode="full_chunk"),
+        )
+
+        record = {
+            "document": "R&N_ITB",
+            "chunk_id": "chunk-1",
+            "page": "97",
+            "depths": {"1st Depth": "Building Services", "2nd Depth": "HVAC", "3rd Depth": "Fresh Air Intake"},
+            "depth_context": "HVAC Fresh Air Intake",
+            "depth_filter_query": "HVAC",
+            "depth_filter_terms": ["Building Services", "HVAC", "Fresh Air Intake"],
+            "keyword_filter_query": '"Fresh Air Intake"',
+            "semantic_query": "Building Services, HVAC, Fresh Air Intake",
+            "vector_terms": "Building Services, HVAC, Fresh Air Intake",
+            "retrieval_mode": "hybrid",
+            "retrieval_candidate_count": 2,
+            "keyword_candidate_count": 2,
+            "semantic_candidate_count": 2,
+            "cross_encoder_query_mode": "full_chunk",
+            "cross_encoder_query": "Chunk Text:\nFull ITB requirement text.",
+            "cross_encoder_candidate_count": 2,
+            "keywords": "Fresh Air Intake",
+            "search_query": "ignored",
+            "retrieval_candidates": [
+                {
+                    "rank": 1,
+                    "retrieval_rank": 1,
+                    "doc_id": "A",
+                    "source_file": "Sample_MDL.xlsx",
+                    "document_no": "1",
+                    "title": "Doc 1",
+                    "text_content": "Full text for doc 1",
+                },
+                {
+                    "rank": 2,
+                    "retrieval_rank": 2,
+                    "doc_id": "B",
+                    "source_file": "Sample_MDL.xlsx",
+                    "document_no": "2",
+                    "title": "Doc 2",
+                    "text_content": "Full text for doc 2",
+                },
+            ],
+            "candidates": [],
+        }
+
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "input.json"
+            output = Path(directory) / "output.csv"
+            source.write_text(json.dumps([record]), encoding="utf-8")
+
+            service.rerank_json_file(source, output)
+
+            csv_output = pd.read_csv(output)
+            json_output = json.loads(output.with_suffix(".json").read_text(encoding="utf-8"))
+
+        self.assertEqual(reranker.calls, [("Chunk Text:\nFull ITB requirement text.", 2, 20)])
+        self.assertEqual(csv_output.loc[0, "Cross_Encoder_Query"], "Chunk Text:\nFull ITB requirement text.")
+        self.assertEqual(json_output[0]["candidates"][0]["doc_id"], "A")
 
     def test_service_can_rerank_with_full_chunk_text(self) -> None:
         reranker = _RecordingReranker()

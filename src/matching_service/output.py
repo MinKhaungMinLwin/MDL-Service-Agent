@@ -109,6 +109,7 @@ def build_json_record(
         "cross_encoder_candidate_count": cross_encoder_candidate_count,
         "keywords": _json_safe_value(source_row.get("Keywords", "")),
         "search_query": _json_safe_value(source_row.get("Search Query", "")),
+        "chunk_text": _json_safe_value(source_row.get("Chunk Text", "")),
         "retrieval_candidates": [
             _format_retrieval_candidate(candidate, rank)
             for rank, candidate in enumerate(retrieval_candidates, start=1)
@@ -172,6 +173,24 @@ def _format_retrieval_candidate(candidate: Candidate, rank: int) -> dict[str, An
         "rank": rank,
         "retrieval_rank": candidate.get("retrieval_rank"),
         "doc_id": _json_safe_value(candidate.get("doc_id")),
+        "source_file": _json_safe_value(candidate.get("source_file")),
+        "document_no": _json_safe_value(candidate.get("document_no")),
+        "title": _json_safe_value(candidate.get("title")),
+        "equipment": _json_safe_value(candidate.get("equipment")),
+        "building": _json_safe_value(candidate.get("building")),
+        "system": _json_safe_value(candidate.get("system")),
+        "study_survey": _json_safe_value(candidate.get("study_survey")),
+        "others": _json_safe_value(candidate.get("others")),
+        "deliverable": _json_safe_value(candidate.get("deliverable")),
+        "text_content": _json_safe_value(candidate.get("text_content")),
+        "bm25_rank": candidate.get("bm25_rank"),
+        "semantic_rank": candidate.get("semantic_rank"),
+        "bm25_score": candidate.get("bm25_score"),
+        "keyword_rrf_score": candidate.get("keyword_rrf_score"),
+        "keyword_score": candidate.get("keyword_score"),
+        "semantic_score": candidate.get("semantic_score"),
+        "rrf_score": candidate.get("rrf_score"),
+        "matched_terms": candidate.get("matched_terms", []),
     }
 
 
