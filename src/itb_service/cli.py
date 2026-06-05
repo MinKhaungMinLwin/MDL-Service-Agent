@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 from pathlib import Path
 
@@ -11,7 +12,7 @@ from loguru import logger
 from common.config import load_env_file, required_env
 from common.openai_client import build_azure_openai_client
 from common.prompts import load_prompt
-from itb_service.loader import load_abbreviation_rules
+from itb_service.loader import clean_chunk_document, load_abbreviation_rules
 from itb_service.models import ITBExtractionConfig, ITBTarget
 from itb_service.prompts import DEFAULT_EXTRACTION_PROMPT_PATH, DEFAULT_VERIFICATION_PROMPT_PATH
 from itb_service.service import ITBExtractionService
@@ -108,6 +109,33 @@ def extract(argv: list[str] | None = None) -> None:
                 "all chunks" if args.mode == "all" else f"section {section}",
             )
     logger.info("Extracted {} ITB chunks total", total_count)
+
+
+def clean_chunks(argv: list[str] | None = None) -> None:
+    """Clean parsed ITB chunk JSON files and write reviewable JSON artifacts."""
+    load_env_file()
+    parser = argparse.ArgumentParser(description="Clean parsed ITB chunk JSON files before ITB extraction.")
+    parser.add_argument("--chunks-file", action="append", type=Path, dest="chunks_files")
+    parser.add_argument("--chunks-dir", type=Path, default=Path(os.getenv("ITB_CHUNKS_DIR", DEFAULT_CHUNKS_DIR)))
+    parser.add_argument("--output-dir", type=Path, required=True)
+    args = parser.parse_args(argv)
+
+    chunks_files = _resolve_chunks_files(args.chunks_files, args.chunks_dir, mode="all")
+    args.output_dir.mkdir(parents=True, exist_ok=True)
+    for chunks_file in chunks_files:
+        data = json.loads(chunks_file.read_text(encoding="utf-8"))
+        original_count = len(data.get("chunks", []))
+        cleaned_data = clean_chunk_document(data)
+        cleaned_count = len(cleaned_data.get("chunks", []))
+        output_path = args.output_dir / chunks_file.name
+        output_path.write_text(json.dumps(cleaned_data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        logger.info(
+            "Cleaned {}: kept {} of {} chunks -> {}",
+            chunks_file,
+            cleaned_count,
+            original_count,
+            output_path,
+        )
 
 
 def _resolve_chunks_files(cli_files: list[Path] | None, chunks_dir: Path, mode: str) -> list[Path]:

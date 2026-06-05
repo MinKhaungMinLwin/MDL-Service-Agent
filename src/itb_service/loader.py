@@ -9,6 +9,10 @@ from typing import Any
 
 from itb_service.models import ITBTarget, PreparedChunk
 
+NOISE_CHUNK_TYPES = {"separator", "toc"}
+NOISE_LABELS = {"document_index"}
+MIN_CHUNK_TEXT_LENGTH = 80
+
 
 def load_abbreviation_rules(path: str | Path) -> dict[str, str]:
     """Load abbreviation variants mapped to canonical names."""
@@ -32,7 +36,35 @@ def load_target_chunks(target: ITBTarget, max_chunks: int = 0) -> list[dict[str,
             for chunk in data.get("chunks", [])
             if any(target.min_page <= page <= target.max_page for page in chunk.get("page_num", []))
         ]
+    chunks = clean_chunks(chunks)
     return chunks[:max_chunks] if max_chunks > 0 else chunks
+
+
+def clean_chunk_document(data: dict[str, Any]) -> dict[str, Any]:
+    """Return a parsed ITB chunk document with non-requirement chunks removed."""
+    cleaned = dict(data)
+    cleaned["chunks"] = clean_chunks(list(data.get("chunks", [])))
+    return cleaned
+
+
+def clean_chunks(chunks: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Remove parser artifacts that should not be sent to ITB extraction."""
+    return [chunk for chunk in chunks if not is_noise_chunk(chunk)]
+
+
+def is_noise_chunk(chunk: dict[str, Any]) -> bool:
+    """Identify chunk artifacts such as TOC rows, document indexes, separators, and short boilerplate."""
+    text = str(chunk.get("text") or "").strip()
+    if not text:
+        return True
+    if str(chunk.get("chunk_type") or "").strip().casefold() in NOISE_CHUNK_TYPES:
+        return True
+    labels = {str(label).strip().casefold() for label in _as_list(chunk.get("label"))}
+    if labels & NOISE_LABELS:
+        return True
+    if len(text) < MIN_CHUNK_TEXT_LENGTH:
+        return True
+    return _is_mostly_non_requirement_text(text)
 
 
 def prepare_chunks(
@@ -102,3 +134,19 @@ def build_chunk_payload(
     if requested_section:
         payload["requested_section"] = requested_section
     return payload
+
+
+def _as_list(value: Any) -> list[Any]:
+    if isinstance(value, list):
+        return value
+    if isinstance(value, tuple):
+        return list(value)
+    return [] if value in (None, "") else [value]
+
+
+def _is_mostly_non_requirement_text(text: str) -> bool:
+    compact = re.sub(r"\s+", "", text)
+    if not compact:
+        return True
+    alpha_count = sum(character.isalpha() for character in compact)
+    return alpha_count < 20 or alpha_count / len(compact) < 0.25
