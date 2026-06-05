@@ -16,6 +16,7 @@ from matching_service.query import DEPTH_COLUMNS, get_depth_context
 
 BASE_COLUMNS = [
     "Document",
+    "Chunk ID",
     "Page",
     "1st Depth",
     "2nd Depth",
@@ -36,6 +37,8 @@ BASE_COLUMNS = [
     "Cross_Encoder_Query",
     "Cross_Encoder_Candidate_Count",
     "Keywords",
+    "Is MDL Retrieval Candidate",
+    "Skip Reason",
     "Search_Queries",
     "Chunk Text",
 ]
@@ -106,6 +109,8 @@ def build_json_record(
         "cross_encoder_query": cross_encoder_query,
         "cross_encoder_candidate_count": cross_encoder_candidate_count,
         "keywords": _json_safe_value(source_row.get("Keywords", "")),
+        "is_mdl_retrieval_candidate": _json_safe_value(source_row.get("Is MDL Retrieval Candidate", "")),
+        "skip_reason": _json_safe_value(source_row.get("Skip Reason", "")),
         "chunk_text": _json_safe_value(source_row.get("Chunk Text", "")),
         "retrieval_candidates": [
             _format_retrieval_candidate(candidate, rank)

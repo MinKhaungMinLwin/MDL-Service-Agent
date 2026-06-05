@@ -52,17 +52,6 @@ def get_token_usage(response: Any) -> dict[str, int]:
     }
 
 
-def split_token_usage(token_usage: dict[str, int], count: int) -> dict[str, int]:
-    """Approximate per-chunk usage for batch calls."""
-    if count <= 0:
-        return {}
-    return {
-        "prompt_tokens": round(token_usage.get("prompt_tokens", 0) / count),
-        "completion_tokens": round(token_usage.get("completion_tokens", 0) / count),
-        "total_tokens": round(token_usage.get("total_tokens", 0) / count),
-    }
-
-
 def failed_extraction(error: Exception | str) -> dict[str, Any]:
     """Build an explicit failed extraction result."""
     message = str(error)

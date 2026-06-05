@@ -127,10 +127,16 @@ class ITBServiceTest(unittest.TestCase):
                 f"  {LONG_FRESH_AIR_TEXT}  ",
             ),
             "Building Services > HVAC",
-            {"depth_1": "Building Services", "depth_2": "HVAC", "keywords": ["Fresh Air Intake"]},
+            {
+                "depth_1": "Building Services",
+                "depth_2": "HVAC",
+                "keywords": ["Fresh Air Intake"],
+                "is_mdl_retrieval_candidate": True,
+            },
         )
 
         self.assertEqual(results["chunk-1"]["depth_1"], "HVAC")
+        self.assertEqual(dict(zip(OUTPUT_HEADER, row, strict=True))["Is MDL Retrieval Candidate"], "True")
         self.assertEqual(
             dict(zip(OUTPUT_HEADER, row, strict=True))["Chunk Text"],
             f"  {LONG_FRESH_AIR_TEXT}  ",
@@ -211,9 +217,12 @@ class ITBServiceTest(unittest.TestCase):
                 token_rows = list(csv.DictReader(file))
 
         self.assertEqual(count, 1)
-        self.assertEqual(csv_rows[0]["LLM Verify Valid"], "True")
+        self.assertNotIn("LLM Verify Valid", csv_rows[0])
         self.assertEqual(json_rows[0]["llm_verification"]["severity"], "ok")
+        self.assertEqual(token_rows[0]["Chunk Count"], "1")
+        self.assertEqual(token_rows[0]["Chunk IDs"], "chunk-1")
         self.assertEqual(token_rows[0]["Total Tokens"], "30")
+        self.assertEqual(token_rows[0]["Avg Total Tokens Per Chunk"], "30.0")
         self.assertEqual(client.prompts, ["extract prompt", "verify prompt"])
 
     def test_service_marks_missing_model_results_for_review(self) -> None:
@@ -285,8 +294,9 @@ class ITBServiceTest(unittest.TestCase):
                 encoding="utf-8",
             )
             (base / "tokens.csv").write_text(
-                "\ufeffDocument,Page,Prompt Tokens,Completion Tokens,Total Tokens,Chunk Text\n"
-                "R&N_ITB,97,1,1,2,existing\n",
+                "\ufeffDocument,Batch Index,Chunk Count,Chunk IDs,Pages,Prompt Tokens,Completion Tokens,Total Tokens,"
+                "Avg Prompt Tokens Per Chunk,Avg Completion Tokens Per Chunk,Avg Total Tokens Per Chunk\n"
+                "R&N_ITB,1,1,chunk-1,97,1,1,2,1.0,1.0,2.0\n",
                 encoding="utf-8",
             )
             count = service.extract_to_files(
@@ -447,16 +457,26 @@ class _ChatClient:
 
 
 class _OutOfOrderITBExtractionService(ITBExtractionService):
-    def _extract_batch(self, document_name, batch):
+    def _extract_batch(self, document_name, batch_index, batch):
         item = batch[0]
         chunk_id = item.chunk["chunk_id"]
         if chunk_id == "chunk-1":
             time.sleep(0.05)
         extraction = {"depth_1": chunk_id}
+        token_usage = {"prompt_tokens": 10, "completion_tokens": 20, "total_tokens": 30}
         return (
             [build_csv_row(document_name, item.chunk, item.hierarchy, extraction)],
-            [build_json_record(document_name, item.chunk, item.hierarchy, extraction, {}, item.known_abbreviations)],
-            [build_token_row(document_name, item.chunk, {})],
+            [
+                build_json_record(
+                    document_name,
+                    item.chunk,
+                    item.hierarchy,
+                    extraction,
+                    token_usage,
+                    item.known_abbreviations,
+                )
+            ],
+            [build_token_row(document_name, batch_index, [item.chunk], token_usage)],
             [],
             [],
         )

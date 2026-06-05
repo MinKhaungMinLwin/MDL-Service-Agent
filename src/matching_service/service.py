@@ -50,6 +50,14 @@ class MatchingService:
         """Match every ITB row in one CSV and write CSV/JSON artifacts."""
         logger.info("Reading input file: {}", csv_path)
         target_df = pd.read_csv(csv_path)
+        original_count = len(target_df)
+        if "Is MDL Retrieval Candidate" in target_df.columns:
+            target_df = target_df[
+                target_df["Is MDL Retrieval Candidate"].map(_is_mdl_retrieval_candidate)
+            ]
+            skipped_count = original_count - len(target_df)
+            if skipped_count:
+                logger.info("Skipped {} non-MDL retrieval candidate row(s)", skipped_count)
         logger.info("Rows to process: {}", len(target_df))
         if target_df.empty:
             logger.info("No target rows. Skipping.")
@@ -211,6 +219,8 @@ class MatchingService:
             "Chunk ID": record.get("chunk_id", ""),
             "Page": record.get("page", ""),
             "Keywords": record.get("keywords", ""),
+            "Is MDL Retrieval Candidate": record.get("is_mdl_retrieval_candidate", ""),
+            "Skip Reason": record.get("skip_reason", ""),
             "Chunk Text": record.get("chunk_text", ""),
             "Depth_Context": record.get("depth_context", ""),
             "Depth_Filter_Query": record.get("depth_filter_query", ""),
@@ -239,3 +249,9 @@ def _normalize_retrieval_candidate(candidate: dict[str, Any]) -> dict[str, Any]:
     normalized = dict(candidate)
     normalized.pop("rank", None)
     return normalized
+
+
+def _is_mdl_retrieval_candidate(value: Any) -> bool:
+    if pd.isna(value):
+        return True
+    return str(value).strip().casefold() not in {"false", "no", "n", "0"}

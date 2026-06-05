@@ -21,18 +21,26 @@ OUTPUT_HEADER = [
     "4th Depth",
     "5th Depth",
     "Keywords",
+    "Is MDL Retrieval Candidate",
+    "Skip Reason",
     "Confidence",
     "Needs Review",
     "Reason",
-    "LLM Verify Valid",
-    "LLM Verify Severity",
-    "LLM Verify Issues",
-    "LLM Suggested Depths",
-    "LLM Suggested Keywords",
-    "LLM Verify Reason",
     "Chunk Text",
 ]
-TOKEN_HEADER = ["Document", "Page", "Prompt Tokens", "Completion Tokens", "Total Tokens", "Chunk Text"]
+TOKEN_HEADER = [
+    "Document",
+    "Batch Index",
+    "Chunk Count",
+    "Chunk IDs",
+    "Pages",
+    "Prompt Tokens",
+    "Completion Tokens",
+    "Total Tokens",
+    "Avg Prompt Tokens Per Chunk",
+    "Avg Completion Tokens Per Chunk",
+    "Avg Total Tokens Per Chunk",
+]
 REJECTED_HEADER = [
     "Document",
     "Chunk ID",

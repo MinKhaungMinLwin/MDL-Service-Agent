@@ -19,10 +19,8 @@ def build_csv_row(
     verification: dict[str, Any] | None = None,
 ) -> list[str]:
     """Convert one extracted source chunk to the downstream CSV schema."""
-    verification = verification or {}
     depths = [as_text(extraction.get(f"depth_{index}")) for index in range(1, 6)]
     keywords = as_list_text(extraction.get("keywords"))
-    suggested_depths = verification.get("suggested_depths")
     return [
         document_name,
         as_text(chunk.get("chunk_id")),
@@ -34,15 +32,11 @@ def build_csv_row(
         hierarchy,
         *depths,
         keywords,
+        _candidate_value(extraction),
+        as_text(extraction.get("skip_reason")),
         as_text(extraction.get("confidence")),
         as_text(extraction.get("needs_review")),
         as_text(extraction.get("reason")),
-        as_text(verification.get("is_valid")),
-        as_text(verification.get("severity")),
-        as_list_text(verification.get("issues")),
-        json.dumps(suggested_depths, ensure_ascii=False) if suggested_depths else "",
-        as_list_text(verification.get("suggested_keywords")),
-        as_text(verification.get("reason")),
         _source_text(chunk),
     ]
 
@@ -79,15 +73,29 @@ def build_json_record(
     return record
 
 
-def build_token_row(document_name: str, chunk: dict[str, Any], token_usage: dict[str, int]) -> list[Any]:
-    """Build one per-chunk token usage row."""
+def build_token_row(
+    document_name: str,
+    batch_index: int,
+    chunks: list[dict[str, Any]],
+    token_usage: dict[str, int],
+) -> list[Any]:
+    """Build one token usage row for a single LLM batch request."""
+    chunk_count = len(chunks)
+    prompt_tokens = token_usage.get("prompt_tokens", 0)
+    completion_tokens = token_usage.get("completion_tokens", 0)
+    total_tokens = token_usage.get("total_tokens", 0)
     return [
         document_name,
-        ", ".join(map(str, chunk.get("page_num", []))),
-        token_usage.get("prompt_tokens", 0),
-        token_usage.get("completion_tokens", 0),
-        token_usage.get("total_tokens", 0),
-        _source_text(chunk),
+        batch_index,
+        chunk_count,
+        ";".join(as_text(chunk.get("chunk_id")) for chunk in chunks if as_text(chunk.get("chunk_id"))),
+        _batch_pages(chunks),
+        prompt_tokens,
+        completion_tokens,
+        total_tokens,
+        _average_tokens(prompt_tokens, chunk_count),
+        _average_tokens(completion_tokens, chunk_count),
+        _average_tokens(total_tokens, chunk_count),
     ]
 
 
@@ -201,3 +209,25 @@ def _write_csv(path: Path, header: list[str], rows: list[list[Any]]) -> None:
 
 def _source_text(chunk: dict[str, Any]) -> str:
     return str(chunk.get("text") or "")
+
+
+def _batch_pages(chunks: list[dict[str, Any]]) -> str:
+    pages = []
+    for chunk in chunks:
+        pages.extend(str(page) for page in chunk.get("page_num", []))
+    return ", ".join(dict.fromkeys(pages))
+
+
+def _average_tokens(token_count: int, chunk_count: int) -> float:
+    if chunk_count <= 0:
+        return 0
+    return round(token_count / chunk_count, 2)
+
+
+def _candidate_value(extraction: dict[str, Any]) -> str:
+    value = extraction.get("is_mdl_retrieval_candidate")
+    if isinstance(value, bool):
+        return str(value)
+    if value is None or as_text(value) == "":
+        return "True"
+    return as_text(value)
