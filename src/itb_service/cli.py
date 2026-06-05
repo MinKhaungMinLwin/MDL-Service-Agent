@@ -22,6 +22,8 @@ DEFAULT_CHUNKS_DIR = DEFAULT_DATA_DIR / "itb_chunks"
 DEFAULT_OUTPUT_DIR = Path("output") / "current_test_env" / "itb_extract"
 DEFAULT_ABBREVIATION_RULES_PATH = Path("src") / "common" / "normalization_rules" / "abbreviations.json"
 DEFAULT_CHUNKS_FILE = DEFAULT_CHUNKS_DIR / "R&N_ITB_chunks.json"
+DEFAULT_BATCH_SIZE = 1
+DEFAULT_MAX_CONCURRENCY = 1
 SECTION_CONFIG = {
     "6": {"min_page": 79, "max_page": 97},
     "7": {"min_page": 97, "max_page": 124},
@@ -35,26 +37,27 @@ def extract(argv: list[str] | None = None) -> None:
     parser.add_argument(
         "--mode",
         choices=["all", "section"],
-        default=os.getenv("ITB_EXTRACT_MODE", "section").strip().lower(),
+        default="all",
         help="Use 'all' to extract every chunk, or 'section' to use configured page ranges.",
     )
     parser.add_argument(
         "--sections",
-        default=os.getenv("ITB_SECTIONS", "7"),
+        default="6,7",
         help="Comma-separated sections for section mode.",
     )
     parser.add_argument("--chunks-file", action="append", type=Path, dest="chunks_files")
-    parser.add_argument("--chunks-dir", type=Path, default=Path(os.getenv("ITB_CHUNKS_DIR", DEFAULT_CHUNKS_DIR)))
-    parser.add_argument("--document-name", default=os.getenv("ITB_DOCUMENT_NAME", ""))
+    parser.add_argument("--chunks-dir", type=Path, default=DEFAULT_CHUNKS_DIR)
+    parser.add_argument("--document-name", default="")
     parser.add_argument(
         "--output-dir",
         type=Path,
-        default=Path(os.getenv("ITB_EXTRACT_OUTPUT_DIR", DEFAULT_OUTPUT_DIR)),
+        default=DEFAULT_OUTPUT_DIR,
     )
     parser.add_argument("--prompt-file", type=Path, default=DEFAULT_EXTRACTION_PROMPT_PATH)
     parser.add_argument("--verify-prompt-file", type=Path, default=DEFAULT_VERIFICATION_PROMPT_PATH)
     parser.add_argument("--abbreviation-rules", type=Path, default=DEFAULT_ABBREVIATION_RULES_PATH)
-    parser.add_argument("--batch-size", type=int, default=int(os.getenv("ITB_BATCH_SIZE", "1")))
+    parser.add_argument("--batch-size", type=int, default=DEFAULT_BATCH_SIZE)
+    parser.add_argument("--max-concurrency", type=int, default=DEFAULT_MAX_CONCURRENCY)
     parser.add_argument("--max-chunks", type=int, default=int(os.getenv("MAX_TEST_CHUNKS", "0")))
     parser.add_argument("--verify", action="store_true", default=_env_flag("ITB_ENABLE_LLM_VERIFY"))
     args = parser.parse_args(argv)
@@ -80,6 +83,7 @@ def extract(argv: list[str] | None = None) -> None:
             config = ITBExtractionConfig(
                 model=model,
                 batch_size=max(1, args.batch_size),
+                max_concurrency=max(1, args.max_concurrency),
                 max_chunks=args.max_chunks,
                 enable_verification=args.verify,
                 requested_section="" if args.mode == "all" else section,
@@ -116,7 +120,7 @@ def clean_chunks(argv: list[str] | None = None) -> None:
     load_env_file()
     parser = argparse.ArgumentParser(description="Clean parsed ITB chunk JSON files before ITB extraction.")
     parser.add_argument("--chunks-file", action="append", type=Path, dest="chunks_files")
-    parser.add_argument("--chunks-dir", type=Path, default=Path(os.getenv("ITB_CHUNKS_DIR", DEFAULT_CHUNKS_DIR)))
+    parser.add_argument("--chunks-dir", type=Path, default=DEFAULT_CHUNKS_DIR)
     parser.add_argument("--output-dir", type=Path, required=True)
     args = parser.parse_args(argv)
 
@@ -141,9 +145,6 @@ def clean_chunks(argv: list[str] | None = None) -> None:
 def _resolve_chunks_files(cli_files: list[Path] | None, chunks_dir: Path, mode: str) -> list[Path]:
     if cli_files:
         return cli_files
-    env_files = _split_env_list(os.getenv("ITB_CHUNKS_FILES", ""))
-    if env_files:
-        return [Path(value) for value in env_files]
     if mode == "all":
         return sorted(chunks_dir.glob("*_chunks.json"))
     return [DEFAULT_CHUNKS_FILE]

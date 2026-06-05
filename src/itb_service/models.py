@@ -73,6 +73,7 @@ class ITBExtractionConfig:
 
     model: str
     batch_size: int = 1
+    max_concurrency: int = 1
     max_chunks: int = 0
     enable_verification: bool = False
     batch_delay_seconds: float = 1.5
@@ -83,6 +84,8 @@ class ITBExtractionConfig:
             raise ValueError("model is required")
         if self.batch_size <= 0:
             raise ValueError("batch_size must be positive")
+        if self.max_concurrency <= 0:
+            raise ValueError("max_concurrency must be positive")
         if self.max_chunks < 0:
             raise ValueError("max_chunks cannot be negative")
         if self.batch_delay_seconds < 0:

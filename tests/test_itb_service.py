@@ -5,6 +5,7 @@ from __future__ import annotations
 import csv
 import json
 import tempfile
+import time
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
@@ -21,7 +22,7 @@ from itb_service.loader import (
     prepare_chunks,
 )
 from itb_service.models import OUTPUT_HEADER, ITBExtractionConfig, ITBTarget
-from itb_service.output import build_csv_row
+from itb_service.output import build_csv_row, build_json_record, build_token_row
 from itb_service.service import ITBExtractionService
 from itb_service.verification import build_verification_payload
 
@@ -308,6 +309,38 @@ class ITBServiceTest(unittest.TestCase):
         self.assertEqual([row["chunk_id"] for row in json_rows], ["chunk-1", "chunk-2"])
         self.assertEqual(client.prompts, ["extract prompt"])
 
+    def test_service_keeps_output_order_with_concurrent_batches(self) -> None:
+        config = ITBExtractionConfig(model="deployment", batch_delay_seconds=0, max_concurrency=2)
+        service = _OutOfOrderITBExtractionService(None, config, "extract prompt", {}, sleep=lambda _: None)
+
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            chunks_path = base / "chunks.json"
+            chunks_path.write_text(
+                json.dumps(
+                    {
+                        "chunks": [
+                            _chunk("chunk-1", [97], LONG_FRESH_AIR_TEXT),
+                            _chunk("chunk-2", [98], LONG_CONTROL_TEXT),
+                        ]
+                    }
+                ),
+                encoding="utf-8",
+            )
+            count = service.extract_to_files(
+                [ITBTarget(chunks_path, "R&N_ITB", 97, 124)],
+                base / "output.csv",
+                base / "output.json",
+                base / "tokens.csv",
+            )
+            with open(base / "output.csv", newline="", encoding="utf-8-sig") as file:
+                csv_rows = list(csv.DictReader(file))
+            json_rows = json.loads((base / "output.json").read_text(encoding="utf-8"))
+
+        self.assertEqual(count, 2)
+        self.assertEqual([row["Chunk ID"] for row in csv_rows], ["chunk-1", "chunk-2"])
+        self.assertEqual([row["chunk_id"] for row in json_rows], ["chunk-1", "chunk-2"])
+
     def test_service_marks_missing_verification_results_as_errors(self) -> None:
         client = _ChatClient(
             [
@@ -420,6 +453,22 @@ class _ChatClient:
         usage = SimpleNamespace(prompt_tokens=10, completion_tokens=20, total_tokens=30)
         message = SimpleNamespace(content=json.dumps(payload))
         return SimpleNamespace(choices=[SimpleNamespace(message=message)], usage=usage)
+
+
+class _OutOfOrderITBExtractionService(ITBExtractionService):
+    def _extract_batch(self, document_name, batch):
+        item = batch[0]
+        chunk_id = item.chunk["chunk_id"]
+        if chunk_id == "chunk-1":
+            time.sleep(0.05)
+        extraction = {"depth_1": chunk_id}
+        return (
+            [build_csv_row(document_name, item.chunk, item.hierarchy, extraction)],
+            [build_json_record(document_name, item.chunk, item.hierarchy, extraction, {}, item.known_abbreviations)],
+            [build_token_row(document_name, item.chunk, {})],
+            [],
+            [],
+        )
 
 
 def _chunk(chunk_id: str, pages: list[int], text: str) -> dict:
