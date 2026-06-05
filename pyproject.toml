@@ -34,6 +34,7 @@ dev = [
 mdl-classify = "mdl_service.cli:classify"
 mdl-ingest = "mdl_service.cli:ingest"
 itb-extract = "itb_service.cli:extract"
+itb-clean-chunks = "itb_service.cli:clean_chunks"
 itb-match = "matching_service.cli:match"
 itb-rerank-matching = "matching_service.cli:rerank_existing"
 itb-eval-build-ground-truth = "evaluation_service.ground_truth.cli:build_ground_truth"
