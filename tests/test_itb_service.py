@@ -256,6 +256,58 @@ class ITBServiceTest(unittest.TestCase):
         self.assertEqual(json_rows[0]["llm_output"]["depth_1"], "ERROR")
         self.assertIn("Missing model result", json_rows[0]["error"])
 
+    def test_service_resumes_existing_outputs_by_chunk_id(self) -> None:
+        client = _ChatClient([{"results": [{"chunk_id": "chunk-2", "depth_1": "HVAC"}]}])
+        config = ITBExtractionConfig(model="deployment", batch_delay_seconds=0)
+        service = ITBExtractionService(client, config, "extract prompt", {}, sleep=lambda _: None)
+
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            chunks_path = base / "chunks.json"
+            chunks_path.write_text(
+                json.dumps(
+                    {
+                        "chunks": [
+                            _chunk("chunk-1", [97], LONG_FRESH_AIR_TEXT),
+                            _chunk("chunk-2", [98], LONG_CONTROL_TEXT),
+                        ]
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (base / "output.json").write_text(
+                json.dumps(
+                    [
+                        {
+                            "document": "R&N_ITB",
+                            "chunk_id": "chunk-1",
+                            "llm_output": {"depth_1": "Existing"},
+                        }
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            (base / "output.csv").write_text(
+                "\ufeffDocument,Chunk ID\nR&N_ITB,chunk-1\n",
+                encoding="utf-8",
+            )
+            (base / "tokens.csv").write_text(
+                "\ufeffDocument,Page,Prompt Tokens,Completion Tokens,Total Tokens,Chunk Text\n"
+                "R&N_ITB,97,1,1,2,existing\n",
+                encoding="utf-8",
+            )
+            count = service.extract_to_files(
+                [ITBTarget(chunks_path, "R&N_ITB", 97, 124)],
+                base / "output.csv",
+                base / "output.json",
+                base / "tokens.csv",
+            )
+            json_rows = json.loads((base / "output.json").read_text(encoding="utf-8"))
+
+        self.assertEqual(count, 1)
+        self.assertEqual([row["chunk_id"] for row in json_rows], ["chunk-1", "chunk-2"])
+        self.assertEqual(client.prompts, ["extract prompt"])
+
     def test_service_marks_missing_verification_results_as_errors(self) -> None:
         client = _ChatClient(
             [

@@ -18,6 +18,8 @@ from itb_service.output import (
     build_rejected_csv_row,
     build_rejected_json_record,
     build_token_row,
+    read_csv_rows,
+    read_json_records,
     write_outputs,
     write_rejected_outputs,
 )
@@ -55,11 +57,15 @@ class ITBExtractionService:
         rejected_json_path: str | Path | None = None,
     ) -> int:
         """Extract configured targets and write CSV, JSON, and token artifacts."""
-        csv_rows = []
-        json_records = []
-        token_rows = []
-        rejected_csv_rows = []
-        rejected_json_records = []
+        csv_rows = read_csv_rows(csv_path)
+        json_records = read_json_records(json_path)
+        token_rows = read_csv_rows(token_path)
+        rejected_csv_rows = read_csv_rows(rejected_csv_path) if rejected_csv_path else []
+        rejected_json_records = read_json_records(rejected_json_path) if rejected_json_path else []
+        completed_chunk_ids = _record_chunk_ids(json_records) | _record_chunk_ids(rejected_json_records)
+        if completed_chunk_ids:
+            logger.info("Resuming ITB extraction with {} completed chunk(s)", len(completed_chunk_ids))
+        extracted_count = 0
         for target in targets:
             chunks = load_target_chunks(target, self.config.max_chunks)
             prepared_chunks = prepare_chunks(
@@ -68,10 +74,17 @@ class ITBExtractionService:
                 self.abbreviation_rules,
                 self.config.requested_section,
             )
+            skipped_count = sum(
+                1 for item in prepared_chunks if as_text(item.chunk.get("chunk_id")) in completed_chunk_ids
+            )
+            prepared_chunks = [
+                item for item in prepared_chunks if as_text(item.chunk.get("chunk_id")) not in completed_chunk_ids
+            ]
             logger.info(
-                "{}: loaded {} target chunks and prepared {} non-empty chunks",
+                "{}: loaded {} target chunks, skipped {} completed chunks, and prepared {} remaining chunks",
                 target.document_name,
                 len(chunks),
+                skipped_count,
                 len(prepared_chunks),
             )
             batches = _chunked(prepared_chunks, self.config.batch_size)
@@ -96,6 +109,9 @@ class ITBExtractionService:
                 token_rows.extend(batch_token_rows)
                 rejected_csv_rows.extend(batch_rejected_csv_rows)
                 rejected_json_records.extend(batch_rejected_json_records)
+                completed_chunk_ids.update(_record_chunk_ids(batch_json_records))
+                completed_chunk_ids.update(_record_chunk_ids(batch_rejected_json_records))
+                extracted_count += len(batch_csv_rows)
                 write_outputs(csv_path, json_path, token_path, csv_rows, json_records, token_rows)
                 if rejected_csv_path and rejected_json_path:
                     write_rejected_outputs(
@@ -110,7 +126,7 @@ class ITBExtractionService:
         if rejected_csv_path and rejected_json_path:
             write_rejected_outputs(rejected_csv_path, rejected_json_path, rejected_csv_rows, rejected_json_records)
             logger.info("Rejected {} chunk(s) outside requested section", len(rejected_csv_rows))
-        return len(csv_rows)
+        return extracted_count
 
     def _extract_batch(
         self,
@@ -258,3 +274,7 @@ class ITBExtractionService:
 
 def _chunked(items: list[PreparedChunk], size: int) -> list[list[PreparedChunk]]:
     return [items[index : index + size] for index in range(0, len(items), size)]
+
+
+def _record_chunk_ids(records: list[dict[str, Any]]) -> set[str]:
+    return {chunk_id for record in records if (chunk_id := as_text(record.get("chunk_id")))}

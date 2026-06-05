@@ -161,6 +161,28 @@ def write_outputs(
     paths[1].write_text(json.dumps(json_records, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
+def read_csv_rows(path: str | Path) -> list[list[str]]:
+    """Read existing CSV rows without the header for resume."""
+    csv_path = Path(path)
+    if not csv_path.exists():
+        return []
+    with open(csv_path, newline="", encoding="utf-8-sig") as file:
+        reader = csv.reader(file)
+        next(reader, None)
+        return [row for row in reader]
+
+
+def read_json_records(path: str | Path) -> list[dict[str, Any]]:
+    """Read existing structured JSON records for resume."""
+    json_path = Path(path)
+    if not json_path.exists():
+        return []
+    data = json.loads(json_path.read_text(encoding="utf-8"))
+    if not isinstance(data, list):
+        raise ValueError(f"Expected list JSON artifact: {json_path}")
+    return data
+
+
 def write_rejected_outputs(
     csv_path: str | Path,
     json_path: str | Path,
