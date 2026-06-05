@@ -96,14 +96,13 @@ def extract(argv: list[str] | None = None) -> None:
                 abbreviation_rules=abbreviation_rules,
             )
             target = _build_target(chunks_file, document_name, args.mode, section)
-            output_stem = "output_itb_all_focused" if args.mode == "all" else f"output_itb_section{section}_focused"
+            output_stem = "itb_extraction" if args.mode == "all" else f"itb_extraction_section{section}"
             count = service.extract_to_files(
                 targets=[target],
                 csv_path=output_dir / f"{output_stem}.csv",
                 json_path=output_dir / f"{output_stem}.json",
                 token_path=output_dir / f"{output_stem}_tokens.csv",
                 rejected_csv_path=output_dir / f"{output_stem}_rejected.csv",
-                rejected_json_path=output_dir / f"{output_stem}_rejected.json",
             )
             total_count += count
             logger.info(

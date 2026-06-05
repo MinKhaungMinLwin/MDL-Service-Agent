@@ -63,7 +63,11 @@ class ITBExtractionService:
         token_rows = read_csv_rows(token_path)
         rejected_csv_rows = read_csv_rows(rejected_csv_path) if rejected_csv_path else []
         rejected_json_records = read_json_records(rejected_json_path) if rejected_json_path else []
-        completed_chunk_ids = _record_chunk_ids(json_records) | _record_chunk_ids(rejected_json_records)
+        completed_chunk_ids = (
+            _record_chunk_ids(json_records)
+            | _record_chunk_ids(rejected_json_records)
+            | _csv_chunk_ids(rejected_csv_rows)
+        )
         if completed_chunk_ids:
             logger.info("Resuming ITB extraction with {} completed chunk(s)", len(completed_chunk_ids))
         extracted_count = 0
@@ -128,7 +132,7 @@ class ITBExtractionService:
                 rejected_csv_rows = _sort_csv_rows(rejected_csv_rows, order_by_chunk_id)
                 rejected_json_records = _sort_json_records(rejected_json_records, order_by_chunk_id)
                 write_outputs(csv_path, json_path, token_path, csv_rows, json_records, token_rows)
-                if rejected_csv_path and rejected_json_path:
+                if rejected_csv_path:
                     write_rejected_outputs(
                         rejected_csv_path,
                         rejected_json_path,
@@ -143,7 +147,7 @@ class ITBExtractionService:
         rejected_csv_rows = _sort_csv_rows(rejected_csv_rows, order_by_chunk_id)
         rejected_json_records = _sort_json_records(rejected_json_records, order_by_chunk_id)
         write_outputs(csv_path, json_path, token_path, csv_rows, json_records, token_rows)
-        if rejected_csv_path and rejected_json_path:
+        if rejected_csv_path:
             write_rejected_outputs(rejected_csv_path, rejected_json_path, rejected_csv_rows, rejected_json_records)
             logger.info("Rejected {} chunk(s) outside requested section", len(rejected_csv_rows))
         return extracted_count
@@ -338,6 +342,10 @@ def _chunked(items: list[PreparedChunk], size: int) -> list[list[PreparedChunk]]
 
 def _record_chunk_ids(records: list[dict[str, Any]]) -> set[str]:
     return {chunk_id for record in records if (chunk_id := as_text(record.get("chunk_id")))}
+
+
+def _csv_chunk_ids(rows: list[list[Any]]) -> set[str]:
+    return {chunk_id for row in rows if len(row) > 1 and (chunk_id := as_text(row[1]))}
 
 
 def _sort_csv_rows(rows: list[list[Any]], order_by_chunk_id: dict[str, int]) -> list[list[Any]]:

@@ -67,8 +67,8 @@ data/schedule_sources/
 
 output/current_test_env/
   itb_extract/
-    output_itb_section6_focused.csv         ITB keyword extraction (Section 6)
-    output_itb_section7_focused.csv         ITB keyword extraction (Section 7)
+    itb_extraction_section6.csv             ITB keyword extraction (Section 6)
+    itb_extraction_section7.csv             ITB keyword extraction (Section 7)
   matching/
     keyword|semantic|hybrid/
       output_match_all_projects_section6.csv ITB to MDL Neo4j matches (Section 6)

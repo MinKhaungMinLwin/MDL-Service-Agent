@@ -21,8 +21,6 @@ OUTPUT_HEADER = [
     "4th Depth",
     "5th Depth",
     "Keywords",
-    "Search Query",
-    "Search Query Source",
     "Confidence",
     "Needs Review",
     "Reason",
@@ -31,7 +29,6 @@ OUTPUT_HEADER = [
     "LLM Verify Issues",
     "LLM Suggested Depths",
     "LLM Suggested Keywords",
-    "LLM Suggested Search Query",
     "LLM Verify Reason",
     "Chunk Text",
 ]

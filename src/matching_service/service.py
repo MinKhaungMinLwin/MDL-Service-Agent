@@ -211,7 +211,6 @@ class MatchingService:
             "Chunk ID": record.get("chunk_id", ""),
             "Page": record.get("page", ""),
             "Keywords": record.get("keywords", ""),
-            "Search Query": record.get("search_query", ""),
             "Chunk Text": record.get("chunk_text", ""),
             "Depth_Context": record.get("depth_context", ""),
             "Depth_Filter_Query": record.get("depth_filter_query", ""),

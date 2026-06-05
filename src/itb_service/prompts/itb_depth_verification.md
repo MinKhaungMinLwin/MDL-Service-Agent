@@ -34,7 +34,6 @@ Each result must include the original `chunk_id`.
         "depth_5": ""
       },
       "suggested_keywords": [],
-      "suggested_search_query": "",
       "reason": ""
     }
   ]
@@ -54,7 +53,7 @@ Verification rules:
 - `depth_4` should only be used for a named equipment, building, package, item-level target, facility, or similarly concrete target.
 - `depth_5` should only be used for a meaningful technical sub-scope below `depth_4`.
 - Blank `depth_4` and `depth_5` are often valid. Do not mark them wrong unless the source clearly names a concrete target/sub-scope.
-- Requirements, design criteria, standards compliance, quantities, operating conditions, and procedural details usually belong in `keywords` or `search_query`, not in `depth_4`/`depth_5`.
+- Requirements, design criteria, standards compliance, quantities, operating conditions, and procedural details usually belong in `keywords`, not in `depth_4`/`depth_5`.
 - Administrative or procedural labels such as quality control submittals, design information, design criteria, approval, submission, or procedure should not be suggested for `depth_4`/`depth_5`.
 - Deliverable/admin terms such as drawing, calculation, report, list, schedule, procedure, approval, or submission should not drive the depth hierarchy unless the deliverable itself is the explicit technical target.
 - Do not require or suggest named tests, systems, or formal deliverables unless they are explicitly stated in the current chunk or current section title. Preserve methodology/process wording when the source does not name a system.
@@ -62,9 +61,7 @@ Verification rules:
 - If an expansion is not supported by `known_abbreviations` and is not explicit in the source text, treat it as inferred and flag it when it could mislead retrieval.
 - Keywords should be useful MDL retrieval anchors: equipment, systems, buildings, study/survey terms, standards, operating conditions, quantities, and parameters.
 - For list or table chunks, check that keywords include the strongest explicit retrieval anchors across named equipment, systems, standards, operating conditions, pollutants, treatment facilities, outage modes, correction factors, and numeric parameters. Do not require every item, but mark a major issue when missing anchors would likely cause MDL retrieval to miss the correct domain.
-- Entity classification should be checked for retrieval impact. Flag major when a noisy table header, adjacent label, or condition-only item is promoted to a primary entity and would materially mis-route retrieval. Treat it as minor or ok when the item is merely a useful keyword and the depth/search query still represent the correct technical scope.
 - If an acronym expansion is supported by `known_abbreviations` but appears only inside a curve name, parameter, or condition, prefer suggesting it as a keyword rather than a standalone equipment entity. Do not call the expansion hallucinated, but do flag misleading entity scope if it would affect matching.
-- Search query should combine the most useful depth terms and keywords as concise comma-separated technical phrases, without broad labels that conflict with the chunk's actual technical scope.
 
 Severity guidance:
 - `ok`: extractor output is acceptable for MDL filtering/matching; no meaningful correction needed.

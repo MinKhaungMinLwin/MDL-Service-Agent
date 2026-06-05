@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from itb_service.extraction import as_list_text, as_text, fallback_search_query
+from itb_service.extraction import as_list_text, as_text
 from itb_service.models import OUTPUT_HEADER, REJECTED_HEADER, TOKEN_HEADER
 
 
@@ -22,10 +22,6 @@ def build_csv_row(
     verification = verification or {}
     depths = [as_text(extraction.get(f"depth_{index}")) for index in range(1, 6)]
     keywords = as_list_text(extraction.get("keywords"))
-    search_query = as_text(extraction.get("search_query"))
-    search_query_source = "llm" if search_query else "fallback"
-    if not search_query:
-        search_query = fallback_search_query(depths, keywords)
     suggested_depths = verification.get("suggested_depths")
     return [
         document_name,
@@ -38,8 +34,6 @@ def build_csv_row(
         hierarchy,
         *depths,
         keywords,
-        search_query,
-        search_query_source,
         as_text(extraction.get("confidence")),
         as_text(extraction.get("needs_review")),
         as_text(extraction.get("reason")),
@@ -48,7 +42,6 @@ def build_csv_row(
         as_list_text(verification.get("issues")),
         json.dumps(suggested_depths, ensure_ascii=False) if suggested_depths else "",
         as_list_text(verification.get("suggested_keywords")),
-        as_text(verification.get("suggested_search_query")),
         as_text(verification.get("reason")),
         _source_text(chunk),
     ]
@@ -185,16 +178,18 @@ def read_json_records(path: str | Path) -> list[dict[str, Any]]:
 
 def write_rejected_outputs(
     csv_path: str | Path,
-    json_path: str | Path,
+    json_path: str | Path | None,
     csv_rows: list[list[Any]],
     json_records: list[dict[str, Any]],
 ) -> None:
     """Write section-boundary rejection audit artifacts."""
-    paths = [Path(csv_path), Path(json_path)]
-    for path in paths:
-        path.parent.mkdir(parents=True, exist_ok=True)
-    _write_csv(paths[0], REJECTED_HEADER, csv_rows)
-    paths[1].write_text(json.dumps(json_records, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    csv_output_path = Path(csv_path)
+    csv_output_path.parent.mkdir(parents=True, exist_ok=True)
+    _write_csv(csv_output_path, REJECTED_HEADER, csv_rows)
+    if json_path is not None:
+        json_output_path = Path(json_path)
+        json_output_path.parent.mkdir(parents=True, exist_ok=True)
+        json_output_path.write_text(json.dumps(json_records, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
 def _write_csv(path: Path, header: list[str], rows: list[list[Any]]) -> None:

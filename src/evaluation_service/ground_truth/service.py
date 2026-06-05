@@ -364,7 +364,7 @@ def load_itb_rows(extract_dir: Path, sections: tuple[str, ...]) -> dict[str, dic
     """Load extracted ITB rows keyed by section and chunk ID."""
     rows_by_key = {}
     for section in sections:
-        path = extract_dir / f"output_itb_section{section}_focused.csv"
+        path = extract_dir / f"itb_extraction_section{section}.csv"
         with open(path, newline="", encoding="utf-8-sig") as file:
             for row in csv.DictReader(file):
                 chunk_id = str(row.get("Chunk ID") or "").strip()

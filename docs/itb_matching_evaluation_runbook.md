@@ -5,8 +5,8 @@ Scope: run after ITB extract, only sections 6 and 7, benchmark on `R_N_MDL`.
 Keep:
 
 ```text
-output/current_test_env/itb_extract/output_itb_section6_focused.csv
-output/current_test_env/itb_extract/output_itb_section7_focused.csv
+output/current_test_env/itb_extract/itb_extraction_section6.csv
+output/current_test_env/itb_extract/itb_extraction_section7.csv
 ```
 
 Flow:

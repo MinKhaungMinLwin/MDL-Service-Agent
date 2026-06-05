@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import re
 from typing import Any
 
 from common.llm_json import parse_json_output
@@ -64,40 +63,6 @@ def split_token_usage(token_usage: dict[str, int], count: int) -> dict[str, int]
     }
 
 
-def fallback_search_query(depths: list[str], keywords: str) -> str:
-    """Build a search query when the model omits one."""
-    generic_terms = {
-        "note",
-        "notes",
-        "detail",
-        "details",
-        "general",
-        "others",
-        "other",
-        "miscellaneous",
-        "misc",
-        "requirement",
-        "requirements",
-        "data",
-        "information",
-    }
-    meaningful_depths = []
-    for depth in depths:
-        if not depth or depth.strip().lower() in ("nan", "none"):
-            continue
-        cleaned_depth = re.sub(r"^[\d\._]+\s*", "", depth.strip()).strip()
-        normalized_depth = re.sub(r"[^a-z0-9]+", " ", cleaned_depth.lower()).strip()
-        if normalized_depth and normalized_depth not in generic_terms and not normalized_depth.isdigit():
-            meaningful_depths.append(cleaned_depth)
-    context = " ".join(meaningful_depths[-2:]) if meaningful_depths else ""
-    cleaned_keywords = " ".join(
-        keyword.strip()
-        for keyword in keywords.split(",")
-        if keyword.strip() and keyword.strip().lower() not in ("nan", "none")
-    )
-    return " ".join(value for value in (context, cleaned_keywords) if value).strip()
-
-
 def failed_extraction(error: Exception | str) -> dict[str, Any]:
     """Build an explicit failed extraction result."""
     message = str(error)
@@ -105,7 +70,6 @@ def failed_extraction(error: Exception | str) -> dict[str, Any]:
         "depth_1": "ERROR",
         "depth_2": message,
         "keywords": [],
-        "search_query": "",
         "confidence": "low",
         "needs_review": True,
         "reason": message,

@@ -53,7 +53,7 @@ a schedule showing when each technical document must be submitted (FA date, FC d
        └─ /parser + /chunker  (API)
              └─▶ ITB chunks JSON  (page, text, hierarchy)
                    └─ uv run itb-extract  (LLM CLI)
-                         └─▶ output_itb_section*.csv
+                         └─▶ itb_extraction_section*.csv
                                (1st–5th Depth, Keywords, Search Query per chunk)
                                └─ uv run itb-match  (Neo4j vector search CLI)
                                      └─▶ output_match_*.csv

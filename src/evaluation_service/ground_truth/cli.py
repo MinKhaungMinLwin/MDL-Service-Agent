@@ -27,8 +27,8 @@ DEFAULT_FINAL_GROUND_TRUTH_PATH = DEFAULT_OUTPUT_DIR / f"{DEFAULT_OUTPUT_STEM}_g
 
 
 def _discover_sections(extract_dir: Path) -> tuple[str, ...]:
-    prefix = "output_itb_section"
-    suffix = "_focused.csv"
+    prefix = "itb_extraction_section"
+    suffix = ".csv"
     sections = []
     for path in extract_dir.glob(f"{prefix}*{suffix}"):
         section = path.name.removeprefix(prefix).removesuffix(suffix)

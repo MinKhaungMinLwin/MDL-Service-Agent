@@ -112,11 +112,11 @@ def _files_to_process(
         ]
     return [
         (
-            input_dir / "output_itb_section6_focused.csv",
+            input_dir / "itb_extraction_section6.csv",
             output_dir / "output_match_all_projects_section6.csv",
         ),
         (
-            input_dir / "output_itb_section7_focused.csv",
+            input_dir / "itb_extraction_section7.csv",
             output_dir / "output_match_all_projects_section7.csv",
         ),
     ]

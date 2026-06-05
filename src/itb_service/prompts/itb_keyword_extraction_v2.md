@@ -24,14 +24,6 @@ If `requested_section` is provided in the input chunk, first decide whether the 
       "depth_4": "",
       "depth_5": "",
       "keywords": [],
-      "search_query": "",
-      "entities": {
-        "equipment": [],
-        "systems": [],
-        "buildings": [],
-        "deliverables": [],
-        "standards": []
-      },
       "confidence": "high|medium|low",
       "needs_review": false,
       "reason": ""
@@ -65,13 +57,13 @@ Depth rules:
 - Use `depth_4` only for a specific equipment, building, package, or item-level target.
 - Use `depth_5` only for a meaningful technical sub-scope.
 - Do not put deliverable names such as drawing, calculation, report, list, or procedure in any depth field.
-- Do not put requirements, design criteria, containment features, standby capacity, refrigerant rules, ventilation criteria, drainage rules, testing requirements, or standards compliance in `depth_4` or `depth_5`; put those terms in `keywords` and `search_query`.
+- Do not put requirements, design criteria, containment features, standby capacity, refrigerant rules, ventilation criteria, drainage rules, testing requirements, or standards compliance in `depth_4` or `depth_5`; put those terms in `keywords`.
 - Leave uncertain or generic depth fields blank.
 - Blank `depth_4` and `depth_5` are valid when no specific equipment, building, package, item-level target, or meaningful sub-scope is explicit.
 - Avoid redundant depth levels. Do not use both `Civil Works` and `Scope of Civil Works` as separate depths unless they represent different hierarchy levels in a useful way.
 - Use `depth_3` for the main technical subject when the chunk is a focused requirement, such as materials, insulation, testing, fire/smoke dampers, fresh air intake, air filtration, domestic water supply, spill containment, drainage, foundation design, concrete durability, or structural steel connections.
 - Keep `depth_4` as a named target only. Generic locations or parts such as `roofs`, `safety rails`, `connections`, `containment`, `criteria`, `requirements`, or combined topic phrases should usually stay in `depth_3` or `keywords`, not `depth_4`.
-- Never place administrative or procedural labels such as `Quality Control Submittals`, `Design Information Submission`, `Design Criteria`, `Approval`, `Submission`, or `Procedure` in `depth_4` or `depth_5`. These belong in `depth_2`/`depth_3`, `keywords`, or `search_query`.
+- Never place administrative or procedural labels such as `Quality Control Submittals`, `Design Information Submission`, `Design Criteria`, `Approval`, `Submission`, or `Procedure` in `depth_4` or `depth_5`. These belong in `depth_2`/`depth_3` or `keywords`.
 - Do not infer a discipline/domain such as Mechanical, Electrical, HVAC, Civil, or I&C from nearby sections unless the current chunk text or current section title explicitly supports it.
 - For generic submission, design information, approval, procedure, quality control, or administrative requirement chunks, keep the broader source domain and use the generic subject as `depth_2`/`depth_3`; do not force the chunk into Mechanical/Electrical/HVAC unless the text explicitly names that discipline.
 - Prefer stable normalized domain labels such as `Civil Works`, `Building Services`, `Mechanical Building Services`, `Electrical Building Services`, `HVAC`, or `Plant Control and Operational System`; avoid using section-title wording like `Scope of Civil Works` as a repeated depth when `Civil Works` is sufficient.
@@ -91,23 +83,7 @@ Keyword rules:
 - Preserve exact source scope for methodology/process terms. Use `dewatering methodology` or `settlement monitoring` when the chunk says methodology/monitoring; do not promote them to named systems unless the source says `system`.
 - Preserve important acronyms, vendor markers, proper nouns, units, and symbols.
 - Use `known_abbreviations` to understand acronyms, but keep common acronyms when they are useful for search.
-- When an acronym or abbreviation appears in the source and has a canonical expansion in `known_abbreviations`, you may use both forms in keywords/entities/search query if useful for retrieval. Do not expand acronyms that are not present in `known_abbreviations` unless the chunk explicitly defines them.
-
-Entity rules:
-- Only classify an item as equipment, system, building, deliverable, or standard when it is the actual subject, row item, requirement target, or explicitly named standard in the current chunk.
-- Do not put noisy repeated table headers, column labels, adjacent section labels, or misaligned OCR fragments into `entities`, even if they look like valid equipment or systems.
-- If a named item appears only as a condition, comparison basis, exception, or part of a curve/parameter name, keep it as a keyword when useful but do not promote it to a primary equipment/entity scope.
-- For acronym expansions from `known_abbreviations`, keep the acronym and canonical name only when the acronym is actually present in the chunk. If the acronym is used inside a curve name or parameter, treat it as a retrieval keyword rather than a standalone equipment entity unless the chunk is about that equipment itself.
-
-Search query rules:
-- Build one concise comma-separated retrieval query.
-- Combine the most meaningful depth terms with the strongest keywords.
-- Prefer technical anchors over administrative section labels.
-- Do not include broad parent labels in the search query when they conflict with the chunk's technical subject. For HVAC, mechanical cooling, ductwork, fresh air, or domestic water service chunks, avoid adding `Scope of Civil Works` unless the civil scope is the actual technical subject.
-- Keep the search query focused on retrieval anchors, not procedural language. Prefer `Ductwork, SMACNA, fire dampers, NFPA 90A` over `submit drawings for approval`.
-- Remove redundancy between depth and keywords while preserving the strongest anchors.
-- Keep the search query concise. Avoid repeating the same parent scope in multiple forms, and avoid long sentence-like phrases.
-- Make the query directly usable for vector or hybrid search against MDL rows.
+- When an acronym or abbreviation appears in the source and has a canonical expansion in `known_abbreviations`, you may use both forms in keywords if useful for retrieval. Do not expand acronyms that are not present in `known_abbreviations` unless the chunk explicitly defines them.
 
 Set `confidence` to:
 - `high` when the technical scope is explicit.

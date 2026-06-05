@@ -36,8 +36,6 @@ BASE_COLUMNS = [
     "Cross_Encoder_Query",
     "Cross_Encoder_Candidate_Count",
     "Keywords",
-    "Search Query",
-    "Search Query Source",
     "Search_Queries",
     "Chunk Text",
 ]
@@ -108,7 +106,6 @@ def build_json_record(
         "cross_encoder_query": cross_encoder_query,
         "cross_encoder_candidate_count": cross_encoder_candidate_count,
         "keywords": _json_safe_value(source_row.get("Keywords", "")),
-        "search_query": _json_safe_value(source_row.get("Search Query", "")),
         "chunk_text": _json_safe_value(source_row.get("Chunk Text", "")),
         "retrieval_candidates": [
             _format_retrieval_candidate(candidate, rank)
