@@ -112,3 +112,63 @@ Scope:
 - [all_projects report](</C:/Users/nguye/OneDrive/Máy tính/doosan-mdl/output/current_test_env/evaluation/matching/all_projects/report.json>)
 - [all_projects_structured summary](</C:/Users/nguye/OneDrive/Máy tính/doosan-mdl/output/current_test_env/evaluation/matching/all_projects_structured/summary.csv>)
 - [all_projects_structured report](</C:/Users/nguye/OneDrive/Máy tính/doosan-mdl/output/current_test_env/evaluation/matching/all_projects_structured/report.json>)
+
+## Cross-Encoder Model Benchmark on Frozen Ground Truth
+
+Scope:
+
+- Retrieval mode: `hybrid`
+- Query mode: `full_chunk`
+- Retrieval pool: frozen from the baseline `L6` run
+- Ground truth:
+  - `output/current_test_env/evaluation/ground_truth/R_N_MDL_ground_truth_final.csv`
+  - `output/current_test_env/evaluation/ground_truth/all_projects_ground_truth_final.csv`
+
+## Model Comparison
+
+| Scope | Model | Positive Queries | Recall@20 | HitRate@20 | Recall@100 |
+| --- | --- | ---: | ---: | ---: | ---: |
+| `R_N_MDL` | `cross-encoder/ms-marco-MiniLM-L6-v2` | 19 | 0.6756 | 0.7895 | 0.9900 |
+| `R_N_MDL` | `BAAI/bge-reranker-v2-m3` | 19 | 0.7092 | 0.9474 | 0.9900 |
+| `R_N_MDL` | `jinaai/jina-reranker-v2-base-multilingual` | 19 | 0.6598 | 0.7895 | 0.9900 |
+| `all_projects` | `cross-encoder/ms-marco-MiniLM-L6-v2` | 26 | 0.5749 | 0.7692 | 0.9588 |
+| `all_projects` | `BAAI/bge-reranker-v2-m3` | 26 | 0.4766 | 0.6923 | 0.9588 |
+| `all_projects` | `jinaai/jina-reranker-v2-base-multilingual` | 26 | 0.5917 | 0.7308 | 0.9588 |
+
+## Key Findings
+
+- `Recall@100` is identical within each scope across all three models.
+  - This is expected because retrieval was frozen before reranking.
+- `R_N_MDL`:
+  - Best model: `BAAI/bge-reranker-v2-m3`
+  - Compared with baseline `L6`:
+    - `Recall@20`: `0.6756 -> 0.7092`
+    - `HitRate@20`: `0.7895 -> 0.9474`
+  - `jinaai/jina-reranker-v2-base-multilingual` is slightly weaker than baseline on `Recall@20` and does not improve `HitRate@20`.
+- `all_projects`:
+  - Best `Recall@20`: `jinaai/jina-reranker-v2-base-multilingual`
+    - `0.5749 -> 0.5917`
+  - Best `HitRate@20`: baseline `cross-encoder/ms-marco-MiniLM-L6-v2`
+    - baseline `0.7692`
+    - Jina `0.7308`
+    - BGE `0.6923`
+  - `BAAI/bge-reranker-v2-m3` is clearly weaker than baseline in the all-project setting.
+
+## Conclusion
+
+- There is no single reranker winner across both scopes.
+- Recommended model for `R_N_MDL`:
+  - `BAAI/bge-reranker-v2-m3`
+- Recommended model for `all_projects`:
+  - `jinaai/jina-reranker-v2-base-multilingual` if you prioritize `Recall@20`
+  - baseline `cross-encoder/ms-marco-MiniLM-L6-v2` if you prioritize `HitRate@20`
+- In the current setup, `BAAI/bge-reranker-v2-m3` improves project-scoped reranking but does not generalize well to all-project reranking.
+
+## Frozen Benchmark Sources
+
+- [R_N_MDL baseline report](</C:/Users/nguye/OneDrive/Máy tính/doosan-mdl/output/current_test_env/experiments/ce_compare/R_N_MDL_pool/evaluation/report.json>)
+- [R_N_MDL BGE m3 report](</C:/Users/nguye/OneDrive/Máy tính/doosan-mdl/output/current_test_env/experiments/ce_compare/R_N_MDL_bge_m3/evaluation/report.json>)
+- [R_N_MDL Jina v2 report](</C:/Users/nguye/OneDrive/Máy tính/doosan-mdl/output/current_test_env/experiments/ce_compare/R_N_MDL_jina_v2/evaluation/report.json>)
+- [all_projects baseline report](</C:/Users/nguye/OneDrive/Máy tính/doosan-mdl/output/current_test_env/experiments/ce_compare/all_projects_pool/evaluation/report.json>)
+- [all_projects BGE m3 report](</C:/Users/nguye/OneDrive/Máy tính/doosan-mdl/output/current_test_env/experiments/ce_compare/all_projects_bge_m3/evaluation/report.json>)
+- [all_projects Jina v2 report](</C:/Users/nguye/OneDrive/Máy tính/doosan-mdl/output/current_test_env/experiments/ce_compare/all_projects_jina_v2/evaluation/report.json>)
