@@ -33,6 +33,8 @@ dev = [
 [project.scripts]
 mdl-classify = "mdl_service.cli:classify"
 mdl-ingest = "mdl_service.cli:ingest"
+mdl-export-catalog = "mdl_service.cli:export_catalog"
+mdl-filter-acc = "mdl_service.cli:filter_acc"
 itb-extract = "itb_service.cli:extract"
 itb-clean-chunks = "itb_service.cli:clean_chunks"
 itb-match = "matching_service.cli:match"

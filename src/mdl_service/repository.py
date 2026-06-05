@@ -72,6 +72,31 @@ class MDLRepository:
                 batch=records,
             )
 
+    def export_catalog(self, project_terms: list[str], limit: int | None = None) -> list[dict[str, Any]]:
+        """Return MDL documents from Neo4j whose source file matches requested project terms."""
+        query_limit = "" if limit is None else "LIMIT $limit"
+        query = f"""
+        MATCH (n:{self.config.node_label})
+        WHERE size($project_terms) = 0
+           OR any(term IN $project_terms WHERE toLower(coalesce(n.source_file, "")) CONTAINS toLower(term))
+        RETURN n.doc_id AS doc_id,
+               n.source_file AS source_file,
+               n.document_no AS document_no,
+               n.title AS title,
+               n.equipment AS equipment,
+               n.building AS building,
+               n.system AS system,
+               n.study_survey AS study_survey,
+               n.others AS others,
+               n.deliverable AS deliverable,
+               n.text_content AS text_content
+        ORDER BY n.source_file, n.document_no, n.title
+        {query_limit}
+        """
+        with self.conn.session() as session:
+            result = session.run(query, project_terms=project_terms, limit=limit)
+            return [dict(record) for record in result]
+
     def _setup_fulltext_index(self, session: Any) -> None:
         result = session.run(
             """

@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import os
+import time
 from pathlib import Path
 from typing import Any
 
@@ -25,4 +27,16 @@ def write_json(path: str | Path, value: Any) -> None:
     """Write one UTF-8 JSON artifact."""
     json_path = Path(path)
     json_path.parent.mkdir(parents=True, exist_ok=True)
-    json_path.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    payload = json.dumps(value, ensure_ascii=False, indent=2) + "\n"
+    temp_path = json_path.with_name(f".{json_path.name}.{os.getpid()}.tmp")
+    last_error: OSError | None = None
+    for attempt in range(1, 6):
+        try:
+            temp_path.write_text(payload, encoding="utf-8")
+            temp_path.replace(json_path)
+            return
+        except OSError as exc:
+            last_error = exc
+            time.sleep(0.5 * attempt)
+    if last_error is not None:
+        raise last_error
