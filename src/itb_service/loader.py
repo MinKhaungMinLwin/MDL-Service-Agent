@@ -24,11 +24,14 @@ def load_abbreviation_rules(path: str | Path) -> dict[str, str]:
 def load_target_chunks(target: ITBTarget, max_chunks: int = 0) -> list[dict[str, Any]]:
     """Load ITB chunks whose pages overlap the configured target range."""
     data = json.loads(target.chunks_file.read_text(encoding="utf-8"))
-    chunks = [
-        chunk
-        for chunk in data.get("chunks", [])
-        if any(target.min_page <= page <= target.max_page for page in chunk.get("page_num", []))
-    ]
+    if target.min_page is None or target.max_page is None:
+        chunks = list(data.get("chunks", []))
+    else:
+        chunks = [
+            chunk
+            for chunk in data.get("chunks", [])
+            if any(target.min_page <= page <= target.max_page for page in chunk.get("page_num", []))
+        ]
     return chunks[:max_chunks] if max_chunks > 0 else chunks
 
 

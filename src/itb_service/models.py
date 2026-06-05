@@ -57,10 +57,12 @@ class ITBTarget:
 
     chunks_file: Path
     document_name: str
-    min_page: int
-    max_page: int
+    min_page: int | None = None
+    max_page: int | None = None
 
     def __post_init__(self) -> None:
+        if self.min_page is None or self.max_page is None:
+            return
         if self.min_page > self.max_page:
             raise ValueError("min_page cannot exceed max_page")
 

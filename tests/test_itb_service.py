@@ -10,6 +10,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from common.llm_json import parse_json_output
+from itb_service.cli import _infer_document_name, _resolve_sections, _safe_scope_name
 from itb_service.extraction import fallback_search_query, parse_batch_results
 from itb_service.loader import find_known_abbreviations, load_target_chunks, normalize_hierarchy, prepare_chunks
 from itb_service.models import OUTPUT_HEADER, ITBExtractionConfig, ITBTarget
@@ -42,6 +43,30 @@ class ITBServiceTest(unittest.TestCase):
         self.assertEqual(len(prepared), 1)
         self.assertEqual(prepared[0].hierarchy, "6._DESIGN_AND_OPERATIONAL_REQUIREMENTS")
         self.assertEqual(prepared[0].known_abbreviations, {"GT": "Gas Turbine"})
+
+    def test_loads_all_target_chunks_without_page_range(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            chunks_path = Path(directory) / "chunks.json"
+            chunks_path.write_text(
+                json.dumps(
+                    {
+                        "chunks": [
+                            _chunk("first", [1], "General requirements"),
+                            _chunk("second", [120], "ACC requirements"),
+                        ]
+                    }
+                ),
+                encoding="utf-8",
+            )
+            chunks = load_target_chunks(ITBTarget(chunks_path, "Fadhili_ITB"))
+
+        self.assertEqual([chunk["chunk_id"] for chunk in chunks], ["first", "second"])
+
+    def test_cli_helpers_infer_document_scope_and_sections(self) -> None:
+        self.assertEqual(_infer_document_name(Path("Turkistan ITB_chunks.json")), "Turkistan_ITB")
+        self.assertEqual(_safe_scope_name("R&N_ITB"), "R_N_ITB")
+        self.assertEqual(_resolve_sections("all", "7"), ["all"])
+        self.assertEqual(_resolve_sections("section", "6,7"), ["6", "7"])
 
     def test_normalizes_hierarchy_abbreviations_and_fallback_query(self) -> None:
         hierarchy = normalize_hierarchy("test_temp > R&N_ITB > 7.5_HVAC, Systems", "R&N_ITB")
