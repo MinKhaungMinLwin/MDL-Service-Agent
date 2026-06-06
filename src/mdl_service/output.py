@@ -7,7 +7,6 @@ import time
 from pathlib import Path
 from typing import Any
 
-from common.json_io import write_json
 from mdl_service.models import ACC_FILTER_FIELDNAMES, CATALOG_FIELDNAMES, CLASSIFIED_FIELDNAMES
 
 
@@ -22,16 +21,14 @@ def write_classified_csv(output_path: str | Path, rows: list[dict[str, str]]) ->
 
 
 def write_catalog_outputs(output_dir: str | Path, rows: list[dict[str, Any]], stem: str = "mdl_catalog") -> None:
-    """Write Neo4j MDL catalog rows as CSV and JSON."""
+    """Write Neo4j MDL catalog rows as CSV."""
     directory = Path(output_dir)
     directory.mkdir(parents=True, exist_ok=True)
     csv_path = directory / f"{stem}.csv"
-    json_path = directory / f"{stem}.json"
     with open(csv_path, "w", newline="", encoding="utf-8-sig") as file:
         writer = csv.DictWriter(file, fieldnames=CATALOG_FIELDNAMES, extrasaction="ignore", quoting=csv.QUOTE_MINIMAL)
         writer.writeheader()
         writer.writerows(rows)
-    write_json(json_path, rows)
 
 
 def write_acc_filter_outputs(output_dir: str | Path, rows: list[dict[str, Any]]) -> None:
@@ -42,8 +39,6 @@ def write_acc_filter_outputs(output_dir: str | Path, rows: list[dict[str, Any]])
     positive_rows = [row for row in rows if _is_true(row.get("Is ACC Related"))]
     _write_dict_csv(directory / "acc_mdl_filter_judgments.csv", ACC_FILTER_FIELDNAMES, rows)
     _write_dict_csv(directory / "acc_mdl_catalog.csv", ACC_FILTER_FIELDNAMES, positive_rows)
-    write_json(directory / "acc_mdl_filter_judgments.json", rows)
-    write_json(directory / "acc_mdl_catalog.json", positive_rows)
 
 
 def _write_dict_csv(path: Path, fieldnames: list[str], rows: list[dict[str, Any]]) -> None:

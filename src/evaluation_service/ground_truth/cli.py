@@ -102,7 +102,7 @@ def build_ground_truth(argv: list[str] | None = None) -> None:
     pools = service.build_pool(args.extract_dir, args.matching_dir)
     judgments, verifications = service.judge(
         pools=pools,
-        resume_state_path=args.output_dir / f"{stem}_ground_truth_resume_state.json" if args.resume else None,
+        resume_state_path=args.output_dir / f"{stem}_ground_truth_resume_state.csv" if args.resume else None,
     )
     final_path = args.final_ground_truth or args.output_dir / f"{stem}_ground_truth_final.csv"
     positive_rows = build_verified_positive_ground_truth_rows(judgments, verifications)

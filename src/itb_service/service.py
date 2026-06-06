@@ -15,12 +15,9 @@ from itb_service.loader import load_target_chunks, prepare_chunks
 from itb_service.models import ITBExtractionConfig, ITBTarget, PreparedChunk
 from itb_service.output import (
     build_csv_row,
-    build_json_record,
     build_rejected_csv_row,
-    build_rejected_json_record,
     build_token_row,
     read_csv_rows,
-    read_json_records,
     write_outputs,
     write_rejected_outputs,
 )
@@ -52,22 +49,14 @@ class ITBExtractionService:
         self,
         targets: list[ITBTarget],
         csv_path: str | Path,
-        json_path: str | Path,
         token_path: str | Path,
         rejected_csv_path: str | Path | None = None,
-        rejected_json_path: str | Path | None = None,
     ) -> int:
-        """Extract configured targets and write CSV, JSON, and token artifacts."""
+        """Extract configured targets and write CSV and token artifacts."""
         csv_rows = read_csv_rows(csv_path)
-        json_records = read_json_records(json_path)
         token_rows = read_csv_rows(token_path)
         rejected_csv_rows = read_csv_rows(rejected_csv_path) if rejected_csv_path else []
-        rejected_json_records = read_json_records(rejected_json_path) if rejected_json_path else []
-        completed_chunk_ids = (
-            _record_chunk_ids(json_records)
-            | _record_chunk_ids(rejected_json_records)
-            | _csv_chunk_ids(rejected_csv_rows)
-        )
+        completed_chunk_ids = _csv_chunk_ids(csv_rows) | _csv_chunk_ids(rejected_csv_rows)
         if completed_chunk_ids:
             logger.info("Resuming ITB extraction with {} completed chunk(s)", len(completed_chunk_ids))
         extracted_count = 0
@@ -111,42 +100,32 @@ class ITBExtractionService:
             for batch_index, batch_result in self._run_batches(target.document_name, indexed_batches):
                 (
                     batch_csv_rows,
-                    batch_json_records,
                     batch_token_rows,
                     batch_rejected_csv_rows,
-                    batch_rejected_json_records,
                 ) = batch_result
                 csv_rows.extend(batch_csv_rows)
-                json_records.extend(batch_json_records)
                 token_rows.extend(batch_token_rows)
                 rejected_csv_rows.extend(batch_rejected_csv_rows)
-                rejected_json_records.extend(batch_rejected_json_records)
-                completed_chunk_ids.update(_record_chunk_ids(batch_json_records))
-                completed_chunk_ids.update(_record_chunk_ids(batch_rejected_json_records))
+                completed_chunk_ids.update(_csv_chunk_ids(batch_csv_rows))
+                completed_chunk_ids.update(_csv_chunk_ids(batch_rejected_csv_rows))
                 extracted_count += len(batch_csv_rows)
                 csv_rows = _sort_csv_rows(csv_rows, order_by_chunk_id)
-                json_records = _sort_json_records(json_records, order_by_chunk_id)
                 token_rows = _sort_token_rows(token_rows, order_by_document)
                 rejected_csv_rows = _sort_csv_rows(rejected_csv_rows, order_by_chunk_id)
-                rejected_json_records = _sort_json_records(rejected_json_records, order_by_chunk_id)
-                write_outputs(csv_path, json_path, token_path, csv_rows, json_records, token_rows)
+                write_outputs(csv_path, token_path, csv_rows, token_rows)
                 if rejected_csv_path:
                     write_rejected_outputs(
                         rejected_csv_path,
-                        rejected_json_path,
                         rejected_csv_rows,
-                        rejected_json_records,
                     )
                 logger.info("{}: completed batch {}/{}", target.document_name, batch_index, len(batches))
                 self.sleep(self.config.batch_delay_seconds)
         csv_rows = _sort_csv_rows(csv_rows, order_by_chunk_id)
-        json_records = _sort_json_records(json_records, order_by_chunk_id)
         token_rows = _sort_token_rows(token_rows, order_by_document)
         rejected_csv_rows = _sort_csv_rows(rejected_csv_rows, order_by_chunk_id)
-        rejected_json_records = _sort_json_records(rejected_json_records, order_by_chunk_id)
-        write_outputs(csv_path, json_path, token_path, csv_rows, json_records, token_rows)
+        write_outputs(csv_path, token_path, csv_rows, token_rows)
         if rejected_csv_path:
-            write_rejected_outputs(rejected_csv_path, rejected_json_path, rejected_csv_rows, rejected_json_records)
+            write_rejected_outputs(rejected_csv_path, rejected_csv_rows)
             logger.info("Rejected {} chunk(s) outside requested section", len(rejected_csv_rows))
         return extracted_count
 
@@ -179,7 +158,7 @@ class ITBExtractionService:
         batch_index: int,
         batch_count: int,
         batch: list[PreparedChunk],
-    ) -> tuple[list[list[Any]], list[dict[str, Any]], list[list[Any]], list[list[Any]], list[dict[str, Any]]]:
+    ) -> tuple[list[list[Any]], list[list[Any]], list[list[Any]]]:
         logger.info(
             "{}: processing batch {}/{} ({} chunk{})",
             document_name,
@@ -195,7 +174,7 @@ class ITBExtractionService:
         document_name: str,
         batch_index: int,
         batch: list[PreparedChunk],
-    ) -> tuple[list[list[Any]], list[dict[str, Any]], list[list[Any]], list[list[Any]], list[dict[str, Any]]]:
+    ) -> tuple[list[list[Any]], list[list[Any]], list[list[Any]]]:
         payloads = [item.payload for item in batch]
         batch_error = ""
         try:
@@ -212,14 +191,11 @@ class ITBExtractionService:
             batch_token_usage = {}
             batch_error = str(exc)
 
-        json_token_usage = _batch_token_usage(batch_token_usage, batch_index, batch)
         extraction_by_id, error_by_id = self._resolve_extractions(batch, results_by_id, batch_error)
         verification_by_id = self._verify_batch(document_name, batch, extraction_by_id, error_by_id)
         csv_rows = []
-        json_records = []
         token_rows = []
         rejected_csv_rows = []
-        rejected_json_records = []
         token_rows.append(
             build_token_row(document_name, batch_index, [item.chunk for item in batch], batch_token_usage)
         )
@@ -236,31 +212,10 @@ class ITBExtractionService:
                 rejected_csv_rows.append(
                     build_rejected_csv_row(document_name, item.chunk, extraction, self.config.requested_section)
                 )
-                rejected_json_records.append(
-                    build_rejected_json_record(
-                        document_name,
-                        item.chunk,
-                        item.hierarchy,
-                        extraction,
-                        self.config.requested_section,
-                    )
-                )
                 continue
             verification = verification_by_id.get(chunk_id, {})
             csv_rows.append(build_csv_row(document_name, item.chunk, item.hierarchy, extraction, verification))
-            json_records.append(
-                build_json_record(
-                    document_name,
-                    item.chunk,
-                    item.hierarchy,
-                    extraction,
-                    json_token_usage,
-                    item.known_abbreviations,
-                    verification=verification,
-                    error=error_by_id.get(chunk_id, ""),
-                )
-            )
-        return csv_rows, json_records, token_rows, rejected_csv_rows, rejected_json_records
+        return csv_rows, token_rows, rejected_csv_rows
 
     def _resolve_extractions(
         self,
@@ -341,20 +296,12 @@ def _chunked(items: list[PreparedChunk], size: int) -> list[list[PreparedChunk]]
     return [items[index : index + size] for index in range(0, len(items), size)]
 
 
-def _record_chunk_ids(records: list[dict[str, Any]]) -> set[str]:
-    return {chunk_id for record in records if (chunk_id := as_text(record.get("chunk_id")))}
-
-
 def _csv_chunk_ids(rows: list[list[Any]]) -> set[str]:
     return {chunk_id for row in rows if len(row) > 1 and (chunk_id := as_text(row[1]))}
 
 
 def _sort_csv_rows(rows: list[list[Any]], order_by_chunk_id: dict[str, int]) -> list[list[Any]]:
     return sorted(rows, key=lambda row: _row_order(row[1] if len(row) > 1 else "", order_by_chunk_id))
-
-
-def _sort_json_records(records: list[dict[str, Any]], order_by_chunk_id: dict[str, int]) -> list[dict[str, Any]]:
-    return sorted(records, key=lambda record: _row_order(record.get("chunk_id", ""), order_by_chunk_id))
 
 
 def _sort_token_rows(rows: list[list[Any]], order_by_document: dict[str, int]) -> list[list[Any]]:
@@ -368,23 +315,6 @@ def _batch_order(row: list[Any]) -> int:
         return int(row[1])
     except (TypeError, ValueError):
         return 0
-
-
-def _batch_token_usage(
-    token_usage: dict[str, int],
-    batch_index: int,
-    batch: list[PreparedChunk],
-) -> dict[str, Any]:
-    chunks = [item.chunk for item in batch]
-    return {
-        "scope": "batch",
-        "batch_index": batch_index,
-        "chunk_count": len(chunks),
-        "chunk_ids": [as_text(chunk.get("chunk_id")) for chunk in chunks if as_text(chunk.get("chunk_id"))],
-        "prompt_tokens": token_usage.get("prompt_tokens", 0),
-        "completion_tokens": token_usage.get("completion_tokens", 0),
-        "total_tokens": token_usage.get("total_tokens", 0),
-    }
 
 
 def _row_order(value: Any, order_by_value: dict[str, int]) -> int:

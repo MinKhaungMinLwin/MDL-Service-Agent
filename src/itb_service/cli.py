@@ -31,7 +31,7 @@ SECTION_CONFIG = {
 
 
 def extract(argv: list[str] | None = None) -> None:
-    """Run ITB extraction and write CSV, JSON, and token outputs."""
+    """Run ITB extraction and write CSV and token outputs."""
     load_env_file()
     parser = argparse.ArgumentParser(description="Extract ITB depth metadata from parsed chunk JSON.")
     parser.add_argument(
@@ -100,7 +100,6 @@ def extract(argv: list[str] | None = None) -> None:
             count = service.extract_to_files(
                 targets=[target],
                 csv_path=output_dir / f"{output_stem}.csv",
-                json_path=output_dir / f"{output_stem}.json",
                 token_path=output_dir / f"{output_stem}_tokens.csv",
                 rejected_csv_path=output_dir / f"{output_stem}_rejected.csv",
             )

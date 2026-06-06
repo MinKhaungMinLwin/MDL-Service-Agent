@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import json
-import os
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
@@ -129,17 +127,15 @@ def write_match_outputs(
     json_records: list[dict[str, Any]],
     output_limit: int,
 ) -> None:
-    """Write legacy CSV and structured JSON matching artifacts."""
+    """Write matching artifacts as CSV."""
+    rows = [_with_candidate_columns(row, record, output_limit) for row, record in zip(rows, json_records, strict=True)]
     result_df = pd.DataFrame(rows)
     match_cols = [f"Matched_Doc_{index + 1}" for index in range(output_limit)]
-    final_cols = [column for column in BASE_COLUMNS if column in result_df.columns] + match_cols
+    base_cols = [column for column in BASE_COLUMNS if column in result_df.columns]
+    detail_cols = [column for column in result_df.columns if column not in set(base_cols + match_cols)]
+    final_cols = base_cols + match_cols + detail_cols
     result_df[final_cols].to_csv(output_path, index=False, encoding="utf-8-sig")
     logger.info("Saved successfully: {}", output_path)
-
-    json_path = _json_output_path(output_path)
-    with open(json_path, "w", encoding="utf-8") as file:
-        json.dump(json_records, file, ensure_ascii=False, indent=2)
-    logger.info("Structured JSON saved successfully: {}", json_path)
 
 
 def _format_json_candidate(candidate: Candidate, rank: int) -> dict[str, Any]:
@@ -200,6 +196,35 @@ def _json_safe_value(value: Any) -> Any:
     return "" if pd.isna(value) else value
 
 
-def _json_output_path(csv_output_path: str | Path) -> str:
-    root, _ = os.path.splitext(str(csv_output_path))
-    return f"{root}.json"
+def _with_candidate_columns(row: dict[str, Any], record: dict[str, Any], output_limit: int) -> dict[str, Any]:
+    resolved = dict(row)
+    candidates = record.get("candidates", [])
+    retrieval_candidates = record.get("retrieval_candidates", [])
+    resolved["Matched_Doc_IDs"] = _joined_candidate_values(candidates, "doc_id")
+    resolved["Retrieval_Doc_IDs"] = _joined_candidate_values(retrieval_candidates, "doc_id")
+    for index in range(output_limit):
+        candidate = candidates[index] if index < len(candidates) else {}
+        prefix = f"Matched_Doc_{index + 1}"
+        resolved[f"{prefix}_Doc_ID"] = _json_safe_value(candidate.get("doc_id", ""))
+        resolved[f"{prefix}_Source_File"] = _json_safe_value(candidate.get("source_file", ""))
+        resolved[f"{prefix}_Document_No"] = _json_safe_value(candidate.get("document_no", ""))
+        resolved[f"{prefix}_Title"] = _json_safe_value(candidate.get("title", ""))
+        resolved[f"{prefix}_Equipment"] = _json_safe_value(candidate.get("equipment", ""))
+        resolved[f"{prefix}_Building"] = _json_safe_value(candidate.get("building", ""))
+        resolved[f"{prefix}_System"] = _json_safe_value(candidate.get("system", ""))
+        resolved[f"{prefix}_Study_Survey"] = _json_safe_value(candidate.get("study_survey", ""))
+        resolved[f"{prefix}_Others"] = _json_safe_value(candidate.get("others", ""))
+        resolved[f"{prefix}_Deliverable"] = _json_safe_value(candidate.get("deliverable", ""))
+        resolved[f"{prefix}_Text_Content"] = _json_safe_value(candidate.get("text_content", ""))
+    return resolved
+
+
+def _joined_candidate_values(candidates: Any, field: str) -> str:
+    values = []
+    seen = set()
+    for candidate in candidates if isinstance(candidates, list) else []:
+        value = str(candidate.get(field) or "").strip()
+        if value and value not in seen:
+            seen.add(value)
+            values.append(value)
+    return "|".join(values)

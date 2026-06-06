@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import csv
-import json
 from pathlib import Path
 from typing import Any
 
@@ -141,19 +140,16 @@ def build_rejected_json_record(
 
 def write_outputs(
     csv_path: str | Path,
-    json_path: str | Path,
     token_path: str | Path,
     csv_rows: list[list[Any]],
-    json_records: list[dict[str, Any]],
     token_rows: list[list[Any]],
 ) -> None:
-    """Write CSV, JSON, and token usage artifacts."""
-    paths = [Path(csv_path), Path(json_path), Path(token_path)]
+    """Write CSV and token usage artifacts."""
+    paths = [Path(csv_path), Path(token_path)]
     for path in paths:
         path.parent.mkdir(parents=True, exist_ok=True)
     _write_csv(paths[0], OUTPUT_HEADER, csv_rows)
-    _write_csv(paths[2], TOKEN_HEADER, token_rows)
-    paths[1].write_text(json.dumps(json_records, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    _write_csv(paths[1], TOKEN_HEADER, token_rows)
 
 
 def read_csv_rows(path: str | Path) -> list[list[str]]:
@@ -167,31 +163,14 @@ def read_csv_rows(path: str | Path) -> list[list[str]]:
         return [row for row in reader]
 
 
-def read_json_records(path: str | Path) -> list[dict[str, Any]]:
-    """Read existing structured JSON records for resume."""
-    json_path = Path(path)
-    if not json_path.exists():
-        return []
-    data = json.loads(json_path.read_text(encoding="utf-8"))
-    if not isinstance(data, list):
-        raise ValueError(f"Expected list JSON artifact: {json_path}")
-    return data
-
-
 def write_rejected_outputs(
     csv_path: str | Path,
-    json_path: str | Path | None,
     csv_rows: list[list[Any]],
-    json_records: list[dict[str, Any]],
 ) -> None:
     """Write section-boundary rejection audit artifacts."""
     csv_output_path = Path(csv_path)
     csv_output_path.parent.mkdir(parents=True, exist_ok=True)
     _write_csv(csv_output_path, REJECTED_HEADER, csv_rows)
-    if json_path is not None:
-        json_output_path = Path(json_path)
-        json_output_path.parent.mkdir(parents=True, exist_ok=True)
-        json_output_path.write_text(json.dumps(json_records, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
 def _write_csv(path: Path, header: list[str], rows: list[list[Any]]) -> None:
