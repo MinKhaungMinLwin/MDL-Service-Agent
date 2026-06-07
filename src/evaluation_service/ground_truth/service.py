@@ -18,6 +18,7 @@ from loguru import logger
 
 from common.json_io import read_json, write_json
 from common.llm_json import parse_json_output
+from schedule_service.normalizer import normalize_equipment
 
 PROMPTS_DIR = Path(__file__).resolve().parent / "prompts"
 DEFAULT_JUDGE_PROMPT_PATH = PROMPTS_DIR / "matching_relevance_judge.md"
@@ -86,6 +87,7 @@ class EvaluationConfig:
     llm_retries: int = 2
     max_concurrency: int = 1
     max_itb_chunks: int = 0
+    equipment_types: tuple[str, ...] = ()
     verify: bool = True
     positive_only: bool = True
     resume: bool = False
@@ -162,7 +164,9 @@ class GroundTruthService:
         """Build a candidate pool from existing matching artifacts."""
         itb_rows = limit_itb_rows(load_itb_rows(extract_dir, self.config.sections), self.config.max_itb_chunks)
         matching_records = load_matching_records(matching_dir, self.config.sections, self.config.modes)
-        pools = build_candidate_pool(itb_rows, matching_records, self.config.pool_top_k)
+        pools = build_candidate_pool(
+            itb_rows, matching_records, self.config.pool_top_k, self.config.equipment_types
+        )
         if pool_path is not None:
             write_json(pool_path, pools)
         logger.info(
@@ -728,8 +732,14 @@ def build_candidate_pool(
     itb_rows: dict[str, dict[str, Any]],
     records_by_source: dict[tuple[str, str], list[dict[str, Any]]],
     top_k: int,
+    equipment_types: tuple[str, ...] = (),
 ) -> list[dict[str, Any]]:
-    """Merge and deduplicate top MDL candidates from each retrieval mode."""
+    """Merge and deduplicate top MDL candidates from each retrieval mode.
+
+    When ``equipment_types`` is non-empty, only candidates whose normalized
+    ``equipment`` matches one of those canonical names are kept — chunks left
+    with no matching candidates are dropped from the pool entirely.
+    """
     pools_by_key: dict[str, dict[str, Any]] = {}
     for (section, _mode), records in records_by_source.items():
         for record in records:
@@ -741,6 +751,8 @@ def build_candidate_pool(
             pool = pools_by_key.setdefault(key, _build_pool_record(section, record, itb_row))
             candidates_by_id = pool.pop("_candidates_by_id")
             for candidate in record.get("candidates", [])[:top_k]:
+                if not _equipment_matches(candidate.get("equipment", ""), equipment_types):
+                    continue
                 candidate_key = _candidate_key(candidate)
                 if not candidate_key:
                     continue
@@ -751,6 +763,8 @@ def build_candidate_pool(
     for key in sorted(pools_by_key):
         pool = pools_by_key[key]
         candidates = list(pool.pop("_candidates_by_id").values())
+        if not candidates:
+            continue
         random.Random(_stable_seed(key)).shuffle(candidates)
         pool["candidates"] = candidates
         pools.append(pool)
@@ -1236,6 +1250,19 @@ def _candidate_key(candidate: dict[str, Any]) -> str:
         return f"document:{'|'.join(document_values)}"
     doc_id = str(candidate.get("doc_id") or "").strip()
     return f"doc_id:{doc_id}" if doc_id else ""
+
+
+def _equipment_matches(raw_equipment: Any, equipment_types: tuple[str, ...]) -> bool:
+    """Check a candidate's equipment against an allow-list of canonical names.
+
+    An empty ``equipment_types`` means no filtering (everything matches). Raw
+    values are normalized first since source MDLs store equipment inconsistently
+    (e.g. "Air Cooled Condenser" vs "AIR COOLED CONDENSER" vs "ACC").
+    """
+    if not equipment_types:
+        return True
+    normalized = normalize_equipment(str(raw_equipment or "").strip())
+    return normalized in equipment_types
 
 
 def _section_chunk_sort_key(key: str) -> tuple[int, int | str, str]:

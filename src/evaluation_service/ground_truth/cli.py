@@ -79,6 +79,13 @@ def build_ground_truth(argv: list[str] | None = None) -> None:
         default=int(os.getenv("ITB_EVAL_MAX_ITB_CHUNKS", "0")),
         help="Limit the number of ITB chunks for quick test runs. Use 0 to process all chunks.",
     )
+    parser.add_argument(
+        "--equipment-types",
+        nargs="+",
+        default=None,
+        help="Restrict the candidate pool to canonical equipment names (e.g. 'Air Cooled Condenser'). "
+        "Chunks left with no matching candidates are dropped. Default: no filtering.",
+    )
     verify_group = parser.add_mutually_exclusive_group()
     verify_group.add_argument(
         "--verify",
@@ -132,6 +139,7 @@ def build_ground_truth(argv: list[str] | None = None) -> None:
         "llm_retries": args.llm_retries,
         "max_concurrency": args.max_concurrency,
         "max_itb_chunks": args.max_itb_chunks,
+        "equipment_types": tuple(args.equipment_types or ()),
         "verify": args.verify,
         "positive_only": args.positive_only,
         "resume": args.resume,
