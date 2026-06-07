@@ -16,6 +16,7 @@ class ScheduleActivity:
     start_date: str
     finish_date: str
     target_text: str
+    semantic_text: str
     # Milestone dates — empty until client provides official mapping
     po_start_date: str = ""
     po_finish_date: str = ""
