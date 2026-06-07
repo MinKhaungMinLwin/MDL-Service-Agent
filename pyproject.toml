@@ -41,6 +41,7 @@ itb-filter-acc = "itb_service.cli:filter_acc"
 itb-match = "matching_service.cli:match"
 itb-rerank-matching = "matching_service.cli:rerank_existing"
 itb-eval-build-ground-truth = "evaluation_service.ground_truth.cli:build_ground_truth"
+acc-build-ground-truth = "evaluation_service.ground_truth.cli:build_acc_ground_truth"
 itb-eval-matching = "evaluation_service.matching_evaluation.cli:evaluate"
 
 [tool.setuptools]
