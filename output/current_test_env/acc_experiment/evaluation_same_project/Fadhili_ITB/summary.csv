@@ -1,0 +1,3 @@
+﻿stage,queries,positive_queries,no_match_queries,avg_precision,avg_f1,recall_at_200,recall_at_50
+retrieval@200,7,5,2,,,1.0,
+cross_encoder@50,7,5,2,,,,0.8666666666666667

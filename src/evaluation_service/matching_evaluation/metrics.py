@@ -9,8 +9,10 @@ from evaluation_service.matching_evaluation.loaders import Qrels, Rankings
 RELEVANCE_THRESHOLD = 3
 
 
-def evaluate_cross_encoder(qrels: Qrels, rankings: Rankings) -> tuple[dict, list[dict]]:
+def evaluate_cross_encoder(qrels: Qrels, rankings: Rankings, k: int = 20) -> tuple[dict, list[dict]]:
     """Evaluate final top matches after cross-encoder reranking."""
+    recall_metric = f"recall_at_{k}"
+    hit_rate_metric = f"hit_rate_at_{k}"
     rows = []
     for query_id in sorted(set(qrels) | set(rankings)):
         query_qrels = qrels.get(query_id, {})
@@ -18,15 +20,16 @@ def evaluate_cross_encoder(qrels: Qrels, rankings: Rankings) -> tuple[dict, list
         rows.append(
             {
                 "query_id": query_id,
-                "recall_at_20": _recall_at_k(query_qrels, ranking, 20, RELEVANCE_THRESHOLD),
-                "hit_rate_at_20": _hit_rate_at_k(query_qrels, ranking, 20, RELEVANCE_THRESHOLD),
+                recall_metric: _recall_at_k(query_qrels, ranking, k, RELEVANCE_THRESHOLD),
+                hit_rate_metric: _hit_rate_at_k(query_qrels, ranking, k, RELEVANCE_THRESHOLD),
             }
         )
-    return _summarize(rows, "recall_at_20"), rows
+    return _summarize(rows, recall_metric), rows
 
 
-def evaluate_retrieval(qrels: Qrels, rankings: Rankings) -> tuple[dict, list[dict]]:
+def evaluate_retrieval(qrels: Qrels, rankings: Rankings, k: int = 100) -> tuple[dict, list[dict]]:
     """Evaluate candidate retrieval before cross-encoder reranking."""
+    recall_metric = f"recall_at_{k}"
     rows = []
     for query_id in sorted(set(qrels) | set(rankings)):
         query_qrels = qrels.get(query_id, {})
@@ -34,10 +37,10 @@ def evaluate_retrieval(qrels: Qrels, rankings: Rankings) -> tuple[dict, list[dic
         rows.append(
             {
                 "query_id": query_id,
-                "recall_at_100": _recall_at_k(query_qrels, ranking, 100, RELEVANCE_THRESHOLD),
+                recall_metric: _recall_at_k(query_qrels, ranking, k, RELEVANCE_THRESHOLD),
             }
         )
-    return _summarize(rows, "recall_at_100"), rows
+    return _summarize(rows, recall_metric), rows
 
 
 def _summarize(rows: list[dict], recall_metric: str) -> dict:
