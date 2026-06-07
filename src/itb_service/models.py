@@ -51,6 +51,30 @@ REJECTED_HEADER = [
     "Confidence",
     "Chunk Text",
 ]
+ACC_CHUNK_FILTER_FIELDNAMES = [
+    "Document",
+    "Chunk ID",
+    "Page",
+    "Section",
+    "Section Path",
+    "Chunk Type",
+    "Label",
+    "Hierarchy Context",
+    "1st Depth",
+    "2nd Depth",
+    "3rd Depth",
+    "4th Depth",
+    "5th Depth",
+    "Keywords",
+    "Is ACC Related",
+    "ACC Reason",
+    "Is MDL Retrieval Candidate",
+    "Skip Reason",
+    "Confidence",
+    "Needs Review",
+    "Reason",
+    "Chunk Text",
+]
 
 
 @dataclass(frozen=True)

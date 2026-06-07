@@ -22,8 +22,9 @@ from mdl_service.service import MDLClassificationService, MDLIngestService
 DEFAULT_DATA_DIR = Path("data") / "current_test_env" / "data"
 DEFAULT_OUTPUT_DIR = Path("output") / "current_test_env"
 DEFAULT_CATALOG_OUTPUT_DIR = DEFAULT_OUTPUT_DIR / "mdl_catalog"
+DEFAULT_ACC_EXPERIMENT_OUTPUT_DIR = DEFAULT_OUTPUT_DIR / "acc_experiment"
 DEFAULT_CATALOG_PROJECTS = ("Fadhili", "R&N", "Turkistan")
-DEFAULT_ACC_OUTPUT_DIR = DEFAULT_CATALOG_OUTPUT_DIR / "acc_filter"
+DEFAULT_ACC_OUTPUT_DIR = DEFAULT_ACC_EXPERIMENT_OUTPUT_DIR / "mdl_filter"
 
 
 def classify(argv: list[str] | None = None) -> None:
