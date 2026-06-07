@@ -9,6 +9,7 @@ the *_MDL_classified.csv format so it can be fed into /schedule/generate.
 from __future__ import annotations
 
 import csv
+import json
 import re
 from pathlib import Path
 from typing import Any
@@ -46,8 +47,9 @@ def extract_candidates(
 
     t0 = time.perf_counter()
 
-    logger.info("Reading ITB matching CSV: {}", input_csv)
-    rows = _read_csv(input_csv)
+    logger.info("Reading ITB matching output: {}", input_csv)
+    is_json = input_csv.suffix.lower() == ".json"
+    rows = _read_matching_json(input_csv) if is_json else _read_csv(input_csv)
     original_count = len(rows)
     if limit > 0:
         rows = rows[:limit]
@@ -55,34 +57,11 @@ def extract_candidates(
 
     t_read = time.perf_counter()
 
-    candidates: dict[str, dict[str, Any]] = {}  # dedup_key → candidate
-
-    for row in rows:
-        itb_doc = row.get("Document", "").strip()
-        itb_page = row.get("Page", "").strip()
-
-        for i in range(1, top_n + 1):
-            raw = row.get(f"Matched_Doc_{i}", "").strip()
-            if not raw:
-                continue
-            parsed = _parse_matched_doc(raw)
-            if parsed["score"] < score_threshold:
-                continue
-
-            key = _dedup_key(parsed["equipment"], parsed["deliverable"], parsed["title"])
-            if key not in candidates:
-                candidates[key] = {
-                    **parsed,
-                    "itb_sources": [],
-                }
-            candidates[key]["itb_sources"].append(
-                f"{itb_doc}:p{itb_page}(score={parsed['score']:.2f})"
-            )
-            # Keep highest score
-            if parsed["score"] > candidates[key]["score"]:
-                candidates[key]["score"] = parsed["score"]
-
-    candidate_list = sorted(candidates.values(), key=lambda c: c["score"], reverse=True)
+    candidate_list = (
+        _extract_candidates_from_json_records(rows, score_threshold, top_n)
+        if is_json
+        else _extract_candidates_from_csv_rows(rows, score_threshold, top_n)
+    )
     t_regex = time.perf_counter()
 
     logger.info(
@@ -123,6 +102,127 @@ def extract_candidates(
     )
     logger.info("Wrote MDL candidates to {}", output_path)
     return output_path, timing
+
+
+def _extract_candidates_from_csv_rows(
+    rows: list[dict[str, str]],
+    score_threshold: float,
+    top_n: int,
+) -> list[dict[str, Any]]:
+    """Extract candidates from the legacy display CSV format."""
+    candidates: dict[str, dict[str, Any]] = {}
+
+    for row in rows:
+        itb_doc = row.get("Document", "").strip()
+        itb_page = row.get("Page", "").strip()
+        chunk_id = row.get("Chunk ID", "").strip()
+
+        for i in range(1, top_n + 1):
+            raw = row.get(f"Matched_Doc_{i}", "").strip()
+            if not raw:
+                continue
+            parsed = _parse_matched_doc(raw)
+            if parsed["score"] < score_threshold:
+                continue
+
+            parsed["rank"] = i
+            parsed["candidate_status"], parsed["quality_issues"] = _candidate_quality(parsed)
+            key = _dedup_key(parsed["equipment"], parsed["deliverable"], parsed["title"])
+            _upsert_candidate(candidates, key, parsed, itb_doc, itb_page, chunk_id)
+
+    return sorted(candidates.values(), key=lambda c: c["score"], reverse=True)
+
+
+def _extract_candidates_from_json_records(
+    records: list[dict[str, Any]],
+    score_threshold: float,
+    top_n: int,
+) -> list[dict[str, Any]]:
+    """Extract candidates from structured matching JSON records."""
+    candidates: dict[str, dict[str, Any]] = {}
+
+    for record in records:
+        itb_doc = str(record.get("document", "") or "").strip()
+        itb_page = str(record.get("page", "") or "").strip()
+        chunk_id = str(record.get("chunk_id", "") or "").strip()
+
+        for candidate in record.get("candidates", [])[:top_n]:
+            parsed = _candidate_from_json(candidate)
+            if parsed["score"] < score_threshold:
+                continue
+            parsed["candidate_status"], parsed["quality_issues"] = _candidate_quality(parsed)
+            key = _structured_dedup_key(parsed)
+            _upsert_candidate(candidates, key, parsed, itb_doc, itb_page, chunk_id)
+
+    return sorted(candidates.values(), key=lambda c: c["score"], reverse=True)
+
+
+def _candidate_from_json(candidate: dict[str, Any]) -> dict[str, Any]:
+    """Normalize one structured JSON candidate into the schedule-candidate shape."""
+    title = _as_text(candidate.get("title"))
+    deliverable = _as_text(candidate.get("deliverable")) or _extract_deliverable(title)
+    equipment = _normalize_equipment(_as_text(candidate.get("equipment")))
+    if not equipment:
+        equipment = _extract_equipment_from_title(title)
+    return {
+        "project": "",
+        "doc_id": _as_text(candidate.get("doc_id")),
+        "source_file": _as_text(candidate.get("source_file")),
+        "document_no": _as_text(candidate.get("document_no")),
+        "equipment": equipment,
+        "building": _as_text(candidate.get("building")),
+        "system": _as_text(candidate.get("system")),
+        "title": title,
+        "deliverable": deliverable,
+        "score": _candidate_score(candidate),
+        "semantic_score": candidate.get("semantic_score"),
+        "cross_encoder_score": candidate.get("cross_encoder_score"),
+        "rrf_score": candidate.get("rrf_score"),
+        "rank": candidate.get("rank") or candidate.get("final_rank"),
+        "retrieval_rank": candidate.get("retrieval_rank"),
+        "parse_source": "json_metadata",
+    }
+
+
+def _candidate_score(candidate: dict[str, Any]) -> float:
+    """Return the filtering/sorting score for structured JSON candidates."""
+    value = candidate.get("semantic_score")
+    if value is None:
+        value = candidate.get("rrf_score")
+    if value is None:
+        value = candidate.get("cross_encoder_score")
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _upsert_candidate(
+    candidates: dict[str, dict[str, Any]],
+    key: str,
+    parsed: dict[str, Any],
+    itb_doc: str,
+    itb_page: str,
+    chunk_id: str = "",
+) -> None:
+    if key not in candidates:
+        candidates[key] = {
+            **parsed,
+            "itb_sources": [],
+        }
+    candidates[key]["itb_sources"].append(_itb_source(itb_doc, itb_page, chunk_id, parsed))
+    if parsed["score"] > candidates[key]["score"]:
+        previous_sources = candidates[key]["itb_sources"]
+        candidates[key].update(parsed)
+        candidates[key]["itb_sources"] = previous_sources
+
+
+def _itb_source(itb_doc: str, itb_page: str, chunk_id: str, parsed: dict[str, Any]) -> str:
+    page = f":p{itb_page}" if itb_page else ""
+    chunk = f":{chunk_id}" if chunk_id else ""
+    rank = parsed.get("rank")
+    rank_part = f",rank={rank}" if rank else ""
+    return f"{itb_doc}{page}{chunk}(score={parsed['score']:.2f}{rank_part})"
 
 
 def _parse_matched_doc(raw: str) -> dict[str, Any]:
@@ -180,6 +280,8 @@ def _parse_matched_doc(raw: str) -> dict[str, Any]:
 
     return {
         "project": "",        # stripped above
+        "doc_id": "",
+        "source_file": "",
         "document_no": document_no,
         "equipment": equipment,
         "building": "",
@@ -187,6 +289,12 @@ def _parse_matched_doc(raw: str) -> dict[str, Any]:
         "title": title,
         "deliverable": deliverable,
         "score": score,
+        "semantic_score": "",
+        "cross_encoder_score": "",
+        "rrf_score": "",
+        "rank": "",
+        "retrieval_rank": "",
+        "parse_source": "csv_display",
     }
 
 
@@ -240,6 +348,59 @@ def _dedup_key(equipment: str, deliverable: str, title: str) -> str:
     return f"{norm_eq}|{norm_del}|{norm_title}"
 
 
+def _structured_dedup_key(candidate: dict[str, Any]) -> str:
+    """Prefer stable MDL identity over parsed text keys."""
+    doc_id = candidate.get("doc_id", "").strip()
+    if doc_id:
+        return f"doc_id:{doc_id}"
+    source_file = candidate.get("source_file", "").strip()
+    document_no = candidate.get("document_no", "").strip()
+    if source_file and document_no:
+        return f"source_doc:{source_file}|{document_no}"
+    if source_file and candidate.get("title", "").strip():
+        return f"source_title:{source_file}|{_norm(candidate['title'])}"
+    return _dedup_key(candidate["equipment"], candidate["deliverable"], candidate["title"])
+
+
+def _candidate_quality(candidate: dict[str, Any]) -> tuple[str, str]:
+    """Return candidate_status and a semicolon-separated quality issue list."""
+    issues = []
+    scope = " ".join(
+        value for value in [candidate.get("equipment", ""), candidate.get("system", ""), candidate.get("building", "")]
+        if value
+    )
+    if not candidate.get("title", "").strip():
+        issues.append("missing_title")
+    if not scope.strip():
+        issues.append("missing_scope")
+    if not candidate.get("deliverable", "").strip():
+        issues.append("missing_deliverable")
+    if _looks_like_document_code(candidate.get("equipment", "")):
+        issues.append("equipment_looks_like_document_code")
+    status = "accepted" if not issues else "needs_review"
+    return status, ";".join(issues)
+
+
+def _looks_like_document_code(value: str) -> bool:
+    value = value.strip()
+    if not value:
+        return False
+    if re.match(r"^(SAU\d|T\d{4,}|MRT-|CCP-|GRT-|DOC_\d+)", value, re.IGNORECASE):
+        return True
+    has_digit = any(ch.isdigit() for ch in value)
+    has_separator = any(ch in value for ch in "-_/&~")
+    alpha_count = sum(ch.isalpha() for ch in value)
+    return has_digit and has_separator and alpha_count >= 2 and len(value) >= 10
+
+
+def _norm(value: str) -> str:
+    return re.sub(r"\s+", " ", value.upper().strip())
+
+
+def _as_text(value: Any) -> str:
+    return str(value or "").strip()
+
+
 def _write_csv(path: Path, candidates: list[dict[str, Any]]) -> None:
     """Write candidate list as CSV compatible with *_MDL_classified.csv format."""
     fieldnames = [
@@ -255,13 +416,23 @@ def _write_csv(path: Path, candidates: list[dict[str, Any]]) -> None:
         # Traceability columns
         "match_score",
         "itb_sources",
+        "candidate_status",
+        "quality_issues",
+        "needs_review",
+        "doc_id",
+        "parse_source",
+        "semantic_score",
+        "cross_encoder_score",
+        "rrf_score",
+        "rank",
+        "retrieval_rank",
     ]
     with path.open("w", encoding="utf-8-sig", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()
         for c in candidates:
             writer.writerow({
-                "Source File": "itb_candidates",
+                "Source File": c.get("source_file", "") or "itb_candidates",
                 "Document No": c.get("document_no", ""),
                 "Title": c["title"],
                 "Equipment": c["equipment"],
@@ -271,7 +442,24 @@ def _write_csv(path: Path, candidates: list[dict[str, Any]]) -> None:
                 "Note": "",
                 "match_score": f"{c['score']:.4f}",
                 "itb_sources": " | ".join(c["itb_sources"][:5]),
+                "candidate_status": c.get("candidate_status", ""),
+                "quality_issues": c.get("quality_issues", ""),
+                "needs_review": "true" if c.get("candidate_status") != "accepted" else "false",
+                "doc_id": c.get("doc_id", ""),
+                "parse_source": c.get("parse_source", ""),
+                "semantic_score": _fmt_optional_score(c.get("semantic_score")),
+                "cross_encoder_score": _fmt_optional_score(c.get("cross_encoder_score")),
+                "rrf_score": _fmt_optional_score(c.get("rrf_score")),
+                "rank": c.get("rank", ""),
+                "retrieval_rank": c.get("retrieval_rank", ""),
             })
+
+
+def _fmt_optional_score(value: Any) -> str:
+    try:
+        return f"{float(value):.4f}"
+    except (TypeError, ValueError):
+        return ""
 
 
 def _classify_candidates(
@@ -292,8 +480,8 @@ def _classify_candidates(
 
     t_import = time.perf_counter()
 
-    # Skip candidates where regex already extracted both fields
-    need_llm = [c for c in candidates if not c.get("equipment") or not c.get("deliverable")]
+    # Skip candidates whose structured fields already provide a usable scope + deliverable.
+    need_llm = [c for c in candidates if _needs_llm_classification(c)]
     skipped = len(candidates) - len(need_llm)
     if skipped:
         logger.info("LLM classify: skipping {} candidates already fully extracted by regex", skipped)
@@ -306,8 +494,9 @@ def _classify_candidates(
         hit = cache.get(c["title"])
         if hit:
             for field, value in hit.items():
-                if value and not c.get(field):
+                if value and (not c.get(field) or _field_needs_repair(field, c.get(field, ""))):
                     c[field] = value
+            c["candidate_status"], c["quality_issues"] = _candidate_quality(c)
             cache_hits += 1
         else:
             to_send.append(c)
@@ -365,6 +554,7 @@ def _classify_candidates(
                     candidate["system"] = result.system
                 if result.deliverable:
                     candidate["deliverable"] = result.deliverable
+                candidate["candidate_status"], candidate["quality_issues"] = _candidate_quality(candidate)
                 cache.put(candidate["title"], candidate)
 
     cache.save()
@@ -375,3 +565,23 @@ def _classify_candidates(
 def _read_csv(path: Path) -> list[dict[str, str]]:
     with path.open("r", encoding="utf-8-sig", newline="") as f:
         return list(csv.DictReader(f))
+
+
+def _read_matching_json(path: Path) -> list[dict[str, Any]]:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, list):
+        raise ValueError(f"Expected matching JSON list at {path}")
+    return payload
+
+
+def _needs_llm_classification(candidate: dict[str, Any]) -> bool:
+    if not candidate.get("deliverable", "").strip():
+        return True
+    has_scope = any(candidate.get(field, "").strip() for field in ("equipment", "system", "building"))
+    if not has_scope:
+        return True
+    return _looks_like_document_code(candidate.get("equipment", ""))
+
+
+def _field_needs_repair(field: str, value: str) -> bool:
+    return field == "equipment" and _looks_like_document_code(value)

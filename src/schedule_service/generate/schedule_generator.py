@@ -79,11 +79,12 @@ def generate_schedule_file(
     _log(f"Reading MDL classified CSV: {input_csv}")
     rows = _read_csv(input_csv)
     original_count = len(rows)
+    rows, candidate_filter = _filter_accepted_candidates(rows)
     if limit > 0:
         rows = rows[:limit]
-        _log(f"Limit enabled: processing first {len(rows)} of {original_count} rows")
+        _log(f"Limit enabled: processing first {len(rows)} accepted rows from {original_count} input rows")
     if not rows:
-        raise ValueError(f"No rows found in {input_csv}")
+        raise ValueError(f"No schedulable rows found in {input_csv}")
 
     t_read = time.perf_counter()
 
@@ -139,7 +140,9 @@ def generate_schedule_file(
         "format_s": round(t_format - t_activities, 3),
         "write_s": round(t_end - t_format, 3),
         "total_s": round(t_end - t0, 3),
+        "rows_input": original_count,
         "rows_processed": len(rows),
+        **candidate_filter,
         "use_semantic_rules": bool(rule_semantic_index),
         "use_semantic_activities": bool(activity_semantic_index),
     }
@@ -231,6 +234,28 @@ def _read_csv(path: Path) -> list[dict[str, str]]:
     """Read an MDL classified CSV file."""
     with path.open("r", encoding="utf-8-sig", newline="") as f:
         return list(csv.DictReader(f))
+
+
+def _filter_accepted_candidates(rows: list[dict[str, str]]) -> tuple[list[dict[str, str]], dict[str, Any]]:
+    """For schedule candidate CSVs, process accepted candidates only.
+
+    Historical *_MDL_classified.csv inputs do not have candidate_status and keep the
+    previous behavior. Candidate CSVs from /schedule/candidates include the column;
+    only accepted rows are safe enough for automatic date generation.
+    """
+    if not rows or "candidate_status" not in rows[0]:
+        return rows, {
+            "candidate_filter_applied": False,
+            "rows_skipped_non_accepted": 0,
+        }
+    accepted = [row for row in rows if row.get("candidate_status", "").strip().lower() == "accepted"]
+    skipped = len(rows) - len(accepted)
+    if skipped:
+        _log(f"Candidate filter enabled: skipping {skipped} non-accepted rows")
+    return accepted, {
+        "candidate_filter_applied": True,
+        "rows_skipped_non_accepted": skipped,
+    }
 
 
 def _output_stem(input_csv: Path) -> str:
