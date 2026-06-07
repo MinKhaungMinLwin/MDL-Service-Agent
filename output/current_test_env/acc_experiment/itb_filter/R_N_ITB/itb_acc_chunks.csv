@@ -1,0 +1,236 @@
+﻿Document,Chunk ID,Page,Section,Section Path,Chunk Type,Label,Hierarchy Context,1st Depth,2nd Depth,3rd Depth,4th Depth,5th Depth,Keywords,Is ACC Related,ACC Reason,Is MDL Retrieval Candidate,Skip Reason,Confidence,Needs Review,Reason,Chunk Text
+R&N_ITB,test_temp_R&N_ITB_chunk_379,79,6.1_Plant_Configuration,"6, 1",content,"text, list_item",6._DESIGN_AND_OPERATIONAL_REQUIREMENTS > 6.1_Plant_Configuration,Design and Operational Requirements,Plant Configuration,Combined Cycle Power Plant,,,"Combined Cycle Power Plant, dual fuel gas turbines (GTs), dry low NOx combustors, heat recovery steam generators (HRSGs), bypass stack, diverter dampers, guillotine damper (horizontal/vertical sealing), condensing steam turbine (CST), air cooled condenser, synchronous generators, generator circuit breakers (GTGs, STGs), generator step-up transformers (2-winding)",True,"Plant configuration list explicitly includes ""Condensing Steam Turbine (CST) with Air Cooled Condenser"".",True,,high,False,"Defines overall plant configuration and major equipment packages for combined cycle plant; strong anchors for matching existing plant configuration, SLD, equipment lists, and system descriptions.","The Plant shall be designed as a Combined Cycle Power Plant, consisting of but not limited to:
+- Dual Fuel Gas Turbine (GTs)
+- Dry low NOx combustors;
+- Heat Recovery Steam Generators (HRSGs),
+- By-pass  stack  including  diverter  dampers  horizontal  and  vertical  sealing  guillotine damper.
+- Condensing Steam Turbine (CST) with Air Cooled Condenser
+- Synchronous Generators for Gas Turbines and Steam Turbine
+- Generator Circuit Breakers for GTGs and STGs
+- 2 winding Generator Step-up transformers;
+- 2 or 3 winding Auxiliary transformers
+- HV Circuit Breakers for GSU Transformers of GTGs and STG
+The plant shall be designed preferably symmetrically; this means the Plant shall consist of equally designed Groups (same number and type of GTs/HRSGs/ST)."
+R&N_ITB,test_temp_R&N_ITB_chunk_381,"80, 81",6.2.1_Air_Cool_Condenser,"6, 2, 1",content,"text, list_item",6._DESIGN_AND_OPERATIONAL_REQUIREMENTS > 6.2_Design_Conditions_&_Requirements > 6.2.1_Air_Cool_Condenser,Design and Operational Requirements,Air Cooled Condenser,ACC performance and scope of supply,,,"air cooled condenser (ACC), condense full steam turbine exhaust (including bypass), supporting calculations, wind direction impact on ACC performance, condensate extraction pumps, vacuum raising and maintaining system, steam duct/distribution system, condenser air removal system, cooling air fans with automatic controls, performance testing tapping points, IP and LP bypass dump steam flows, N+1 fans",True,"Section titled ""6.2.1 Air Cool Condenser"" with detailed ACC scope (fans, steam duct, vacuum system, condensate pumps, performance, N+1 fans).",True,,high,False,"Contains explicit ACC functional requirements, transient scenarios, redundancy (N+1 fans), and detailed component scope—strong retrieval anchors for ACC datasheets, P&IDs, calculations, and system descriptions.","The condenser shall be capable of condensing the whole of the steam exhaust from the steam turbine (including the bypass systems) under all conditions of load and operation. For this the EPC Contractor shall provide  with  his  proposal  supporting  calculations.  Additionally,  supporting  calculations  demonstrating that the wind direction at the site will not impact the performance of the ACCs shall be provided. The ACC location shall be selected so that it will not be in the predominant wind direction.
+The systems and components for the ACC shall be provided by the Contractor and shall include but not limited to the following:
+- Condensate extraction pumps and strainers;
+- Vacuum raising and maintaining system;
+- Turbine blow off tank;
+- Condensate, air extraction, recirculation, air, drain and atmospheric exhaust pipework and valves;
+- Vent pipework routed to a safe location;
+- Flash boxes (with integral connections to condenser) for feed heater and other drains;
+- Heat exchange sections;
+- Support structure and fan deck;
+- Steam duct / distribution system;
+- Condensate collection system;
+- Condenser air removal system;
+- Cooling air fans with automatic controls
+- Condenser atmospheric relief devices;
+- Holding down bolts, plates, etc;
+- Local ladders, galleries and hand railing;
+- All driving motors with base plates, or stools for all auxiliaries;
+- Local instruments, gauges, control and panels;
+- Additional  tapping  points,  complete  with  isolation  and  all  necessary  instruments  for performance testing;
+- Any special lifting tackle, spanners and tools;
+- All other equipment required for the safe and efficient operation of the plant.
+The  exhaust  steam  from  the  Steam  Turbine  exhaust  shall  be  directed  to  the  air  cooled  condenser  and condensing  system  via  a  steam  piping  and  ductwork  system;  the  water  will  then  be  forwarded  to  the condensate system.
+The condenser and the cooling system, at a minimum, shall be capable of:
+- i. Condensing the total steam flow from its associated steam turbine operating at maximum flow and at maximum ambient temperature;
+- ii. Accepting the total steam system drain flows;
+- iii. Condensing the full capability of the steam turbine bypass system(s); and
+- iv. simultaneously  operating  with  steam  flow  through  the  steam  turbine  and  the  steam  turbine  bypass system.
+The condensing plant shall be designed and guaranteed to condense the maximum exhaust steam flow from the Steam Turbine; to accept the relevant steam system drains; and to condense the dump steam flows from
+the IP and LP bypass systems under conditions of turbine start-up, rapid load reduction, partial or full load rejection and turbine trip.
+The ACC shall be provided with N+1 fans where N refers to the number of fans required for the maximum load condition. There is no requirement to provide the ACC equipped with elevator.
+The condenser vacuum shall be optimised by the EPC Contractor."
+R&N_ITB,test_temp_R&N_ITB_chunk_382,81,6.2.1_Air_Cool_Condenser,"6, 2, 1",content,text,6._DESIGN_AND_OPERATIONAL_REQUIREMENTS > 6.2_Design_Conditions_&_Requirements > 6.2.1_Air_Cool_Condenser,Design and Operational Requirements,Air Cooled Condenser,ACC design details and standards,,,"LP turbine exhaust to condenser transition (minimal obstructions), negligible pressure drop, turbine bypass dumps dispersion headers, ACC materials selection, demineralized water chemistry (OEM guidelines), steam ejectors or mechanical vacuum pumps, hogging duty and running duty device per condenser, steam for air ejectors from main steam supply, silencer on ejector outlet, hotwell tank sizing (HEI standards), instrumentation for condenser tube leakage troubleshooting",True,"ACC design details: LP exhaust transition to condenser, bypass dumps, ACC materials, vacuum system (hogging/holding), hotwell/condensate instrumentation.",True,,high,False,"Provides concrete ACC mechanical/process design requirements, vacuum system options, and explicit standard reference (HEI), suitable for matching condenser/vacuum system design documents and specifications.","The steam turbine outlet connection pieces shall be designed for smooth transition with minimal obstructions from the LP turbine exhaust to the condenser to assure negligible pressure drop.
+The turbine bypass dumps shall be designed with dispersion headers internal to the condenser to adequately disperse the steam safely into the condenser for all possible extreme transient scenarios.
+The Air-Cooled condenser materials shall be selected to provide the necessary reliability at an economical cost taking into account that ACC is being operated with Demineralized water with proper water chemistry required by OEM guidelines. ACC OEM Design will take into consideration of proper material selection as per Demin water quality..
+Vacuum raising and maintaining plant may be based on either steam ejectors or mechanical vacuum pumps. As a minimum, one start-up (hogging) duty and one running duty device shall be provided for each condenser.
+Steam for air ejectors, if supplied, shall be taken from the main steam supply. A silencer shall be provided on each ejector outlet.
+The hotwell tank and condensate system shall be sized in accordance with HEI standards.
+The condensate system shall be equipped with instrumentation that will assist in trouble shooting of any condenser tube leakage."
+R&N_ITB,test_temp_R&N_ITB_chunk_412,"90, 91",6.5.1_Mechanical_equipment,"6, 5, 1",content,"text, list_item",6.5_Redundancy_Concept > 6.5.1_Mechanical_equipment,Redundancy Concept,Mechanical Equipment,"Redundancy Requirements (N+1, 2x100%, 3x50%)",,,"pumps/blowers/compressors/fans N+1, on-line switchover capability, HP feedwater pump lube oil pump 2x100%, HP feedwater pump lube oil heater 2x100%, power plant jockey pumps 2x100%, cooling tower/fin fan cooler cells N+1, DM plant N+1 stream, gas reducing station 3x50%, fuel gas boosting compressors N+1 (N=number of gas turbines), instrument air receiver tank 2x100%, air dryers 2x100%, drain and vent valves two valves in series if pressure > 4 MPa",True,Explicitly mentions 'air cooled condenser' in redundancy note: 'Heat exchangers (not applicable to fin fan cooler or to air cooled condenser)'.,True,,high,False,"Contains explicit redundancy configurations for multiple mechanical/utility systems and components; strong anchors for matching to equipment lists, P&IDs, datasheets, and design criteria.","All  pumps  and  compressors  shall  be  redundant  with  on-line  switchover  capability  with  following redundancy:
+- Pumps, blowers, compressors, fans : N+1
+- Lube oil pump for HP Feedwater Pump : 2x100% (for each FW pump)
+- Lube oil heater for HP Feedwater Pump : 2x100% (for each FW pump)
+- Power Plant Jockey pumps : 2x100%
+- Heat exchangers (not applicable to fin fan cooler or to air cooled condenser). Redundancy should be considered to eliminate single point of failure that will result in reduced load.
+- Cooling tower/fin fan cooler cells : N+1
+- Tanks (if not mentioned hereunder) : more than 1
+- CCW Expansion Tanks : 1 x 100%
+- Atmospheric drain tank : 1 x 100%
+- Vacuum Flash Tank : 1 x 100%
+- Condensate Storage Tank : 2x50% or 1x100%
+- Service air receiver tank : 2 x 100%
+- Instrument air receiver tank : 2 x 100%
+- H2 Tanks : 2 x 50%
+- Diesel storage tank : 2 x 50%
+- Gas Drain Collection Tank (GT Area) : 1 x 100%
+- GT Fuel Gas Last Chance Filter (per GT) : 2 x 100% Chemical tanks
+- DM plant : N+1 stream
+- Air conditioning :  N+1  (except  for  non-plant  buildings,  such  as: Administration building/ workshop/warehouse/Gate guard house)
+- Ventilation Fans :  N+1  (except  for  non-plant  buildings,  such  as: Administration building/ workshop/warehouse/Gate guard house))
+- Gas reducing station : 3 x 50%
+- Feed water control stations : 2 x 100%
+- Fuel Gas Boosting Compressors: : N+1, where, N=Number of Gas Turbines
+- Air  compressors  with  after  coolers  (after  coolers  if  required,  will  be  confirmed  during  detail engineering) : 3x50%
+- Air filtering skids : 2 x 100%
+- Air dryers : 2 x 100%
+- After Filters : 2 x 100%
+- CO2 rack & manifold station for each GT : 1 x 100%
+- CO2 rack & manifold station for each ST : 1 x 100%
+- N2 rack & manifold station : 1 x 100%
+- H2 generator : 2 x 100%
+- Drain and vent valves :  two  valves  in  series  (If  operating  pressure  is greater than 4 MPa) otherwise single valve
+- Level control valve for HRSG Drums and Feedwater tank :  N+1 (not applicable for startup line, as applicable)
+Provision of bypass valves for control valves shall apply for those systems/facilities which can also be reasonably controlled manually."
+R&N_ITB,test_temp_R&N_ITB_chunk_426,"95, 96",6.6_Plant_Performance_and_Schedule,,content,"text, list_item",6.6_Plant_Performance_and_Schedule,Plant Performance,Performance Corrections,Correction Curves and Outage Modes,,,"performance correction curves, reference conditions, primary and backup fuel, Gas Turbine standard correction curves, generator capability curve (GT/ST), combined cycle start-up/shutdown curves, net capacity and net heat rate corrections, evaporative cooler ON/OFF, wet compression, duct firing, ambient temperature/humidity/barometric pressure corrections, fuel gas LHV and C:H ratio, grid frequency and power factor, natural gas pressure/temperature at terminal point, degradation with GT fired hours, condensate return flow and temperature, outage modes, H&M balance drawings, outage duration and frequency (GT/HRSG/ST), LTSA assumptions",True,"Explicit mention of ""Cooling Tower/ACC"" in performance correction requirements (inlet air condition difference).",True,,high,False,"Contains explicit technical requirements for performance correction curves, operating condition correction parameters, and outage mode definitions tied to GT/HRSG/ST and combined cycle performance documentation.","Performance correction curves and formulae for the correction of measured performance data at conditions different from the Reference Conditions shall be provided by the contractor for both the primary and the backup fuel:
+- Gas Turbine Standard correction curves
+- Gas Turbine generator capability curve
+- Steam Turbine generator capability curve
+- CC Start-up curves
+- CC Shutdown curve
+- Capacity of GT system vs ambient temperature
+- Gas Turbine GSUT capacity curve
+- Response capability curve (frequency response chart)
+- Emissions table
+- Steam turbine load changes
+- Power output vs gas pressure
+- CC Correction curves (to be provided for):
+- Evaporative Cooler ON (Only for Base Load),
+- Wet Compression On (only after Evaporative Cooler is ON)
+- Evaporative Cooler OFF (Base Load and partial loads)
+- Duct Firing On (if applicable)
+- o The corrections of the net capacity and net heat rate of the total Plant in combined cycle configuration shall be provided for:
+- ambient air temperature
+- ambient air humidity
+- ambient barometric pressure
+- Fuel Gas Lower Heating value (LHV)
+- Fuel Gas C:H ratio
+- Inlet  Air  Condition  Difference  Between  Cooling  Tower/ACC  and  Gas Turbine
+- Grid Frequency
+- Power Factor
+- Cycle Unaccounted Losses
+- Natural Gas Pressure at the Terminal Point
+- Natural Gas Temperature at the Terminal Point
+- Partial load (only for EVC OFF case)
+- Degradation with GT fired hours
+- condensate return flow and temperature
+- b. Outage modes
+The important and different outage modes encountered during the operation shall be furnished by the Contractor. Corresponding H&M balance drawings are to be supplied by the Contractor.
+The outage durations of GT, HRSG and ST shall be defined.
+The  outage  frequency  shall  be  defined  for  HRSG,  ST  and  GT  (in  line  with  the  typical  LTSA assumptions)."
+R&N_ITB,test_temp_R&N_ITB_chunk_452,107,7.2.11_Piling_and_isolated_footings,"7, 2, 11",list,"list_item, text",7.1_Scope_of_Civil_Works > 7.2.11_Piling_and_isolated_footings,Civil Works,Piling and Isolated Footings,Foundations for major plant equipment and buildings,,,"Steam turbine foundations, Gas turbine foundations, HRSG foundations, Air Cooled Condenser foundations, GT and UAT foundations, Deaerator and feed water structure foundations, Tank/Pump foundations, Main and bypass stack foundation, key dynamic equipment foundations, earthwork and levelling",True,Explicitly lists 'Air cooled condenser' and 'Air Cooled Condenser Foundations' among major/key foundations.,True,,high,False,Explicit civil/structural scope identifying specific plant foundations and sensitive/dynamic equipment foundations; useful anchors for matching foundation design drawings/calculations/specs in MDL.,"- Steam and Gas turbines Building foundations if applicable
+- HRSG Foundations
+- Air cooled condenser
+- GT and UAT foundations
+- Deaerator and Feed water Structure foundations and Tank/Pump foundations
+- GT and UAT foundations
+Following  sensitive  structures  and  foundations  shall  be  designed  by  the  reputed  Consultant  subject  to Owner's recommendation and approval.
+- Steam and Gas Turbines foundations
+- Steam and Gas turbines Building foundations if applicable
+- Main Building foundations as control and electrical buildings
+- Deaerator and Feed water Structure foundations and Tank/Pump foundations
+- Main and Bypass Stack foundation
+- Key dynamic equipment foundations
+- Air Cooled Condenser Foundations
+- GT and UAT foundations
+Earthwork and levelling shall also be designed and performed by the reputed Contractor and Consultant as per Owner's recommendation and approval"
+R&N_ITB,test_temp_R&N_ITB_chunk_719,218,10.3.1_General,"10, 3, 1",list,list_item,10.1_Fuel_System > 10.3.1_General,Steam Turbine Generator,Package Scope,Auxiliaries and Interfaces,,,"three-phase AC generator, excitation and voltage regulation, synchronizing facilities, generator neutral and line connection facilities, steam turbine I&C system, dual or triple pressure stage turbine, emergency stop valves for live steam and HP steam, steam strainers, hydraulic or pneumatic operated control valves, turning device (100% AC motor and 100% DC motor), shaft sealing glands and gland steam condenser, safety relief valve in turbine exhaust line, turbine exhaust steam line to duct air cooled condenser, LP section cooling at low load (spray system), noise and heat insulation, static and dynamic foundation calculation, deflection calculation due to forces and moments, extensive vibration monitoring facilities, supporting steelworks/access walkways/ladders/service platforms",True,"Explicit interface: ""Turbine exhaust steam line (to supply duct air cooled condenser)"" indicating ACC connection.",True,,high,False,"Detailed list of STG package components and interfaces (electrical, I&C, valves, condenser tie-in), plus foundation calculations and vibration monitoring—strong signals for matching existing engineering documents.","- Three  phase  AC  generator,  including  excitation  and  voltage  regulation  and  all  other  required auxiliaries
+- Synchronizing facilities
+- Steam turbine related electrical facilities, including generator neutral and line connection facilities
+- Steam turbine Instrumentation and control (I&C) system.
+- Dual or Triple Pressure Stage turbine depending on the proposed design Emergency stop valves for live steam and HP steam complete, including the necessary blow-out provisions,
+- Steam strainers for installation in the emergency stop valve or including housing for installation in the live steam and HP steam admission line,
+- Hydraulically or pneumatic operated control valves at the inlet of the turbine,
+- Motorised or hydraulic turning device, complete, with manual turning equipment and one
+- (1) x 100% AC and one (1) x 100% DC motor
+- Shaft sealing glands and gland steam system complete with gland steam condenser,
+- Safety relief valve in the turbine exhaust line,
+- Turbine drain system, complete,
+- HP steam infeed line, complete, including stop and control valves,
+- Turbine exhaust steam line (to supply duct air cooled condenser),
+- Cooling system in LP section to prevent overheating at low load, e.g. spray system, if necessary,
+- Complete noise and heat insulation,
+- Turbine enclosure, complete, as required,
+- Fire protection equipment,
+- All connecting piping, bearings, fittings, safety devices, fastenings, etc.,
+- Static  and  dynamic  calculation  of  the  complete  foundations,  common  for  steam  turbine  and generator, including deflection calculation due to occurring forces and moments,
+- Extensive  vibration  monitoring  facilities  for  a  continuous  diagnosis  of  the  rotating  parts  and bearings of the turbine, and
+- Necessary supporting steelworks, access walkways, ladders, service platforms for the complete steam turbine generators area, also covering all auxiliary equipment."
+R&N_ITB,test_temp_R&N_ITB_chunk_720,218,10.3.2_Condensing_Steam_Turbines,"10, 3, 2",content,text,10.1_Fuel_System > 10.3.2_Condensing_Steam_Turbines,Steam Turbine Generator,Condensing Steam Turbines,Air-cooled condenser configuration,,,"water scarcity, wet cooling towers not feasible, air-cooled condensers, steam turbine exhaust, manufacturer standard design, directly coupled 60 Hz generators, located indoors, ventilated atmosphere",True,Explicitly states “air-cooled condensers will be the basis for steam turbine condensers” and mentions “air-cooled condenser configuration”.,True,,high,False,"Defines condenser cooling basis (air-cooled), generator coupling/frequency, and indoor/ventilated installation requirements—useful anchors to retrieve STG/ACC design documents.","Due to the scarcity of water, solutions involving wet cooling towers are not feasible and air-cooled. condensers  will  be  the  basis  for  steam  turbine  condensers.  The  steam  turbine  exhaust  and  air-cooled condenser  configuration  shall  be  as  per  manufacturer's  standard  design.  The  steam  turbines  shall  be complete with and directly coupled to 60Hz generators. Steam turbines shall be provided for the Plant as defined in this OTS and shall be located indoors in a ventilated atmosphere."
+R&N_ITB,test_temp_R&N_ITB_chunk_721,219,10.3.2_Condensing_Steam_Turbines,,content,text,10.1_Fuel_System > 10.3.2_Condensing_Steam_Turbines,Steam Turbine Generator,Condensing Steam Turbines,Reheat multi-pressure condensing turbine requirements,,,"reheat multiple pressure condensing type, air-cooled condenser, direct coupling, two-pole generator, 60 Hz, impulse or reaction blading acceptable, HP turbine steam admission, stop and control valves, steam turbine governor, stable conditions control",True,Mentions turbine is “condensing type using an air-cooled condenser”.,True,,high,False,"Provides specific turbine type (reheat, multi-pressure, condensing) and control/valving requirements that can match STG datasheets/specifications and control narratives.","The turbine shall be a reheat, multiple pressure condensing type using an air-cooled condenser and be suitable for direct coupling to a two-pole generator for power generation at 60 Hz. Designs for impulse or reaction blading, or for combinations thereof, are equally acceptable.
+The steam admission to the HP turbine section shall be via suitable stop and control valves. The steam turbine governor shall be capable of controlling the steam turbine to maintain stable conditions."
+R&N_ITB,test_temp_R&N_ITB_chunk_741,224,10.4.1_Steam_Turbine_Condensers,"10, 4, 1",content,"text, list_item",10.4_Condensing_Systems > 10.4.1_Steam_Turbine_Condensers,Condensing Systems,Steam Turbine Condensers,Air Cooled Condenser (ACC) system scope,,,"air cooled condenser (ACC), steam turbine exhaust to condenser steam duct, LP-steam headers letdown, condensate collection headers, air moving system, fan drives, steel support structure (platforms, stairways, escape ladder), air recirculation prevention, noise attenuation features, earthing and lightning protection, air evacuation pumps, ejector condenser drain tank strainers, condensate tank and drain, drain and vent pumping (valves, traps), steam turbine bypass steam on trip, reserve capacity for steam turbine overloads, ACC outside heat transfer surface cleaning (semi-automatic)",True,"Explicitly titled 'Air Cooled Condenser (ACC) system scope' and lists ACC equipment (steam ducting, fan drives, steel support structure, air evacuation pumps, ACC cleaning system).",True,,high,False,"Defines ACC condenser system scope and functional sizing requirements (operating ranges, bypass on trip, reserve capacity) with multiple equipment/interface anchors useful for matching condenser/ACC datasheets, P&IDs, layouts, and electrical/control documents.","Air cooled condenser(s) will be required to let down steam from the condensing part of the steam turbine and from the LP-steam headers.
+The system shall comprise at least the following equipment:
+- steam duct from the steam reducing stations to condenser and steam distribution ducting,
+- steam duct from turbine exhaust flange to condenser and steam distribution ducting,
+- condensate collection headers,
+- air moving system,
+- fan drives,
+- steel support structure, including maintenance platforms, access stairways and escape ladder,
+- facilities for prevention of air recirculation,
+- noise attenuation features/devices as required,
+- all  required  electrical  and  control  equipment  for  safe  operation,  monitoring  and  measuring, earthing and lightning protection,
+- air evacuation pumps, if applicable,
+- ejector condenser, drain tank and strainers at ejector steam inlets,
+- condensate tank and drain,
+- drain and vent pumping, piping, valves and traps with supports, and
+- semi-automatic ACC outside heat transfer surface cleaning system.
+The steam turbine condenser shall be complete in every respect for reliable, efficient and safe operation for a high service lifetime. The design of the air-cooled condenser shall be in accordance with the ambient conditions at Project Site and steam turbine requirements.
+The condenser shall be sized to receive:
+- Condense all steam for all operating ranges
+- Accept the full steam turbine bypass steam when the steam turbine trips.
+The  capacity  of  the  steam  turbine  condenser  shall  include  a  reserve  to  cover  possible  steam  turbine overloads."
+R&N_ITB,test_temp_R&N_ITB_chunk_742,"224, 225",10.4.1.1_Air_moving_system,"10, 4, 1, 1",content,text,10.4_Condensing_Systems > 10.4.1_Steam_Turbine_Condensers > 10.4.1.1_Air_moving_system,Condensing Systems,Steam Turbine Condensers,Air moving system (axial fans and drives),,,"heat exchanging cell, individual axial flow fan, adjustable fan blades (when out of service), variable speed motor drive, continuous outdoor service, cold start at any ambient temperature (specified range), shock loading from reverse rotation (wind/convection), reverse rotation lock (alternative), remote control from Control Room, optimize configuration based on ambient condition",True,Describes ACC air moving system: 'heat exchanging cell' with 'individual axial flow fan' and 'variable speed motor' remote control.,True,,high,False,"Provides specific technical requirements for ACC fan/drive design, operability, and control interfaces that can retrieve fan datasheets, motor/VSD specs, control narratives, and ACC mechanical design documents.","The cooling air to each heat exchanging cell shall be forced by individual axial flow fan; each fan, whose blades shall be adjustable when the fan is out of service, shall be driven by a variable speed motor.
+All the components of the fan/drive unit shall be designed for continuous outdoor service over the range of air condenser loads, ambient air temperatures and air temperatures adjacent to the tube bundles.
+It shall be possible to initiate a cold start of the fans during any ambient air temperature within the specified range.
+All drive components shall be rated to take into account any shock loading that may occur from starting a fan which may be rotating in a reverse direction under the influence of prevailing winds or convection currents. As an alternative, a reverse rotation lock may be provided.
+Each fan drive shall be individually remotely controlled from the Control Room allowing the operator to optimize the operative configuration on the basis of actual ambient condition."
+R&N_ITB,test_temp_R&N_ITB_chunk_743,225,10.4.1.2_ACC_cleaning_system,"10, 4, 1, 2",content,text,10.4_Condensing_Systems > 10.4.1_Steam_Turbine_Condensers > 10.4.1.2_ACC_cleaning_system,Condensing Systems,Steam Turbine Condensers,ACC cleaning system,,,"air cooled condenser (ACC), outside heat transfer surface cleaning, semi-automatic high-pressure spray-water cleaning, periodic cleaning during normal operation, maintain heat transfer coefficient, cleaning while ACC in operation",True,Section 'ACC cleaning system' and states cleaning while 'the ACC is in operation'.,True,,high,False,"States explicit requirement for an ACC spray-water cleaning system and operational constraints, useful to match ACC auxiliary systems, water supply/cleaning system P&IDs, and O&M documentation.","It shall be possible to clean the outside heat transfer surfaces by application of well established cleaning procedures. A semi-automatic high-pressure spray-water cleaning system shall be supplied for periodically cleaning the heat exchanger external surfaces during normal operation, keeping them free of deposits and maintaining the heat transfer coefficient of the condenser. It shall be possible for this cleaning system to be used whilst the ACC is in operation."
+R&N_ITB,test_temp_R&N_ITB_chunk_788,240,10.7_Plant_Main_Cooling,"10, 7",content,"text, list_item",10.7_Plant_Main_Cooling,Plant Main Cooling,,,,,"Air Cooled Condenser, OTS Part A 1.2.3.7, OTS Part A 4.2.7, Part B 6.2.1, Water Treatment Plant",True,"Explicitly references ""Air Cooled Condenser"" and points to ACC sections (OTS Part A 1.2.3.7, 4.2.7; Part B 6.2.1).",False,Primarily cross-references and section navigation (N.A. items) without technical requirements.,low,True,Contains references and section pointers only; insufficient technical content for MDL retrieval matching.,"Refer to sections 1.2.3.7 and 4.2.7 of OTS Part A and section 6.2.1 of this Part B (Air Cooled Condenser).
+- 10.8 N.A.
+- 10.9 -N.A.
+- 10.10 Water Treatment Plant"
+R&N_ITB,test_temp_R&N_ITB_chunk_950,"290, 291",11.10.2_Power_Block_and_BOP_Commissioning_Tests,,content,"text, list_item",11._OWNER'S__MINIMUM__INSPECTIONS__&__TESTING__ON__FACTORY__AND__SITE__QUALITY_ACCEPTANCE_TESTS > 11.7_Turn-Over-Packages > 11.10.2_Power_Block_and_BOP_Commissioning_Tests,Owner's Minimum Inspections & Testing,Turn-Over Packages,Power Block and BOP Commissioning Tests,,,"GT OEM dual redundant electrical overspeed trip devices, mechanical overspeed trip device cannot be provided, bearing metal temperature not applied to GT trip function, bearing metal temperature high alarm only, shaft vibration high alarm and trip, overspeed trip interlock test at full speed no load (FSNL), simulation interlock test at GT shutdown condition, electric overspeed trip devices approved by SIL study, generator cooling system (hydrogen/water/air) functionality test, generator oil seal system functionality test, speed governor no load tests (start sequence, speed steps, natural oscillations, synchronization range), speed governor on load tests (load rejection at 100%, island operation, exhaust gas high temperature limiter), steam turbine EHC (electro-hydraulic control) if applicable, Air Cooled Condenser vacuum leak test, HVAC relative moisture test, HVAC air balance, overhead crane static load tests, demineralization plant pumps running tests",True,Explicit section 'Air Cooled Condenser' with commissioning requirements including 'Logic and interlock tests' and 'Vacuum leak test'.,True,,high,False,"Provides specific commissioning/test requirements and design constraints (overspeed trip redundancy, SIL study, FSNL testing) plus equipment-specific test scopes (ACC vacuum leak, EHC, HVAC, crane, demin plant) useful for MDL retrieval.","GT OEM will provide dual redundant Electrical over speed trip devices as per OEM standard design, and Mechanical over speed trip device cannot be provided.
+The high bearing metal temperature will not be applied to GT trip function as per OEM standard design. The high temperature alarm will be provided. The bearing metal temperature is expected to increase gradually, and there is enough time for an operator to take proper action such as the unit shutdown after alarm acknowledgement.
+The shaft vibration (not bearing vibration) high alarm and trip functions will be provided.
+Over speed Trip interlock test will be carried out after Gas turbine reaches full speed no load.
+Regarding other trip tests, simulation interlock test will be carried out at Gas Turbine shut down condition.
+Electric over speed tip devices shall be approved by SIL study during the execution stage.
+- Gas and steam Turbine Cooling generator system (hydrogen, water or air) and oil seal generator system
+- o Primary elements verification of calibration
+- o Loop tests
+- o Functionality test
+- Gas and Steam Turbine Speed governor
+- o No  load  tests  (Start  sequence,  Response  to  speed  steps,  Natural  oscillations,  trip  for  over  speed, synchronization range)
+- o On load tests (Power statism, load limiter and load variator, Load rejection at 100% load in regulation mode, Island operation, tests limiter for high temperature in exhaust gases, load variation ramp)
+- Steam Turbine Electro-Hydraulic Control Turbine System (EHC). If applicable.
+- o Speed Control, acceleration control, speed regulation, speed equalizer
+- o Load control, Load-frequency control, load governor change and load limit, pressure regulator, Load redactor  for  vacuum  lose and/or  turbine  auxiliaries,  power/load  unbalance,  valves flow  pressure limiter, on off valves control, steam valves control, etc.
+- Air Cooled Condenser
+- o Primary elements verification of calibration
+- o Loop tests
+- o Logic and interlock tests
+- o Functionality tests
+- o Vacuum leak test
+- HVAC system
+- o Relative moisture test
+- o Temperature control cold/hot
+- o Automatism control
+- o Air balance
+- Hoist
+- o Movement or translation tests
+- o Length and extent cable test
+- o Rotation test if applicable
+- o Weight capacity test
+- o Overhead crane static load tests
+- o Movement Load Tests
+- Demineralization plant
+- o Primary elements verification of calibration
+- o Filters functionality verification
+- o Loop tests
+- o Logic and interlock tests
+- o Pumps running, tests
+- o Functionality tests"
