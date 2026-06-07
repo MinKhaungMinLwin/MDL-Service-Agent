@@ -173,7 +173,11 @@ def _format_schedule_row(
 
     sub_type = rule.sub_type if rule else ""
     rule_name = rule.item_name if rule else ""
+    rule_keyword = rule.doc_keyword if rule else ""
+    rule_priority = rule.priority if rule else ""
     vt_parsed: dict = rule.vt_parsed if rule else {}
+    vt_raw = vt_parsed.get("raw", "") if vt_parsed else ""
+    vt_description = rule.describe() if rule else ""
 
     # Compute FA/FC date ranges
     dr = DateRange()
@@ -184,7 +188,7 @@ def _format_schedule_row(
         anchor = resolve_anchor_date(activity.start_date, activity.finish_date, rule, shift_days)
         ntp_floor = TEMPLATE_NTP + timedelta(days=shift_days) if shift_days else None
         dr = compute_date_range(vt_parsed, anchor, sub_type, rule.priority, ntp_floor=ntp_floor)
-        date_range_status = "generated" if anchor is not None else "missing_date"
+        date_range_status = _date_range_status(anchor, dr)
 
     return {
         "source_file": row.get("Source File", ""),
@@ -197,6 +201,10 @@ def _format_schedule_row(
         "itb_sources": row.get("itb_sources", ""),
         "rule_query": rule_query,
         "matched_rule": rule_name,
+        "matched_rule_keyword": rule_keyword,
+        "matched_rule_priority": rule_priority,
+        "matched_rule_validation_time": vt_raw,
+        "matched_rule_date_formula": vt_description,
         "submission_type": sub_type,
         "matched_activity_id": activity.activity_id,
         "matched_activity_name": activity.activity_name_clean or activity.activity_name,
@@ -211,8 +219,22 @@ def _format_schedule_row(
         "fc_latest": _fmt_date(dr.fc_latest),
         "date_range_status": date_range_status,
         "date_range_confidence": f"{dr.confidence:.2f}" if dr.confidence else "",
+        "date_range_notes": dr.notes,
         "ntp_shift_days": shift_days if shift_days else "",
     }
+
+
+def _date_range_status(anchor: date | None, dr: DateRange) -> str:
+    """Return an output status that reflects date completeness, not only rule match success."""
+    if anchor is None:
+        return "missing_date"
+    if not dr.fa_recommended and not dr.fc_recommended:
+        return "missing_date_range"
+    if not dr.fa_recommended:
+        return "missing_fa"
+    if not dr.fc_recommended:
+        return "missing_fc"
+    return "generated"
 
 
 def _compute_shift(ntp_date: str) -> int:
