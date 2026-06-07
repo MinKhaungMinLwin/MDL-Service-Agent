@@ -30,6 +30,9 @@ def extract(argv: list[str] | None = None) -> None:
     """Run ITB extraction and write CSV, JSON, and token outputs."""
     parser = argparse.ArgumentParser(description="Extract ITB depth metadata from parsed chunk JSON.")
     parser.add_argument("--section", choices=sorted(SECTION_CONFIG), default=os.getenv("ITB_SECTION", "7").strip())
+    parser.add_argument("--min-page", type=int, default=None, help="Override the section's page range start.")
+    parser.add_argument("--max-page", type=int, default=None, help="Override the section's page range end.")
+    parser.add_argument("--output-stem", default=None, help="Override the output file stem (default: output_itb_section{N}_focused).")
     parser.add_argument("--chunks-file", type=Path, default=DEFAULT_CHUNKS_DIR / "R&N_ITB_chunks.json")
     parser.add_argument("--document-name", default="R&N_ITB")
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
@@ -41,14 +44,26 @@ def extract(argv: list[str] | None = None) -> None:
     parser.add_argument("--verify", action="store_true", default=_env_flag("ITB_ENABLE_LLM_VERIFY"))
     args = parser.parse_args(argv)
 
-    section_config = SECTION_CONFIG[args.section]
-    output_stem = f"output_itb_section{args.section}_focused"
+    page_range_override = args.min_page is not None and args.max_page is not None
+    if page_range_override:
+        # An explicit page range may span multiple top-level sections (e.g. a
+        # keyword-derived window), so a single requested_section would make the
+        # LLM's section-boundary check reject valid chunks. Skip that check —
+        # empty requested_section disables it (see _is_rejected_by_section_boundary).
+        min_page, max_page = args.min_page, args.max_page
+        requested_section = ""
+    else:
+        section_config = SECTION_CONFIG[args.section]
+        min_page = section_config["min_page"]
+        max_page = section_config["max_page"]
+        requested_section = args.section
+    output_stem = args.output_stem or f"output_itb_section{args.section}_focused"
     config = ITBExtractionConfig(
         model=required_env("AZURE_OPENAI_CHAT_DEPLOYMENT"),
         batch_size=max(1, args.batch_size),
         max_chunks=args.max_chunks,
         enable_verification=args.verify,
-        requested_section=args.section,
+        requested_section=requested_section,
     )
     client = build_azure_openai_client(
         api_version_env="AZURE_OPENAI_CHAT_API_VERSION",
@@ -68,8 +83,8 @@ def extract(argv: list[str] | None = None) -> None:
             ITBTarget(
                 chunks_file=args.chunks_file,
                 document_name=args.document_name,
-                min_page=section_config["min_page"],
-                max_page=section_config["max_page"],
+                min_page=min_page,
+                max_page=max_page,
             )
         ],
         csv_path=args.output_dir / f"{output_stem}.csv",
@@ -78,7 +93,7 @@ def extract(argv: list[str] | None = None) -> None:
         rejected_csv_path=args.output_dir / f"{output_stem}_rejected.csv",
         rejected_json_path=args.output_dir / f"{output_stem}_rejected.json",
     )
-    logger.info("Extracted {} ITB chunks for section {}", count, args.section)
+    logger.info("Extracted {} ITB chunks for pages {}-{} (section arg: {})", count, min_page, max_page, args.section)
 
 
 def _env_flag(name: str) -> bool:
