@@ -1,0 +1,8 @@
+deliverable_family,scope_family,allowed_rule_families,allowed_activity_phases,anchor_policy,notes
+technical_specification,*,technical_specification,procurement,start,Technical specifications should prefer technical-spec rules and procurement/P.O anchors.
+p&id,*,p&id,system_design|procurement,start,P&ID can anchor to system design or procurement depending validation rule activity keyword.
+system_description,*,system_description,system_design|procurement,start,System descriptions can anchor to system design or procurement depending validation rule activity keyword.
+curve,gtg,curve,installation|erection|procurement,start,Generator capability/performance curves should stay in curve family; FC-only rules require domain review.
+curve,acc,curve,procurement,start,ACC performance curves anchor to procurement/P.O.
+classification,plant,classification,engineering|procurement,start,Plant/site classifications should stay in classification family.
+diagram,*,diagram|logic|configuration,system_design|engineering,start,Diagrams may be compatible with logic/configuration only when scope matches.

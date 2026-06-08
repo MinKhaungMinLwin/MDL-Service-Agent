@@ -25,9 +25,12 @@ from schedule_service.normalizer import (
 from schedule_service.normalizer import (
     normalize_equipment as _normalize_equipment_fn,
 )
+from schedule_service.normalizer import refine_deliverable_with_title
 
-DEFAULT_SCORE_THRESHOLD = 0.75
-DEFAULT_TOP_N = 5          # how many Matched_Doc_N per row to consider
+DEFAULT_SCORE_THRESHOLD = 0.70
+DEFAULT_TOP_N = 20         # how many Matched_Doc_N per row to consider
+DEFAULT_SELECTION_TOP_PER_CHUNK = 10
+DEFAULT_SELECTION_HIGH_SCORE = 0.82
 DEFAULT_OUTPUT_DIR = Path("output/schedule_service/candidates")
 
 
@@ -68,6 +71,7 @@ def extract_candidates(
         "Extracted {} unique MDL candidates (threshold={}, top_n={})",
         len(candidate_list), score_threshold, top_n,
     )
+    _select_final_candidates(candidate_list)
 
     llm_timing: dict[str, Any] = {"llm_enabled": False}
     if classify_with_llm and candidate_list:
@@ -76,6 +80,8 @@ def extract_candidates(
             len(candidate_list),
         )
         llm_timing = _classify_candidates(candidate_list)
+        _refresh_candidate_quality(candidate_list)
+        _select_final_candidates(candidate_list)
 
     t_llm = time.perf_counter()
 
@@ -160,7 +166,10 @@ def _extract_candidates_from_json_records(
 def _candidate_from_json(candidate: dict[str, Any]) -> dict[str, Any]:
     """Normalize one structured JSON candidate into the schedule-candidate shape."""
     title = _as_text(candidate.get("title"))
-    deliverable = _as_text(candidate.get("deliverable")) or _extract_deliverable(title)
+    deliverable = refine_deliverable_with_title(
+        _as_text(candidate.get("deliverable")) or _extract_deliverable(title),
+        title,
+    )
     equipment = _normalize_equipment(_as_text(candidate.get("equipment")))
     if not equipment:
         equipment = _extract_equipment_from_title(title)
@@ -182,6 +191,64 @@ def _candidate_from_json(candidate: dict[str, Any]) -> dict[str, Any]:
         "retrieval_rank": candidate.get("retrieval_rank"),
         "parse_source": "json_metadata",
     }
+
+
+def _select_final_candidates(
+    candidates: list[dict[str, Any]],
+    top_per_chunk: int = DEFAULT_SELECTION_TOP_PER_CHUNK,
+    high_score_threshold: float = DEFAULT_SELECTION_HIGH_SCORE,
+) -> None:
+    """Mark the final candidates to feed into schedule generation while keeping backups for audit."""
+    selected: set[int] = set()
+    reasons: dict[int, set[str]] = {idx: set() for idx in range(len(candidates))}
+    chunk_candidates: dict[str, list[tuple[int, float, int]]] = {}
+    for idx, candidate in enumerate(candidates):
+        for chunk_id, rank in _candidate_chunk_ranks(candidate).items():
+            chunk_candidates.setdefault(chunk_id, []).append((rank, -float(candidate.get("score") or 0.0), idx))
+        if float(candidate.get("score") or 0.0) >= high_score_threshold:
+            selected.add(idx)
+            reasons[idx].add(f"high_score>={high_score_threshold:.2f}")
+
+    best_selected_rank: dict[int, int] = {}
+    for chunk_id, items in chunk_candidates.items():
+        items.sort()
+        for rank, _score_sort, idx in items[:top_per_chunk]:
+            selected.add(idx)
+            reasons[idx].add(f"top_{top_per_chunk}:{chunk_id}")
+            best_selected_rank[idx] = min(best_selected_rank.get(idx, rank), rank)
+
+    for idx, candidate in enumerate(candidates):
+        chunk_ranks = _candidate_chunk_ranks(candidate)
+        candidate["candidate_selection_status"] = "selected" if idx in selected else "backup"
+        candidate["candidate_selection_rank"] = best_selected_rank.get(idx, min(chunk_ranks.values() or [0])) or ""
+        candidate["candidate_selection_score"] = _candidate_selection_score(candidate)
+        candidate["candidate_selection_reasons"] = (
+            ";".join(sorted(reasons[idx])) if idx in selected else "outside_top_k"
+        )
+
+
+def _candidate_chunk_ranks(candidate: dict[str, Any]) -> dict[str, int]:
+    ranks: dict[str, int] = {}
+    for source in candidate.get("itb_sources", []):
+        for chunk_id in re.findall(r"[A-Za-z0-9_.&-]+_chunk_\d+", source):
+            rank_match = re.search(r"rank=(\d+)", source)
+            rank = int(rank_match.group(1)) if rank_match else int(candidate.get("rank") or 999)
+            ranks[chunk_id] = min(ranks.get(chunk_id, rank), rank)
+    return ranks
+
+
+def _candidate_selection_score(candidate: dict[str, Any]) -> float:
+    score = float(candidate.get("score") or 0.0)
+    best_rank = min(_candidate_chunk_ranks(candidate).values() or [99])
+    rank_bonus = max(0, DEFAULT_TOP_N + 1 - best_rank) * 0.003
+    completeness_bonus = 0.0
+    if candidate.get("deliverable", "").strip():
+        completeness_bonus += 0.015
+    if any(candidate.get(field, "").strip() for field in ("equipment", "system", "building")):
+        completeness_bonus += 0.015
+    if candidate.get("candidate_status") == "accepted":
+        completeness_bonus += 0.010
+    return score + rank_bonus + completeness_bonus
 
 
 def _candidate_score(candidate: dict[str, Any]) -> float:
@@ -371,7 +438,7 @@ def _candidate_quality(candidate: dict[str, Any]) -> tuple[str, str]:
     )
     if not candidate.get("title", "").strip():
         issues.append("missing_title")
-    if not scope.strip():
+    if not scope.strip() and not _is_global_scope_candidate(candidate):
         issues.append("missing_scope")
     if not candidate.get("deliverable", "").strip():
         issues.append("missing_deliverable")
@@ -379,6 +446,44 @@ def _candidate_quality(candidate: dict[str, Any]) -> tuple[str, str]:
         issues.append("equipment_looks_like_document_code")
     status = "accepted" if not issues else "needs_review"
     return status, ";".join(issues)
+
+
+def _is_global_scope_candidate(candidate: dict[str, Any]) -> bool:
+    """Return True when a candidate is intentionally plant-level instead of scoped to equipment/system/building."""
+    title = _norm(candidate.get("title", ""))
+    deliverable = _norm(candidate.get("deliverable", ""))
+    text = f"{title} {deliverable}"
+    if not title or not deliverable:
+        return False
+
+    global_title_patterns = (
+        "PLANT OVERALL",
+        "PLANT PERFORMANCE",
+        "PLANT GENERAL",
+        "OVERALL PLANT",
+        "OVERALL PROTECTION",
+        "OVERALL SYSTEM",
+        "SITE",
+    )
+    if any(pattern in text for pattern in global_title_patterns):
+        return True
+
+    global_deliverable_patterns = (
+        "HAZARDOUS AREA CLASSIFICATION",
+        "AREA CLASSIFICATION",
+        "PERFORMANCE CORRECTION CURVE",
+        "PERFORMANCE CURVE",
+        "CAPABILITY CURVE",
+        "CORRECTION CURVE",
+    )
+    if any(pattern in text for pattern in global_deliverable_patterns):
+        return True
+
+    if "CLASSIFICATION" in deliverable and any(pattern in title for pattern in ("PLANT", "OVERALL", "SITE")):
+        return True
+    return "CURVE" in deliverable and any(
+        pattern in title for pattern in ("PLANT PERFORMANCE", "PERFORMANCE", "CAPABILITY")
+    )
 
 
 def _looks_like_document_code(value: str) -> bool:
@@ -419,6 +524,10 @@ def _write_csv(path: Path, candidates: list[dict[str, Any]]) -> None:
         "candidate_status",
         "quality_issues",
         "needs_review",
+        "candidate_selection_status",
+        "candidate_selection_rank",
+        "candidate_selection_score",
+        "candidate_selection_reasons",
         "doc_id",
         "parse_source",
         "semantic_score",
@@ -445,6 +554,10 @@ def _write_csv(path: Path, candidates: list[dict[str, Any]]) -> None:
                 "candidate_status": c.get("candidate_status", ""),
                 "quality_issues": c.get("quality_issues", ""),
                 "needs_review": "true" if c.get("candidate_status") != "accepted" else "false",
+                "candidate_selection_status": c.get("candidate_selection_status", ""),
+                "candidate_selection_rank": c.get("candidate_selection_rank", ""),
+                "candidate_selection_score": _fmt_optional_score(c.get("candidate_selection_score")),
+                "candidate_selection_reasons": c.get("candidate_selection_reasons", ""),
                 "doc_id": c.get("doc_id", ""),
                 "parse_source": c.get("parse_source", ""),
                 "semantic_score": _fmt_optional_score(c.get("semantic_score")),
@@ -578,10 +691,15 @@ def _needs_llm_classification(candidate: dict[str, Any]) -> bool:
     if not candidate.get("deliverable", "").strip():
         return True
     has_scope = any(candidate.get(field, "").strip() for field in ("equipment", "system", "building"))
-    if not has_scope:
+    if not has_scope and not _is_global_scope_candidate(candidate):
         return True
     return _looks_like_document_code(candidate.get("equipment", ""))
 
 
 def _field_needs_repair(field: str, value: str) -> bool:
     return field == "equipment" and _looks_like_document_code(value)
+
+
+def _refresh_candidate_quality(candidates: list[dict[str, Any]]) -> None:
+    for candidate in candidates:
+        candidate["candidate_status"], candidate["quality_issues"] = _candidate_quality(candidate)

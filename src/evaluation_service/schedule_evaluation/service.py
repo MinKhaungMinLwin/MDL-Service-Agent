@@ -54,6 +54,58 @@ MISSING_GT_HEADER = [
     "reason",
 ]
 
+RAW_MATCH_AUDIT_HEADER = [
+    "section",
+    "chunk_id",
+    "mdl_doc_id",
+    "raw_found",
+    "raw_rank",
+    "raw_score",
+    "raw_score_source",
+    "candidate_top_n",
+    "candidate_score_threshold",
+    "passes_top_n",
+    "passes_score_threshold",
+    "candidate_found",
+    "candidate_status",
+    "generated_found",
+    "drop_stage",
+    "title",
+    "document_no",
+]
+
+GOLD_LABEL_HEADER = [
+    "section",
+    "chunk_id",
+    "mdl_doc_id",
+    "title",
+    "expected_rule_keyword",
+    "expected_submission_type",
+    "expected_activity_id",
+    "expected_activity_phase",
+    "expected_date_status",
+    "expected_anchor_type",
+    "notes",
+]
+
+GOLD_ANALYSIS_HEADER = [
+    *GOLD_LABEL_HEADER,
+    "candidate_found",
+    "generated_found",
+    "actual_rule_keyword",
+    "actual_submission_type",
+    "actual_activity_id",
+    "actual_activity_name",
+    "actual_activity_phase",
+    "actual_date_status",
+    "candidate_correct",
+    "rule_correct",
+    "activity_correct",
+    "date_correct",
+    "all_three_correct",
+    "mismatch_reasons",
+]
+
 STOP_TOKENS = {
     "A",
     "AN",
@@ -80,6 +132,7 @@ STOP_TOKENS = {
 
 DELIVERABLE_FAMILIES: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("p&id", ("P&ID", "P&I", "PIPING INSTRUMENT", "PIPING & INSTRUMENT")),
+    ("painting_specification", ("PAINTING SPECIFICATION", "PAINT SPECIFICATION")),
     ("painting", ("PAINTING", "PAINT")),
     ("foundation", ("FOUNDATION", "FDN")),
     ("technical_specification", ("TECHNICAL SPECIFICATION", "SPECIFICATION")),
@@ -102,7 +155,7 @@ DELIVERABLE_FAMILIES: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("logic", ("LOGIC",)),
 )
 
-SEVERE_FAMILIES = {"painting", "foundation"}
+SEVERE_FAMILIES = {"painting", "painting_specification", "foundation"}
 
 
 class ScheduleEvaluationService:
@@ -116,6 +169,11 @@ class ScheduleEvaluationService:
         output_dir: Path,
         sections: tuple[str, ...],
         relevance_threshold: int = 3,
+        matching_input_path: Path | None = None,
+        candidate_top_n: int = 20,
+        candidate_score_threshold: float = 0.70,
+        gold_labels_path: Path | None = None,
+        write_gold_template: bool = False,
     ) -> None:
         """Evaluate candidate and generated schedule artifacts."""
         ground_truth = _load_ground_truth(ground_truth_path, sections, relevance_threshold)
@@ -134,6 +192,24 @@ class ScheduleEvaluationService:
             candidate_by_doc_id,
             generated_analysis,
         )
+        raw_match_audit = (
+            _raw_match_audit_rows(
+                ground_truth=ground_truth,
+                candidates=candidates,
+                generated_analysis=generated_analysis,
+                matching_input_path=matching_input_path,
+                candidate_top_n=candidate_top_n,
+                candidate_score_threshold=candidate_score_threshold,
+            )
+            if matching_input_path
+            else []
+        )
+        gold_rows = _load_csv(gold_labels_path) if gold_labels_path else []
+        gold_analysis = (
+            _gold_label_analysis(gold_rows, candidates, generated_analysis, generated_rows)
+            if gold_rows
+            else []
+        )
         summary = _summary(
             ground_truth,
             candidates,
@@ -144,16 +220,37 @@ class ScheduleEvaluationService:
             sections,
             relevance_threshold,
         )
+        if gold_analysis:
+            summary["gold_label_rows"] = len(gold_analysis)
+            summary["gold_candidate_correct"] = sum(row["candidate_correct"] for row in gold_analysis)
+            summary["gold_rule_correct"] = sum(row["rule_correct"] for row in gold_analysis)
+            summary["gold_activity_correct"] = sum(row["activity_correct"] for row in gold_analysis)
+            summary["gold_date_correct"] = sum(row["date_correct"] for row in gold_analysis)
+            summary["gold_all_three_correct"] = sum(row["all_three_correct"] for row in gold_analysis)
 
         output_dir.mkdir(parents=True, exist_ok=True)
         _write_csv(output_dir / "row_analysis.csv", ROW_ANALYSIS_HEADER, generated_analysis)
         _write_csv(output_dir / "missing_ground_truth.csv", MISSING_GT_HEADER, missing_ground_truth)
+        if matching_input_path:
+            _write_csv(output_dir / "missing_ground_truth_raw_match_audit.csv", RAW_MATCH_AUDIT_HEADER, raw_match_audit)
+        if write_gold_template:
+            _write_csv(
+                output_dir / "schedule_gold_labels_template.csv",
+                GOLD_LABEL_HEADER,
+                _gold_label_template_rows(generated_analysis, ground_truth),
+            )
+        if gold_analysis:
+            _write_csv(output_dir / "gold_label_analysis.csv", GOLD_ANALYSIS_HEADER, gold_analysis)
         write_json(
             output_dir / "report.json",
             {
                 "ground_truth_path": str(ground_truth_path),
                 "candidates_path": str(candidates_path),
                 "generated_path": str(generated_path),
+                "matching_input_path": str(matching_input_path) if matching_input_path else "",
+                "candidate_top_n": candidate_top_n,
+                "candidate_score_threshold": candidate_score_threshold,
+                "gold_labels_path": str(gold_labels_path) if gold_labels_path else "",
                 "sections": list(sections),
                 "summary": summary,
             },
@@ -313,6 +410,279 @@ def _missing_ground_truth_rows(
     return rows
 
 
+def _raw_match_audit_rows(
+    ground_truth: dict[str, dict[str, dict[str, str]]],
+    candidates: list[dict[str, str]],
+    generated_analysis: list[dict[str, Any]],
+    matching_input_path: Path,
+    candidate_top_n: int,
+    candidate_score_threshold: float,
+) -> list[dict[str, Any]]:
+    raw_index = _load_raw_match_index(matching_input_path)
+    candidate_pairs = {
+        (chunk_id, candidate.get("doc_id", "").strip()): candidate
+        for candidate in candidates
+        if candidate.get("doc_id", "").strip()
+        for chunk_id in _source_chunks(candidate.get("itb_sources", ""))
+    }
+    generated_pairs = {
+        (chunk_id, row["doc_id"]): row
+        for row in generated_analysis
+        if row["doc_id"]
+        for chunk_id in str(row.get("source_chunks") or "").split(" | ")
+    }
+    rows = []
+    for chunk_id in sorted(ground_truth):
+        for doc_id, gt_row in sorted(ground_truth[chunk_id].items()):
+            raw = raw_index.get((chunk_id, doc_id), {})
+            candidate = candidate_pairs.get((chunk_id, doc_id), {})
+            generated = generated_pairs.get((chunk_id, doc_id), {})
+            raw_rank = _int_or_zero(raw.get("rank"))
+            raw_score = _float_or_none(raw.get("score"))
+            raw_found = bool(raw)
+            passes_top_n = raw_found and 0 < raw_rank <= candidate_top_n
+            passes_score = raw_found and raw_score is not None and raw_score >= candidate_score_threshold
+            candidate_found = bool(candidate)
+            generated_found = bool(generated)
+            rows.append(
+                {
+                    "section": gt_row.get("section", ""),
+                    "chunk_id": chunk_id,
+                    "mdl_doc_id": doc_id,
+                    "raw_found": raw_found,
+                    "raw_rank": raw_rank or "",
+                    "raw_score": _fmt_float(raw_score),
+                    "raw_score_source": raw.get("score_source", ""),
+                    "candidate_top_n": candidate_top_n,
+                    "candidate_score_threshold": candidate_score_threshold,
+                    "passes_top_n": passes_top_n,
+                    "passes_score_threshold": passes_score,
+                    "candidate_found": candidate_found,
+                    "candidate_status": candidate.get("candidate_status", ""),
+                    "generated_found": generated_found,
+                    "drop_stage": _raw_drop_stage(
+                        raw_found=raw_found,
+                        passes_top_n=passes_top_n,
+                        passes_score=passes_score,
+                        candidate_found=candidate_found,
+                        candidate_status=candidate.get("candidate_status", ""),
+                        generated_found=generated_found,
+                    ),
+                    "title": raw.get("title", "") or candidate.get("Title", ""),
+                    "document_no": raw.get("document_no", "") or candidate.get("Document No", ""),
+                }
+            )
+    return rows
+
+
+def _gold_label_template_rows(
+    generated_analysis: list[dict[str, Any]],
+    ground_truth: dict[str, dict[str, dict[str, str]]],
+) -> list[dict[str, Any]]:
+    rows = []
+    for generated in generated_analysis:
+        if not generated.get("exact_gt_hit"):
+            continue
+        for chunk_id in _source_chunks(str(generated.get("gt_positive_source_chunks") or "")):
+            gt_row = ground_truth.get(chunk_id, {}).get(generated["doc_id"], {})
+            rows.append(
+                {
+                    "section": gt_row.get("section", ""),
+                    "chunk_id": chunk_id,
+                    "mdl_doc_id": generated["doc_id"],
+                    "title": generated.get("title", ""),
+                    "expected_rule_keyword": generated.get("matched_rule_keyword", ""),
+                    "expected_submission_type": generated.get("submission_type", ""),
+                    "expected_activity_id": "",
+                    "expected_activity_phase": "",
+                    "expected_date_status": generated.get("date_range_status", ""),
+                    "expected_anchor_type": "",
+                    "notes": "",
+                }
+            )
+    return rows
+
+
+def _gold_label_analysis(
+    gold_rows: list[dict[str, str]],
+    candidates: list[dict[str, str]],
+    generated_analysis: list[dict[str, Any]],
+    generated_rows: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    candidate_pairs = {
+        (chunk_id, candidate.get("doc_id", "").strip())
+        for candidate in candidates
+        if candidate.get("doc_id", "").strip()
+        for chunk_id in _source_chunks(candidate.get("itb_sources", ""))
+    }
+    generated_by_pair = {
+        (chunk_id, analysis["doc_id"]): (analysis, generated_rows[index])
+        for index, analysis in enumerate(generated_analysis)
+        if analysis["doc_id"]
+        for chunk_id in str(analysis.get("source_chunks") or "").split(" | ")
+    }
+    rows = []
+    for gold in gold_rows:
+        chunk_id = str(gold.get("chunk_id") or "").strip()
+        doc_id = str(gold.get("mdl_doc_id") or "").strip()
+        generated_pair = generated_by_pair.get((chunk_id, doc_id))
+        analysis, generated = generated_pair if generated_pair else ({}, {})
+        candidate_found = (chunk_id, doc_id) in candidate_pairs
+        generated_found = bool(generated_pair)
+        rule_correct = _gold_rule_correct(gold, generated)
+        activity_correct = _gold_activity_correct(gold, generated)
+        date_correct = _gold_date_correct(gold, generated)
+        candidate_correct = candidate_found and generated_found
+        reasons = _gold_mismatch_reasons(
+            candidate_correct=candidate_correct,
+            rule_correct=rule_correct,
+            activity_correct=activity_correct,
+            date_correct=date_correct,
+        )
+        rows.append(
+            {
+                **{field: gold.get(field, "") for field in GOLD_LABEL_HEADER},
+                "candidate_found": candidate_found,
+                "generated_found": generated_found,
+                "actual_rule_keyword": generated.get("matched_rule_keyword", ""),
+                "actual_submission_type": generated.get("submission_type", ""),
+                "actual_activity_id": generated.get("matched_activity_id", ""),
+                "actual_activity_name": generated.get("matched_activity_name", ""),
+                "actual_activity_phase": generated.get("activity_match_activity_phase", ""),
+                "actual_date_status": generated.get("date_range_status", analysis.get("date_range_status", "")),
+                "candidate_correct": candidate_correct,
+                "rule_correct": rule_correct,
+                "activity_correct": activity_correct,
+                "date_correct": date_correct,
+                "all_three_correct": candidate_correct and rule_correct and activity_correct and date_correct,
+                "mismatch_reasons": ";".join(reasons),
+            }
+        )
+    return rows
+
+
+def _gold_rule_correct(gold: dict[str, str], generated: dict[str, Any]) -> bool:
+    expected_rule = _norm(gold.get("expected_rule_keyword", ""))
+    expected_submission = _norm(gold.get("expected_submission_type", ""))
+    rule_ok = not expected_rule or expected_rule == _norm(str(generated.get("matched_rule_keyword") or ""))
+    submission_ok = (
+        not expected_submission
+        or expected_submission == _norm(str(generated.get("submission_type") or ""))
+    )
+    return bool(generated) and rule_ok and submission_ok
+
+
+def _gold_activity_correct(gold: dict[str, str], generated: dict[str, Any]) -> bool:
+    expected_id = _norm(gold.get("expected_activity_id", ""))
+    expected_phase = _norm(gold.get("expected_activity_phase", ""))
+    id_ok = not expected_id or expected_id == _norm(str(generated.get("matched_activity_id") or ""))
+    phase_ok = (
+        not expected_phase
+        or expected_phase == _norm(str(generated.get("activity_match_activity_phase") or ""))
+    )
+    return bool(generated) and id_ok and phase_ok
+
+
+def _gold_date_correct(gold: dict[str, str], generated: dict[str, Any]) -> bool:
+    expected_status = _norm(gold.get("expected_date_status", ""))
+    status_ok = not expected_status or expected_status == _norm(str(generated.get("date_range_status") or ""))
+    return bool(generated) and status_ok
+
+
+def _gold_mismatch_reasons(
+    candidate_correct: bool,
+    rule_correct: bool,
+    activity_correct: bool,
+    date_correct: bool,
+) -> list[str]:
+    reasons = []
+    if not candidate_correct:
+        reasons.append("candidate")
+    if not rule_correct:
+        reasons.append("rule")
+    if not activity_correct:
+        reasons.append("activity")
+    if not date_correct:
+        reasons.append("date")
+    return reasons
+
+
+def _load_raw_match_index(path: Path) -> dict[tuple[str, str], dict[str, Any]]:
+    if path.suffix.lower() == ".json":
+        return _load_raw_match_json_index(path)
+    return _load_raw_match_csv_index(path)
+
+
+def _load_raw_match_json_index(path: Path) -> dict[tuple[str, str], dict[str, Any]]:
+    records = read_json(path)
+    if not isinstance(records, list):
+        raise ValueError(f"Expected raw matching JSON list at {path}")
+    index: dict[tuple[str, str], dict[str, Any]] = {}
+    for record in records:
+        chunk_id = str(record.get("chunk_id") or "").strip()
+        if not chunk_id:
+            continue
+        candidates = record.get("candidates") or record.get("retrieval_candidates") or []
+        for position, candidate in enumerate(candidates, start=1):
+            if not isinstance(candidate, dict):
+                continue
+            doc_id = str(candidate.get("doc_id") or "").strip()
+            if not doc_id:
+                continue
+            score, score_source = _raw_candidate_score(candidate)
+            rank = _int_or_zero(candidate.get("final_rank") or candidate.get("rank")) or position
+            key = (chunk_id, doc_id)
+            if key not in index or rank < _int_or_zero(index[key].get("rank")):
+                index[key] = {
+                    "rank": rank,
+                    "score": score,
+                    "score_source": score_source,
+                    "title": str(candidate.get("title") or ""),
+                    "document_no": str(candidate.get("document_no") or ""),
+                }
+    return index
+
+
+def _load_raw_match_csv_index(path: Path) -> dict[tuple[str, str], dict[str, Any]]:
+    # Legacy display CSV does not preserve doc_id, so exact GT doc-id audit is not possible.
+    _load_csv(path)  # validates that the CSV is readable
+    return {}
+
+
+def _raw_candidate_score(candidate: dict[str, Any]) -> tuple[float | None, str]:
+    for key in ("semantic_score", "rrf_score"):
+        value = _float_or_none(candidate.get(key))
+        if value is not None:
+            return value, key
+    value = _float_or_none(candidate.get("cross_encoder_score"))
+    if value is not None and value > 0:
+        return value, "cross_encoder_score"
+    return None, ""
+
+
+def _raw_drop_stage(
+    raw_found: bool,
+    passes_top_n: bool,
+    passes_score: bool,
+    candidate_found: bool,
+    candidate_status: str,
+    generated_found: bool,
+) -> str:
+    if not raw_found:
+        return "not_in_raw_matching"
+    if not passes_top_n:
+        return "rank_beyond_top_n"
+    if not passes_score:
+        return "below_score_threshold"
+    if not candidate_found:
+        return "not_kept_after_candidate_extraction"
+    if candidate_status.strip().lower() != "accepted":
+        return "candidate_needs_review"
+    if not generated_found:
+        return "not_generated"
+    return "kept_and_generated"
+
+
 def _summary(
     ground_truth: dict[str, dict[str, dict[str, str]]],
     candidates: list[dict[str, str]],
@@ -440,6 +810,19 @@ def _norm(value: str) -> str:
 
 def _ratio(numerator: int, denominator: int) -> float | None:
     return round(numerator / denominator, 6) if denominator else None
+
+
+def _float_or_none(value: Any) -> float | None:
+    try:
+        if value is None or value == "":
+            return None
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _fmt_float(value: float | None) -> str:
+    return f"{value:.4f}" if value is not None else ""
 
 
 def _int_or_zero(value: Any) -> int:

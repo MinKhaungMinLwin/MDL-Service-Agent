@@ -161,10 +161,21 @@ _DELIVERABLE_TO_RULE_KEYWORD: dict[str, str] = {
     "LAYOUT DRAWING": "Layout Drawing",
     "CALCULATION": "Calculation sheet",
     "SIZING CALCULATION": "Calculation sheet",
+    "PAINTING SPECIFICATION": "Painting Specification",
+    "PAINT SPECIFICATION": "Painting Specification",
     "TECHNICAL SPECIFICATION": "Technical Specification",
     "SPECIFICATION": "Technical Specification",
     "DATA SHEET": "Data Sheet",
     "DATASHEET": "Data Sheet",
+    "GENERATOR CAPABILITY CURVES AND DATA": "Generator Capability Curves and Data",
+    "CAPABILITY CURVES AND DATA": "Generator Capability Curves and Data",
+    "CAPABILITY CURVES": "Generator Capability Curves and Data",
+    "PERFORMANCE DATA AND CURVES": "Performance Data and Curves",
+    "PERFORMANCE CURVES": "Performance Curve",
+    "PERFORMANCE CURVE": "Performance Curve",
+    "PERFORMANCE DATA": "Performance Data and Curves",
+    "CURVES": "Performance Curve",
+    "CURVE": "Performance Curve",
     "OUTLINE DRAWING": "Outline Drawing",
     "SINGLE LINE DIAGRAM": "Single Line Diagram",
     "SLD": "Single Line Diagram",
@@ -211,6 +222,7 @@ _DELIVERABLE_SCAN_KEYWORDS: list[str] = [
     "PIPING ISO DRAWING", "ELEVATION", "PLAN & SECTION", "PLAN AND SECTION",
     "DRAWING",
     # Specification / Criteria / Requirements
+    "PAINTING SPECIFICATION", "PAINT SPECIFICATION",
     "TECHNICAL SPECIFICATIONS", "TECHNICAL SPECIFICATION", "SPECIFICATION",
     "DESIGN CRITERIA", "CRITERIA",
     "DESIGN REQUIREMENTS", "REQUIREMENTS",
@@ -229,7 +241,9 @@ _DELIVERABLE_SCAN_KEYWORDS: list[str] = [
     "STUDY REPORT", "DESIGN REPORT", "HAZARDOUS AREA CLASSIFICATION",
     "REPORT", "STUDY",
     # Models / Curves
-    "MODEL", "PERFORMANCE CURVE", "PERFORMANCE DATA", "CURVES", "CURVE",
+    "MODEL", "GENERATOR CAPABILITY CURVES AND DATA", "CAPABILITY CURVES AND DATA", "CAPABILITY CURVES",
+    "PERFORMANCE DATA AND CURVES", "PERFORMANCE CURVES", "PERFORMANCE CURVE", "PERFORMANCE DATA",
+    "CURVES", "CURVE",
     # Schematics
     "SCHEMATICS", "SCHEMATIC",
     # Notes / Plans
@@ -278,6 +292,34 @@ def normalize_deliverable(deliverable: str) -> str:
     Falls back to the trimmed input unchanged when no mapping is defined.
     """
     return _DELIVERABLE_TO_RULE_KEYWORD.get(deliverable.strip().upper(), deliverable.strip())
+
+
+def refine_deliverable_with_title(deliverable: str, title: str) -> str:
+    """Preserve specific deliverable families hidden behind a generic MDL value."""
+    extracted = extract_deliverable(title)
+    if not extracted:
+        return deliverable.strip()
+
+    current = deliverable.strip()
+    current_upper = current.upper()
+    if (
+        (not current or current_upper in {"SPECIFICATION", "TECHNICAL SPECIFICATION", "TECHNICAL SPECIFICATIONS"})
+        and extracted in {"PAINTING SPECIFICATION", "PAINT SPECIFICATION"}
+    ):
+        return extracted
+    if current_upper in {"", "DATA", "OPERATIONAL DATA", "PERFORMANCE DATA", "CURVES", "CURVE"} and extracted in {
+        "GENERATOR CAPABILITY CURVES AND DATA",
+        "CAPABILITY CURVES AND DATA",
+        "CAPABILITY CURVES",
+        "PERFORMANCE DATA AND CURVES",
+        "PERFORMANCE CURVES",
+        "PERFORMANCE CURVE",
+        "PERFORMANCE DATA",
+        "CURVES",
+        "CURVE",
+    }:
+        return extracted
+    return current
 
 
 def extract_deliverable(text: str) -> str:
