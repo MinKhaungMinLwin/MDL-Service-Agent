@@ -1,0 +1,2 @@
+﻿section,chunk_id,mdl_doc_id,relevance,topic_match,deliverable_match,requirement_coverage,context_fit,reason,verifier_relevance,verifier_agrees,final_relevance,label_status
+acc,test_temp_Fadhili_ITB_chunk_083,Fadhili_MDL_classified_T16182-DE00-P0MAG-123020_302,3,3,3,3,3,"Directly matches ACC structural supports/steelwork requirements (integrated support structure, platforms/stairs/ladders, fabrication/installation, loadings, galvanizing) as an ACC steel structure specification.",3,True,3,positive
