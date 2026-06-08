@@ -25,9 +25,9 @@ class EvaluationServiceTest(unittest.TestCase):
     def test_cli_discovers_available_extract_sections_in_numeric_order(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             base = Path(directory)
-            (base / "output_itb_section10_focused.csv").write_text("Chunk ID,Chunk Text\n", encoding="utf-8")
-            (base / "output_itb_section2_focused.csv").write_text("Chunk ID,Chunk Text\n", encoding="utf-8")
-            (base / "output_itb_sectionA_focused.csv").write_text("Chunk ID,Chunk Text\n", encoding="utf-8")
+            (base / "itb_extraction_section10.csv").write_text("Chunk ID,Chunk Text\n", encoding="utf-8")
+            (base / "itb_extraction_section2.csv").write_text("Chunk ID,Chunk Text\n", encoding="utf-8")
+            (base / "itb_extraction_sectionA.csv").write_text("Chunk ID,Chunk Text\n", encoding="utf-8")
 
             self.assertEqual(_discover_sections(base), ("2", "10", "A"))
 

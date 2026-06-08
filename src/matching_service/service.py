@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import Any
 
@@ -47,9 +46,17 @@ class MatchingService:
         self.repository.setup_fulltext_index()
 
     def match_file(self, csv_path: str | Path, output_path: str | Path) -> None:
-        """Match every ITB row in one CSV and write CSV/JSON artifacts."""
+        """Match every ITB row in one CSV and write CSV artifacts."""
         logger.info("Reading input file: {}", csv_path)
         target_df = pd.read_csv(csv_path)
+        original_count = len(target_df)
+        if "Is MDL Retrieval Candidate" in target_df.columns:
+            target_df = target_df[
+                target_df["Is MDL Retrieval Candidate"].map(_is_mdl_retrieval_candidate)
+            ]
+            skipped_count = original_count - len(target_df)
+            if skipped_count:
+                logger.info("Skipped {} non-MDL retrieval candidate row(s)", skipped_count)
         logger.info("Rows to process: {}", len(target_df))
         if target_df.empty:
             logger.info("No target rows. Skipping.")
@@ -120,10 +127,10 @@ class MatchingService:
 
         write_match_outputs(output_path, output_rows, json_records, self.config.output_limit)
 
-    def rerank_json_file(self, json_path: str | Path, output_path: str | Path) -> None:
-        """Rerank existing retrieval candidates from a structured matching JSON artifact."""
-        logger.info("Reading structured matching file: {}", json_path)
-        records = json.loads(Path(json_path).read_text(encoding="utf-8"))
+    def rerank_csv_file(self, csv_path: str | Path, output_path: str | Path) -> None:
+        """Rerank existing matching candidates from a CSV artifact."""
+        logger.info("Reading matching CSV file: {}", csv_path)
+        records = _records_from_matching_csv(Path(csv_path), self.config.output_limit)
         if not records:
             logger.info("No structured matching records. Skipping.")
             return
@@ -211,7 +218,8 @@ class MatchingService:
             "Chunk ID": record.get("chunk_id", ""),
             "Page": record.get("page", ""),
             "Keywords": record.get("keywords", ""),
-            "Search Query": record.get("search_query", ""),
+            "Is MDL Retrieval Candidate": record.get("is_mdl_retrieval_candidate", ""),
+            "Skip Reason": record.get("skip_reason", ""),
             "Chunk Text": record.get("chunk_text", ""),
             "Depth_Context": record.get("depth_context", ""),
             "Depth_Filter_Query": record.get("depth_filter_query", ""),
@@ -240,3 +248,70 @@ def _normalize_retrieval_candidate(candidate: dict[str, Any]) -> dict[str, Any]:
     normalized = dict(candidate)
     normalized.pop("rank", None)
     return normalized
+
+
+def _records_from_matching_csv(path: Path, output_limit: int) -> list[dict[str, Any]]:
+    df = pd.read_csv(path)
+    records = []
+    for _, row in df.iterrows():
+        candidates = []
+        for index in range(1, output_limit + 1):
+            prefix = f"Matched_Doc_{index}"
+            doc_id = _cell_text(row.get(f"{prefix}_Doc_ID", ""))
+            if not doc_id:
+                continue
+            candidates.append(
+                {
+                    "rank": index,
+                    "doc_id": doc_id,
+                    "source_file": _cell_text(row.get(f"{prefix}_Source_File", "")),
+                    "document_no": _cell_text(row.get(f"{prefix}_Document_No", "")),
+                    "title": _cell_text(row.get(f"{prefix}_Title", "")),
+                    "equipment": _cell_text(row.get(f"{prefix}_Equipment", "")),
+                    "building": _cell_text(row.get(f"{prefix}_Building", "")),
+                    "system": _cell_text(row.get(f"{prefix}_System", "")),
+                    "study_survey": _cell_text(row.get(f"{prefix}_Study_Survey", "")),
+                    "others": _cell_text(row.get(f"{prefix}_Others", "")),
+                    "deliverable": _cell_text(row.get(f"{prefix}_Deliverable", "")),
+                    "text_content": _cell_text(row.get(f"{prefix}_Text_Content", "")),
+                }
+            )
+        records.append(
+            {
+                "document": _cell_text(row.get("Document", "")),
+                "chunk_id": _cell_text(row.get("Chunk ID", "")),
+                "page": _cell_text(row.get("Page", "")),
+                "depths": {depth: _cell_text(row.get(depth, "")) for depth in DEPTH_COLUMNS},
+                "depth_context": _cell_text(row.get("Depth_Context", "")),
+                "depth_filter_query": _cell_text(row.get("Depth_Filter_Query", "")),
+                "keyword_filter_query": _cell_text(row.get("Keyword_Filter_Query", "")),
+                "semantic_query": _cell_text(row.get("Semantic_Query", "")),
+                "vector_terms": _cell_text(row.get("Vector_Terms", "")),
+                "retrieval_mode": _cell_text(row.get("Retrieval_Mode", "")),
+                "retrieval_candidate_count": _cell_text(row.get("Retrieval_Candidate_Count", "")),
+                "keyword_candidate_count": _cell_text(row.get("Keyword_Candidate_Count", "")),
+                "semantic_candidate_count": _cell_text(row.get("Semantic_Candidate_Count", "")),
+                "cross_encoder_query_mode": _cell_text(row.get("Cross_Encoder_Query_Mode", "")),
+                "cross_encoder_query": _cell_text(row.get("Cross_Encoder_Query", "")),
+                "cross_encoder_candidate_count": len(candidates),
+                "keywords": _cell_text(row.get("Keywords", "")),
+                "is_mdl_retrieval_candidate": _cell_text(row.get("Is MDL Retrieval Candidate", "")),
+                "skip_reason": _cell_text(row.get("Skip Reason", "")),
+                "chunk_text": _cell_text(row.get("Chunk Text", "")),
+                "retrieval_candidates": candidates,
+                "candidates": candidates,
+            }
+        )
+    return records
+
+
+def _cell_text(value: Any) -> str:
+    if pd.isna(value):
+        return ""
+    return str(value)
+
+
+def _is_mdl_retrieval_candidate(value: Any) -> bool:
+    if pd.isna(value):
+        return True
+    return str(value).strip().casefold() not in {"false", "no", "n", "0"}

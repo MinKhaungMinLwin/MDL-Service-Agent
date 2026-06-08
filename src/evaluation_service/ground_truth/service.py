@@ -15,7 +15,6 @@ from typing import Any
 
 from loguru import logger
 
-from common.json_io import read_json, write_json
 from common.llm_json import parse_json_output
 
 PROMPTS_DIR = Path(__file__).resolve().parent / "prompts"
@@ -146,7 +145,7 @@ class GroundTruthService:
         matching_records = load_matching_records(matching_dir, self.config.sections, self.config.modes)
         pools = build_candidate_pool(itb_rows, matching_records)
         if pool_path is not None:
-            write_json(pool_path, pools)
+            write_pool_csv(pool_path, pools)
         logger.info(
             "{} {} ITB candidate pools with {} MDL candidates{}",
             "Saved" if pool_path is not None else "Built",
@@ -364,7 +363,7 @@ def load_itb_rows(extract_dir: Path, sections: tuple[str, ...]) -> dict[str, dic
     """Load extracted ITB rows keyed by section and chunk ID."""
     rows_by_key = {}
     for section in sections:
-        path = extract_dir / f"output_itb_section{section}_focused.csv"
+        path = extract_dir / f"itb_extraction_section{section}.csv"
         with open(path, newline="", encoding="utf-8-sig") as file:
             for row in csv.DictReader(file):
                 chunk_id = str(row.get("Chunk ID") or "").strip()
@@ -388,12 +387,12 @@ def load_matching_records(
     sections: tuple[str, ...],
     modes: tuple[str, ...],
 ) -> dict[tuple[str, str], list[dict[str, Any]]]:
-    """Load matching JSON records keyed by section and retrieval mode."""
+    """Load matching CSV records keyed by section and retrieval mode."""
     records_by_source = {}
     for section in sections:
         for mode in modes:
-            path = matching_dir / mode / f"output_match_all_projects_section{section}.json"
-            records_by_source[(section, mode)] = read_json(path)
+            path = matching_dir / mode / f"output_match_all_projects_section{section}.csv"
+            records_by_source[(section, mode)] = read_matching_csv_records(path)
     return records_by_source
 
 
@@ -483,19 +482,63 @@ def _build_verify_pool_payload(payloads: list[dict[str, Any]]) -> dict[str, Any]
     }
 
 
+def read_matching_csv_records(path: Path) -> list[dict[str, Any]]:
+    records = []
+    with open(path, newline="", encoding="utf-8-sig") as file:
+        reader = csv.DictReader(file)
+        fieldnames = reader.fieldnames or []
+        candidate_indexes = _matched_candidate_indexes(fieldnames)
+        for row in reader:
+            records.append(
+                {
+                    "document": row.get("Document", ""),
+                    "chunk_id": row.get("Chunk ID", ""),
+                    "page": row.get("Page", ""),
+                    "depths": {
+                        field: row.get(field, "")
+                        for field in ("1st Depth", "2nd Depth", "3rd Depth", "4th Depth", "5th Depth")
+                        if str(row.get(field, "")).strip()
+                    },
+                    "keywords": row.get("Keywords", ""),
+                    "chunk_text": row.get("Chunk Text", ""),
+                    "candidates": [
+                        candidate
+                        for index in candidate_indexes
+                        if (candidate := _candidate_from_matching_row(row, index))
+                    ],
+                }
+            )
+    return records
+
+
+def write_pool_csv(path: Path, pools: list[dict[str, Any]]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    header = ["section", "chunk_id", "candidate_count", "candidate_doc_ids"]
+    with open(path, "w", newline="", encoding="utf-8-sig") as file:
+        writer = csv.DictWriter(file, fieldnames=header)
+        writer.writeheader()
+        for pool in pools:
+            writer.writerow(
+                {
+                    "section": pool.get("section", ""),
+                    "chunk_id": pool.get("chunk_id", ""),
+                    "candidate_count": len(pool.get("candidates", [])),
+                    "candidate_doc_ids": "|".join(
+                        str(candidate.get("doc_id", "")).strip()
+                        for candidate in pool.get("candidates", [])
+                        if str(candidate.get("doc_id", "")).strip()
+                    ),
+                }
+            )
+
+
 def read_resume_state(resume_state_path: Path, pair_ids: set[str]) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     if not resume_state_path.exists():
         return [], []
-    state = read_json(resume_state_path)
-    judgments = [
-        row
-        for row in state.get("judgments", [])
-        if row.get("judgment_id") in pair_ids
-    ]
+    rows = _read_resume_rows(resume_state_path)
+    judgments = [row for row in rows if row.get("record_type") == "judgment" and row.get("judgment_id") in pair_ids]
     verifications = [
-        row
-        for row in state.get("verifications", [])
-        if row.get("judgment_id") in pair_ids
+        row for row in rows if row.get("record_type") == "verification" and row.get("judgment_id") in pair_ids
     ]
     return judgments, verifications
 
@@ -503,12 +546,11 @@ def read_resume_state(resume_state_path: Path, pair_ids: set[str]) -> tuple[list
 def read_completed_pool_keys(resume_state_path: Path) -> set[tuple[str, str]]:
     if not resume_state_path.exists():
         return set()
-    state = read_json(resume_state_path)
-    completed_pools = state.get("completed_pools", [])
     return {
         (str(row.get("section")), str(row.get("chunk_id")))
-        for row in completed_pools
+        for row in _read_resume_rows(resume_state_path)
         if row.get("section") and row.get("chunk_id")
+        and row.get("record_type") == "completed_pool"
     }
 
 
@@ -518,20 +560,17 @@ def write_resume_state(
     verifications: list[dict[str, Any]],
     completed_pools: set[tuple[str, str]] | None = None,
 ) -> None:
-    state = {
-        "summary": {
-            "judgment_count": len(judgments),
-            "verification_count": len(verifications),
-        },
-        "judgments": judgments,
-        "verifications": verifications,
-    }
+    rows = []
+    for judgment in judgments:
+        rows.append({"record_type": "judgment", **judgment})
+    for verification in verifications:
+        rows.append({"record_type": "verification", **verification})
     if completed_pools is not None:
-        state["completed_pools"] = [
-            {"section": section, "chunk_id": chunk_id}
+        rows.extend(
+            {"record_type": "completed_pool", "section": section, "chunk_id": chunk_id}
             for section, chunk_id in sorted(completed_pools)
-        ]
-    write_json(resume_state_path, state)
+        )
+    _write_resume_rows(resume_state_path, rows)
 
 
 def build_verified_positive_ground_truth_rows(
@@ -680,6 +719,71 @@ def _compact_context(row: dict[str, Any]) -> dict[str, Any]:
         for key, value in row.items()
         if value not in ("", None, {}) and value != []
     }
+
+
+def _matched_candidate_indexes(fieldnames: list[str]) -> list[int]:
+    indexes = []
+    prefix = "Matched_Doc_"
+    suffix = "_Doc_ID"
+    for field in fieldnames:
+        if field.startswith(prefix) and field.endswith(suffix):
+            raw_index = field[len(prefix) : -len(suffix)]
+            if raw_index.isdigit():
+                indexes.append(int(raw_index))
+    return sorted(indexes)
+
+
+def _candidate_from_matching_row(row: dict[str, Any], index: int) -> dict[str, Any] | None:
+    prefix = f"Matched_Doc_{index}"
+    doc_id = str(row.get(f"{prefix}_Doc_ID") or "").strip()
+    if not doc_id:
+        return None
+    return {
+        "doc_id": doc_id,
+        "source_file": row.get(f"{prefix}_Source_File", ""),
+        "document_no": row.get(f"{prefix}_Document_No", ""),
+        "title": row.get(f"{prefix}_Title", ""),
+        "equipment": row.get(f"{prefix}_Equipment", ""),
+        "building": row.get(f"{prefix}_Building", ""),
+        "system": row.get(f"{prefix}_System", ""),
+        "study_survey": row.get(f"{prefix}_Study_Survey", ""),
+        "others": row.get(f"{prefix}_Others", ""),
+        "deliverable": row.get(f"{prefix}_Deliverable", ""),
+        "text_content": row.get(f"{prefix}_Text_Content", ""),
+    }
+
+
+def _read_resume_rows(path: Path) -> list[dict[str, Any]]:
+    with open(path, newline="", encoding="utf-8-sig") as file:
+        return [dict(row) for row in csv.DictReader(file)]
+
+
+def _write_resume_rows(path: Path, rows: list[dict[str, Any]]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fieldnames = _resume_fieldnames(rows)
+    with open(path, "w", newline="", encoding="utf-8-sig") as file:
+        writer = csv.DictWriter(file, fieldnames=fieldnames, extrasaction="ignore")
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+def _resume_fieldnames(rows: list[dict[str, Any]]) -> list[str]:
+    preferred = [
+        "record_type",
+        "judgment_id",
+        "section",
+        "chunk_id",
+        "mdl_doc_id",
+        "relevance",
+        "topic_match",
+        "deliverable_match",
+        "requirement_coverage",
+        "context_fit",
+        "reason",
+        "agrees",
+    ]
+    extras = sorted({key for row in rows for key in row if key not in preferred})
+    return preferred + extras
 
 
 def _normalize_positive_ground_truth_row(row: dict[str, Any]) -> dict[str, Any] | None:
