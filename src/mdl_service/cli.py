@@ -113,12 +113,19 @@ def export_catalog(argv: list[str] | None = None) -> None:
 
 
 def filter_acc(argv: list[str] | None = None) -> None:
-    """Filter ACC-related MDL documents from an exported catalog."""
+    """Filter ACC-related MDL documents from Neo4j or an exported catalog."""
     parser = argparse.ArgumentParser(description="Use an LLM to filter ACC-related MDL catalog rows.")
     parser.add_argument(
         "--input",
         type=Path,
-        default=DEFAULT_CATALOG_OUTPUT_DIR / "fadhili_r_n_turkistan_mdl_catalog.csv",
+        default=None,
+        help="Optional exported MDL catalog CSV. If omitted, rows are loaded directly from Neo4j.",
+    )
+    parser.add_argument(
+        "--project",
+        action="append",
+        dest="projects",
+        help="Project/source-file term to include when loading from Neo4j. Repeat for multiple projects.",
     )
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_ACC_OUTPUT_DIR)
     parser.add_argument(
@@ -127,6 +134,8 @@ def filter_acc(argv: list[str] | None = None) -> None:
         default=Path(os.getenv("ACC_FILTER_PROMPT_FILE", DEFAULT_ACC_FILTER_PROMPT_PATH)),
     )
     parser.add_argument("--model", default=os.getenv("AZURE_OPENAI_CHAT_DEPLOYMENT"))
+    parser.add_argument("--node-label", default=MDLIngestConfig().node_label)
+    parser.add_argument("--limit", type=int)
     parser.add_argument("--batch-size", type=int, default=10)
     parser.add_argument("--max-concurrency", type=int, default=1)
     args = parser.parse_args(argv)
@@ -143,8 +152,16 @@ def filter_acc(argv: list[str] | None = None) -> None:
         batch_size=args.batch_size,
         max_concurrency=args.max_concurrency,
     )
-    count = service.filter_file(args.input, args.output_dir)
-    print(f"Filtered {count} MDL catalog rows into {args.output_dir}.")
+    if args.input:
+        count = service.filter_file(args.input, args.output_dir)
+    else:
+        projects = args.projects or list(DEFAULT_CATALOG_PROJECTS)
+        with Neo4jConnection() as conn:
+            repository = MDLRepository(conn, MDLIngestConfig(node_label=args.node_label))
+            records = repository.export_catalog(projects, limit=args.limit)
+        rows = [_build_catalog_row(record, projects) for record in records]
+        count = service.filter_rows(rows, args.output_dir)
+    print(f"Filtered {count} MDL catalog rows into {args.output_dir / 'acc_mdl_catalog.csv'}.")
 
 
 def _build_catalog_row(record: dict, projects: list[str]) -> dict[str, str]:

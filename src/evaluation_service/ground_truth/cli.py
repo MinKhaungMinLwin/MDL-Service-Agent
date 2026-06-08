@@ -139,6 +139,12 @@ def build_acc_ground_truth(argv: list[str] | None = None) -> None:
     parser.add_argument("--model", default=os.getenv("AZURE_OPENAI_CHAT_DEPLOYMENT"))
     parser.add_argument("--llm-retries", type=int, default=int(os.getenv("ACC_GT_LLM_RETRIES", "2")))
     parser.add_argument(
+        "--mdl-batch-size",
+        type=int,
+        default=int(os.getenv("ACC_GT_MDL_BATCH_SIZE", "20")),
+        help="Number of ACC MDL candidates to send per selector LLM call.",
+    )
+    parser.add_argument(
         "--max-itb-chunks",
         type=int,
         default=int(os.getenv("ACC_GT_MAX_ITB_CHUNKS", "0")),
@@ -150,6 +156,7 @@ def build_acc_ground_truth(argv: list[str] | None = None) -> None:
         model=args.model or required_env("AZURE_OPENAI_CHAT_DEPLOYMENT"),
         llm_retries=args.llm_retries,
         max_itb_chunks=args.max_itb_chunks,
+        mdl_batch_size=args.mdl_batch_size,
     )
     service = ACCGroundTruthService(
         config=config,

@@ -15,7 +15,6 @@ SUMMARY_BASE_FIELDNAMES = [
     "stage",
     "queries",
     "positive_queries",
-    "no_match_queries",
     "avg_precision",
     "avg_f1",
 ]
@@ -26,7 +25,6 @@ Rankings = dict[str, list[str]]
 
 def evaluate_acc_experiment(
     ground_truth_path: Path,
-    ground_truth_judgments_path: Path,
     matching_dir: Path,
     output_dir: Path,
     llm_selection_path: Path | None = None,
@@ -37,7 +35,7 @@ def evaluate_acc_experiment(
 ) -> None:
     """Evaluate ACC artifacts using the shared retrieval/cross-encoder metrics."""
     qrels = _load_positive_qrels(ground_truth_path)
-    query_info = _load_query_info(ground_truth_judgments_path, qrels)
+    query_info = _load_query_info(ground_truth_path, qrels)
     matching_rankings = _load_matching_rankings(matching_dir, cross_encoder_k)
     if scope:
         qrels = _filter_by_scope(qrels, scope)
@@ -56,7 +54,6 @@ def evaluate_acc_experiment(
         {
             "stage": retrieval_stage,
             **_drop_hit_rate_metrics(retrieval_summary),
-            **_no_match_summary(query_info, retrieval_rankings),
         }
     )
 
@@ -71,7 +68,6 @@ def evaluate_acc_experiment(
         {
             "stage": cross_encoder_stage,
             **_drop_hit_rate_metrics(cross_encoder_summary),
-            **_no_match_summary(query_info, cross_encoder_rankings),
         }
     )
 
@@ -147,7 +143,11 @@ def _load_llm_rankings(path: Path) -> Rankings:
         if not query_id:
             continue
         if "Selected MDL Doc IDs" in row:
-            rankings[query_id] = _split_doc_ids(row.get("Selected MDL Doc IDs"))
+            rankings.setdefault(query_id, [])
+            rankings[query_id] = _merge_doc_ids(
+                rankings[query_id],
+                _split_doc_ids(row.get("Selected MDL Doc IDs")),
+            )
         elif doc_id := _clean(row.get("MDL Doc ID")):
             rankings.setdefault(query_id, []).append(doc_id)
     return rankings
@@ -192,17 +192,9 @@ def _summarize_selected_set(rows: list[dict[str, Any]]) -> dict[str, Any]:
     return {
         "queries": len(rows),
         "positive_queries": len(positive_rows),
-        "no_match_queries": sum(row["No Match Query"] == "True" for row in rows),
         "avg_recall": _mean_number(_selected_recall(row) for row in positive_rows),
         "avg_precision": _mean_number(row["Precision"] for row in positive_rows),
         "avg_f1": _mean_number(row["F1"] for row in positive_rows),
-    }
-
-
-def _no_match_summary(query_info: dict[str, dict[str, str]], _rankings: Rankings) -> dict[str, Any]:
-    no_match_query_ids = [query_id for query_id, info in query_info.items() if info.get("No Match Query") == "True"]
-    return {
-        "no_match_queries": len(no_match_query_ids),
     }
 
 
@@ -271,6 +263,16 @@ def _split_doc_ids(value: Any) -> list[str]:
             seen.add(doc_id)
             doc_ids.append(doc_id)
     return doc_ids
+
+
+def _merge_doc_ids(existing: list[str], incoming: list[str]) -> list[str]:
+    seen = set()
+    merged = []
+    for doc_id in [*existing, *incoming]:
+        if doc_id and doc_id not in seen:
+            seen.add(doc_id)
+            merged.append(doc_id)
+    return merged
 
 
 def _query_id(scope: Any, chunk_id: Any) -> str:

@@ -37,8 +37,11 @@ class ACCFilterService:
 
     def filter_file(self, input_path: str | Path, output_dir: str | Path) -> int:
         """Filter one exported MDL catalog CSV."""
-        rows = _read_dict_rows(input_path)
-        completed_rows = _read_dict_rows(Path(output_dir) / "acc_mdl_filter_judgments.csv")
+        return self.filter_rows(_read_dict_rows(input_path), output_dir)
+
+    def filter_rows(self, rows: list[dict[str, Any]], output_dir: str | Path) -> int:
+        """Filter in-memory MDL catalog rows."""
+        completed_rows = _read_dict_rows(Path(output_dir) / "acc_mdl_catalog.csv")
         completed_doc_ids = {_clean(row.get("Doc ID")) for row in completed_rows if _clean(row.get("Doc ID"))}
         order_by_doc_id = {_clean(row.get("Doc ID")): index for index, row in enumerate(rows)}
         remaining_rows = [row for row in rows if _clean(row.get("Doc ID")) not in completed_doc_ids]
@@ -108,7 +111,13 @@ class ACCFilterService:
                 raise
             except Exception as exc:
                 last_error = exc
-                logger.warning("ACC filter batch {}/{} failed on attempt {}: {}", batch_index, batch_count, attempt, exc)
+                logger.warning(
+                    "ACC filter batch {}/{} failed on attempt {}: {}",
+                    batch_index,
+                    batch_count,
+                    attempt,
+                    exc,
+                )
                 time.sleep(2.0 * attempt)
         if last_error is not None:
             raise last_error

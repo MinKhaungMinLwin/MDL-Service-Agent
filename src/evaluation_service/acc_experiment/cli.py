@@ -3,14 +3,18 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import os
+import tempfile
 from pathlib import Path
+from typing import Any
 
 from common.config import required_env
 from common.embedding_client import AzureEmbeddingService
 from common.neo4j_client import Neo4jConnection
 from common.openai_client import build_azure_openai_client
 from common.prompts import load_prompt
+from evaluation_service.acc_experiment.document_level import build_document_level_outputs
 from evaluation_service.acc_experiment.evaluation import evaluate_acc_experiment
 from evaluation_service.acc_experiment.final_selector import (
     DEFAULT_FINAL_SELECTOR_PROMPT_PATH,
@@ -30,8 +34,7 @@ DEFAULT_FULL_NEO4J_MATCHING_DIR = DEFAULT_BASE_DIR / "matching_full_neo4j"
 DEFAULT_SELECTION_DIR = DEFAULT_BASE_DIR / "llm_final_selection"
 DEFAULT_EVALUATION_DIR = DEFAULT_BASE_DIR / "evaluation"
 DEFAULT_GROUND_TRUTH_PATH = DEFAULT_BASE_DIR / "ground_truth" / "acc_itb_mdl_ground_truth.csv"
-DEFAULT_GROUND_TRUTH_JUDGMENTS_PATH = DEFAULT_BASE_DIR / "ground_truth" / "acc_itb_mdl_ground_truth_judgments.csv"
-DEFAULT_SELECTION_JUDGMENTS_PATH = DEFAULT_SELECTION_DIR / "acc_llm_final_selection_judgments.csv"
+DEFAULT_SELECTION_PATH = DEFAULT_SELECTION_DIR / "acc_llm_final_selection.csv"
 DEFAULT_CROSS_ENCODER_MODEL = "cross-encoder/ms-marco-MiniLM-L6-v2"
 DEFAULT_SCOPE_SOURCE_FILES = {
     "Fadhili_ITB": "Fadhili_MDL.xlsx",
@@ -108,7 +111,11 @@ def match(argv: list[str] | None = None) -> None:
                     embedding_service=embedding_service,
                 )
                 service.setup()
-                service.match_file(input_path, output_path)
+                filtered_input_path = _write_acc_positive_temp_csv(input_path)
+                try:
+                    service.match_file(filtered_input_path, output_path)
+                finally:
+                    filtered_input_path.unlink(missing_ok=True)
                 print(f"Saved {mode} ACC matching for {scope}: {output_path}")
 
 
@@ -120,14 +127,28 @@ def select_final(argv: list[str] | None = None) -> None:
     parser.add_argument("--prompt-file", type=Path, default=DEFAULT_FINAL_SELECTOR_PROMPT_PATH)
     parser.add_argument("--model", default=os.getenv("AZURE_OPENAI_CHAT_DEPLOYMENT"))
     parser.add_argument("--top-k", type=int, default=int(os.getenv("ACC_FINAL_SELECTOR_TOP_K", "20")))
+    parser.add_argument(
+        "--candidate-batch-size",
+        type=int,
+        default=int(os.getenv("ACC_FINAL_SELECTOR_CANDIDATE_BATCH_SIZE", "20")),
+        help="Number of cross-encoder candidates to send in each LLM selector call.",
+    )
     parser.add_argument("--llm-retries", type=int, default=int(os.getenv("ACC_FINAL_SELECTOR_LLM_RETRIES", "2")))
+    parser.add_argument(
+        "--max-records",
+        type=int,
+        default=int(os.getenv("ACC_FINAL_SELECTOR_MAX_RECORDS", "0")),
+        help="Limit records for token/cost test runs. Use 0 to process all records.",
+    )
     args = parser.parse_args(argv)
 
     service = ACCFinalSelectorService(
         config=ACCFinalSelectorConfig(
             model=args.model or required_env("AZURE_OPENAI_CHAT_DEPLOYMENT"),
             top_k=args.top_k,
+            candidate_batch_size=args.candidate_batch_size,
             llm_retries=args.llm_retries,
+            max_records=args.max_records,
         ),
         client=build_azure_openai_client(
             api_version_env="AZURE_OPENAI_CHAT_API_VERSION",
@@ -144,10 +165,9 @@ def evaluate_matching(argv: list[str] | None = None) -> None:
     """Evaluate ACC retrieval, cross-encoder, and optional LLM final selection."""
     parser = argparse.ArgumentParser(description="Evaluate ACC experiment matching outputs.")
     parser.add_argument("--ground-truth", type=Path, default=DEFAULT_GROUND_TRUTH_PATH)
-    parser.add_argument("--ground-truth-judgments", type=Path, default=DEFAULT_GROUND_TRUTH_JUDGMENTS_PATH)
     parser.add_argument("--matching-dir", type=Path, default=DEFAULT_MATCHING_DIR)
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_EVALUATION_DIR)
-    parser.add_argument("--llm-selection", type=Path, default=DEFAULT_SELECTION_JUDGMENTS_PATH)
+    parser.add_argument("--llm-selection", type=Path, default=DEFAULT_SELECTION_PATH)
     parser.add_argument("--no-llm-selection", action="store_true")
     parser.add_argument("--retrieval-k", type=int, default=100)
     parser.add_argument("--cross-encoder-k", type=int, default=20)
@@ -162,7 +182,6 @@ def evaluate_matching(argv: list[str] | None = None) -> None:
     llm_selection_path = None if args.no_llm_selection else args.llm_selection
     evaluate_acc_experiment(
         ground_truth_path=args.ground_truth,
-        ground_truth_judgments_path=args.ground_truth_judgments,
         matching_dir=args.matching_dir,
         output_dir=args.output_dir,
         llm_selection_path=llm_selection_path,
@@ -172,6 +191,46 @@ def evaluate_matching(argv: list[str] | None = None) -> None:
         scope=args.scope,
     )
     print(f"Saved ACC matching evaluation reports: {args.output_dir}")
+
+
+def aggregate_final(argv: list[str] | None = None) -> None:
+    """Aggregate chunk-level final selection into document-level MDL catalog and metrics."""
+    parser = argparse.ArgumentParser(description="Aggregate ACC final selections to ITB document-level MDL outputs.")
+    parser.add_argument("--selection", type=Path, default=DEFAULT_SELECTION_DIR / "acc_llm_final_selection.csv")
+    parser.add_argument("--ground-truth", type=Path, default=DEFAULT_GROUND_TRUTH_PATH)
+    parser.add_argument("--output-dir", type=Path, default=DEFAULT_BASE_DIR / "document_level")
+    parser.add_argument(
+        "--scope",
+        default="",
+        help="Aggregate/evaluate only one ITB scope, e.g. Fadhili_ITB, R_N_ITB, or Turkistan_ITB.",
+    )
+    args = parser.parse_args(argv)
+
+    build_document_level_outputs(
+        selection_path=args.selection,
+        ground_truth_path=args.ground_truth,
+        output_dir=args.output_dir,
+        scope=args.scope,
+    )
+    print(f"Saved ACC document-level outputs: {args.output_dir}")
+
+
+def _write_acc_positive_temp_csv(input_path: Path) -> Path:
+    with open(input_path, newline="", encoding="utf-8-sig") as file:
+        reader = csv.DictReader(file)
+        fieldnames = list(reader.fieldnames or [])
+        rows = [row for row in reader if _is_true(row.get("Is ACC Related"))]
+    with tempfile.NamedTemporaryFile("w", newline="", encoding="utf-8-sig", suffix=".csv", delete=False) as temp_file:
+        writer = csv.DictWriter(temp_file, fieldnames=fieldnames, extrasaction="ignore")
+        writer.writeheader()
+        writer.writerows(rows)
+        return Path(temp_file.name)
+
+
+def _is_true(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    return str(value).strip().casefold() in {"true", "yes", "y", "1"}
 
 
 if __name__ == "__main__":

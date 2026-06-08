@@ -1,3 +1,3 @@
-﻿stage,queries,positive_queries,no_match_queries,avg_precision,avg_f1,recall_at_200,recall_at_50
-retrieval@200,13,7,7,,,0.8324829931972789,
-cross_encoder@50,13,7,7,,,,0.3520408163265306
+﻿stage,queries,positive_queries,avg_precision,avg_f1,recall_at_200,recall_at_50
+retrieval@200,13,8,,,0.8645833333333334,
+cross_encoder@50,13,8,,,,0.37390873015873016

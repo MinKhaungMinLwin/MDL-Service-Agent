@@ -32,12 +32,11 @@ def write_catalog_outputs(output_dir: str | Path, rows: list[dict[str, Any]], st
 
 
 def write_acc_filter_outputs(output_dir: str | Path, rows: list[dict[str, Any]]) -> None:
-    """Write all ACC filter judgments and the positive ACC-only catalog."""
+    """Write the positive ACC-only catalog."""
     directory = Path(output_dir)
     directory.mkdir(parents=True, exist_ok=True)
     rows = list(rows)
     positive_rows = [row for row in rows if _is_true(row.get("Is ACC Related"))]
-    _write_dict_csv(directory / "acc_mdl_filter_judgments.csv", ACC_FILTER_FIELDNAMES, rows)
     _write_dict_csv(directory / "acc_mdl_catalog.csv", ACC_FILTER_FIELDNAMES, positive_rows)
 
 

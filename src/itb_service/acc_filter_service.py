@@ -38,7 +38,7 @@ class ITBACCFilterService:
     def filter_file(self, input_path: str | Path, output_dir: str | Path) -> int:
         """Filter one ITB extraction CSV."""
         rows = _read_dict_rows(input_path)
-        completed_rows = _read_dict_rows(Path(output_dir) / "itb_acc_filter_judgments.csv")
+        completed_rows = _read_dict_rows(Path(output_dir) / "itb_acc_chunks.csv")
         completed_chunk_ids = {_clean(row.get("Chunk ID")) for row in completed_rows if _clean(row.get("Chunk ID"))}
         order_by_chunk_id = {_clean(row.get("Chunk ID")): index for index, row in enumerate(rows)}
         remaining_rows = [row for row in rows if _clean(row.get("Chunk ID")) not in completed_chunk_ids]
@@ -122,13 +122,11 @@ class ITBACCFilterService:
 
 
 def write_itb_acc_filter_outputs(output_dir: str | Path, rows: list[dict[str, Any]]) -> None:
-    """Write all ITB ACC filter judgments and the positive ACC-only chunks."""
+    """Write all ITB ACC filter judgments to a single resumable CSV."""
     directory = Path(output_dir)
     directory.mkdir(parents=True, exist_ok=True)
     rows = list(rows)
-    positive_rows = [row for row in rows if _is_true(row.get("Is ACC Related"))]
-    _write_dict_csv(directory / "itb_acc_filter_judgments.csv", ACC_CHUNK_FILTER_FIELDNAMES, rows)
-    _write_dict_csv(directory / "itb_acc_chunks.csv", ACC_CHUNK_FILTER_FIELDNAMES, positive_rows)
+    _write_dict_csv(directory / "itb_acc_chunks.csv", ACC_CHUNK_FILTER_FIELDNAMES, rows)
 
 
 def _merge_judgment(row: dict[str, Any], judgment: dict[str, Any]) -> dict[str, Any]:
@@ -171,12 +169,6 @@ def _chunked(rows: list[dict[str, Any]], size: int) -> list[list[dict[str, Any]]
 
 def _sort_rows(rows: list[dict[str, Any]], order_by_chunk_id: dict[str, int]) -> list[dict[str, Any]]:
     return sorted(rows, key=lambda row: order_by_chunk_id.get(_clean(row.get("Chunk ID")), len(order_by_chunk_id)))
-
-
-def _is_true(value: Any) -> bool:
-    if isinstance(value, bool):
-        return value
-    return str(value).strip().casefold() in {"true", "yes", "y", "1"}
 
 
 def _clean(value: Any) -> str:

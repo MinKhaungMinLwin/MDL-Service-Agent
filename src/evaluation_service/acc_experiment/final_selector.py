@@ -22,6 +22,18 @@ SELECTION_FIELDNAMES = [
     "Document",
     "Chunk ID",
     "Page",
+    "Candidate Batch Index",
+    "Candidate Batch Count",
+    "Candidate Rank Start",
+    "Candidate Rank End",
+    "Candidate Count",
+    "Top K Doc IDs",
+    "Selected MDL Doc IDs",
+    "No Match",
+    "Usage Row",
+    "Prompt Tokens",
+    "Completion Tokens",
+    "Total Tokens",
     "MDL Doc ID",
     "Rank",
     "Source File",
@@ -33,20 +45,6 @@ SELECTION_FIELDNAMES = [
     "Study/Survey",
     "Others",
     "Deliverable",
-    "Selector Reason",
-]
-
-JUDGMENT_FIELDNAMES = [
-    "Project Name",
-    "ITB Scope",
-    "Document",
-    "Chunk ID",
-    "Candidate Count",
-    "Top K Doc IDs",
-    "Selected MDL Doc IDs",
-    "Invalid MDL Doc IDs",
-    "No Match",
-    "Reason",
 ]
 
 
@@ -56,18 +54,24 @@ class ACCFinalSelectorConfig:
 
     model: str
     top_k: int = 20
+    candidate_batch_size: int = 20
     llm_retries: int = 2
     batch_delay_seconds: float = 0.5
+    max_records: int = 0
 
     def __post_init__(self) -> None:
         if not self.model:
             raise ValueError("model is required")
         if self.top_k <= 0:
             raise ValueError("top_k must be positive")
+        if self.candidate_batch_size <= 0:
+            raise ValueError("candidate_batch_size must be positive")
         if self.llm_retries < 0:
             raise ValueError("llm_retries cannot be negative")
         if self.batch_delay_seconds < 0:
             raise ValueError("batch_delay_seconds cannot be negative")
+        if self.max_records < 0:
+            raise ValueError("max_records cannot be negative")
 
 
 class ACCFinalSelectorService:
@@ -90,55 +94,86 @@ class ACCFinalSelectorService:
     def select(self, matching_dir: Path, output_dir: Path) -> int:
         """Run final LLM selection for all matching CSV files under a matching directory."""
         records = load_matching_records(matching_dir, self.config.top_k)
+        if self.config.max_records > 0:
+            records = records[: self.config.max_records]
         if not records:
             raise FileNotFoundError(f"No matching CSV records found in {matching_dir}")
 
         output_dir.mkdir(parents=True, exist_ok=True)
-        judgment_path = output_dir / "acc_llm_final_selection_judgments.csv"
         selection_path = output_dir / "acc_llm_final_selection.csv"
-        judgment_rows = _read_csv(judgment_path)
         selection_rows = _read_csv(selection_path)
-        completed = {
-            (_clean(row.get("ITB Scope")), _clean(row.get("Chunk ID")))
-            for row in judgment_rows
-            if _clean(row.get("ITB Scope")) and _clean(row.get("Chunk ID"))
+        completed_batches = {
+            (
+                _clean(row.get("ITB Scope")),
+                _clean(row.get("Chunk ID")),
+                _clean(row.get("Candidate Batch Index")),
+            )
+            for row in selection_rows
+            if _clean(row.get("ITB Scope"))
+            and _clean(row.get("Chunk ID"))
+            and _clean(row.get("Candidate Batch Index"))
+            and _is_true(row.get("Usage Row"))
         }
 
         for index, record in enumerate(records, start=1):
-            key = (record["itb_scope"], record["chunk_id"])
-            if key in completed:
-                continue
+            candidate_batches = _candidate_batches(record["candidates"], self.config.candidate_batch_size)
             logger.info(
-                "Running ACC final selector {}/{}: {} {} ({} candidate{})",
+                "Running ACC final selector record {}/{}: {} {} ({} candidates, {} batch{})",
                 index,
                 len(records),
                 record["itb_scope"],
                 record["chunk_id"],
                 len(record["candidates"]),
-                "" if len(record["candidates"]) == 1 else "s",
+                len(candidate_batches),
+                "" if len(candidate_batches) == 1 else "es",
             )
-            result = _run_with_retries(
-                lambda current_record=record: _select_record(
-                    self.client,
-                    self.config.model,
-                    self.prompt,
-                    current_record,
-                ),
-                retries=self.config.llm_retries,
-                sleep=self.sleep,
-                delay_seconds=self.config.batch_delay_seconds,
-                description=f"final select {record['itb_scope']} {record['chunk_id']}",
-            )
-            judgment, selections = _resolve_selection(record, result)
-            judgment_rows.append(judgment)
-            selection_rows.extend(selections)
-            completed.add(key)
-            _write_csv(judgment_path, JUDGMENT_FIELDNAMES, judgment_rows)
-            _write_csv(selection_path, SELECTION_FIELDNAMES, _dedupe_selection_rows(selection_rows))
-            self.sleep(self.config.batch_delay_seconds)
+            for batch_index, batch_candidates in enumerate(candidate_batches, start=1):
+                batch_key = (record["itb_scope"], record["chunk_id"], str(batch_index))
+                if batch_key in completed_batches:
+                    continue
+                rank_start = batch_candidates[0]["rank"]
+                rank_end = batch_candidates[-1]["rank"]
+                logger.info(
+                    "Running ACC final selector batch {}/{} for {} {} (candidate ranks {}-{}, {} candidates)",
+                    batch_index,
+                    len(candidate_batches),
+                    record["itb_scope"],
+                    record["chunk_id"],
+                    rank_start,
+                    rank_end,
+                    len(batch_candidates),
+                )
+                batch_record = {**record, "candidates": batch_candidates}
+                result = _run_with_retries(
+                    lambda current_record=batch_record: _select_record(
+                        self.client,
+                        self.config.model,
+                        self.prompt,
+                        current_record,
+                    ),
+                    retries=self.config.llm_retries,
+                    sleep=self.sleep,
+                    delay_seconds=self.config.batch_delay_seconds,
+                    description=(
+                        f"final select {record['itb_scope']} {record['chunk_id']} "
+                        f"batch {batch_index}/{len(candidate_batches)}"
+                    ),
+                )
+                output_rows = _resolve_selection(
+                    record,
+                    batch_candidates,
+                    result,
+                    batch_index=batch_index,
+                    batch_count=len(candidate_batches),
+                    rank_start=rank_start,
+                    rank_end=rank_end,
+                )
+                selection_rows.extend(output_rows)
+                completed_batches.add(batch_key)
+                _write_csv(selection_path, SELECTION_FIELDNAMES, _dedupe_selection_rows(selection_rows))
+                self.sleep(self.config.batch_delay_seconds)
 
         selection_rows = _dedupe_selection_rows(selection_rows)
-        _write_csv(judgment_path, JUDGMENT_FIELDNAMES, judgment_rows)
         _write_csv(selection_path, SELECTION_FIELDNAMES, selection_rows)
         logger.info("Saved {} ACC final selected rows: {}", len(selection_rows), selection_path)
         return len(selection_rows)
@@ -192,37 +227,80 @@ def _select_record(client: Any, model: str, prompt: str, record: dict[str, Any])
     parsed = parse_json_output(response.choices[0].message.content or "{}")
     if not isinstance(parsed.get("selected_doc_ids"), list):
         raise ValueError("LLM response must contain selected_doc_ids list")
+    returned_chunk_id = _clean(parsed.get("chunk_id"))
+    if returned_chunk_id and returned_chunk_id != record["chunk_id"]:
+        raise ValueError(
+            f"LLM response chunk_id mismatch: expected {record['chunk_id']}, got {returned_chunk_id}"
+        )
+    selected_ids = _unique_clean_list(parsed.get("selected_doc_ids"))
+    candidate_ids = {candidate["doc_id"] for candidate in record["candidates"]}
+    invalid_ids = [doc_id for doc_id in selected_ids if doc_id not in candidate_ids]
+    if invalid_ids:
+        raise ValueError(f"LLM selected doc_id(s) outside Top-K candidates: {', '.join(invalid_ids)}")
+    parsed["_usage"] = _usage_dict(getattr(response, "usage", None))
     return parsed
 
 
-def _resolve_selection(record: dict[str, Any], result: dict[str, Any]) -> tuple[dict[str, str], list[dict[str, str]]]:
-    candidates_by_id = {candidate["doc_id"]: candidate for candidate in record["candidates"]}
+def _resolve_selection(
+    record: dict[str, Any],
+    candidates: list[dict[str, str]],
+    result: dict[str, Any],
+    *,
+    batch_index: int,
+    batch_count: int,
+    rank_start: str,
+    rank_end: str,
+) -> list[dict[str, str]]:
+    candidates_by_id = {candidate["doc_id"]: candidate for candidate in candidates}
     selected_ids = _unique_clean_list(result.get("selected_doc_ids"))
-    valid_ids = [doc_id for doc_id in selected_ids if doc_id in candidates_by_id]
-    invalid_ids = [doc_id for doc_id in selected_ids if doc_id not in candidates_by_id]
-    reasons = result.get("reasons") if isinstance(result.get("reasons"), dict) else {}
-    judgment = {
+    usage = result.get("_usage") if isinstance(result.get("_usage"), dict) else {}
+    base_row = {
         "Project Name": record["project_name"],
         "ITB Scope": record["itb_scope"],
         "Document": record["document"],
         "Chunk ID": record["chunk_id"],
-        "Candidate Count": len(record["candidates"]),
-        "Top K Doc IDs": "|".join(candidate["doc_id"] for candidate in record["candidates"]),
-        "Selected MDL Doc IDs": "|".join(valid_ids),
-        "Invalid MDL Doc IDs": "|".join(invalid_ids),
-        "No Match": str(not valid_ids),
-        "Reason": _clean(result.get("reason")),
+        "Page": record["page"],
+        "Candidate Batch Index": str(batch_index),
+        "Candidate Batch Count": str(batch_count),
+        "Candidate Rank Start": rank_start,
+        "Candidate Rank End": rank_end,
+        "Candidate Count": len(candidates),
+        "Top K Doc IDs": "|".join(candidate["doc_id"] for candidate in candidates),
+        "Selected MDL Doc IDs": "|".join(selected_ids),
+        "No Match": str(not selected_ids),
+        "Prompt Tokens": _clean(usage.get("prompt_tokens")),
+        "Completion Tokens": _clean(usage.get("completion_tokens")),
+        "Total Tokens": _clean(usage.get("total_tokens")),
     }
-    selections = []
-    for doc_id in valid_ids:
-        candidate = candidates_by_id[doc_id]
-        selections.append(
+    if not selected_ids:
+        return [
             {
-                "Project Name": record["project_name"],
-                "ITB Scope": record["itb_scope"],
-                "Document": record["document"],
-                "Chunk ID": record["chunk_id"],
-                "Page": record["page"],
+                **base_row,
+                "Usage Row": "True",
+                "MDL Doc ID": "",
+                "Rank": "",
+                "Source File": "",
+                "Document No": "",
+                "Title": "",
+                "Equipment": "",
+                "Building": "",
+                "System": "",
+                "Study/Survey": "",
+                "Others": "",
+                "Deliverable": "",
+            }
+        ]
+
+    rows = []
+    for doc_id in selected_ids:
+        candidate = candidates_by_id[doc_id]
+        rows.append(
+            {
+                **base_row,
+                "Usage Row": "True" if not rows else "False",
+                "Prompt Tokens": base_row["Prompt Tokens"] if not rows else "",
+                "Completion Tokens": base_row["Completion Tokens"] if not rows else "",
+                "Total Tokens": base_row["Total Tokens"] if not rows else "",
                 "MDL Doc ID": doc_id,
                 "Rank": candidate["rank"],
                 "Source File": candidate["source_file"],
@@ -234,10 +312,25 @@ def _resolve_selection(record: dict[str, Any], result: dict[str, Any]) -> tuple[
                 "Study/Survey": candidate["study_survey"],
                 "Others": candidate["others"],
                 "Deliverable": candidate["deliverable"],
-                "Selector Reason": _clean(reasons.get(doc_id)) or _clean(result.get("reason")),
             }
         )
-    return judgment, selections
+    return rows
+
+
+def _candidate_batches(candidates: list[dict[str, str]], batch_size: int) -> list[list[dict[str, str]]]:
+    return [candidates[start : start + batch_size] for start in range(0, len(candidates), batch_size)]
+
+
+def _usage_dict(usage: Any) -> dict[str, Any]:
+    if usage is None:
+        return {}
+    if isinstance(usage, dict):
+        return usage
+    return {
+        "prompt_tokens": getattr(usage, "prompt_tokens", ""),
+        "completion_tokens": getattr(usage, "completion_tokens", ""),
+        "total_tokens": getattr(usage, "total_tokens", ""),
+    }
 
 
 def _candidate_rows(row: dict[str, Any], top_k: int) -> list[dict[str, str]]:
@@ -354,8 +447,14 @@ def _write_csv(path: Path, fieldnames: list[str], rows: list[dict[str, Any]]) ->
 def _dedupe_selection_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     rows_by_key = {}
     for row in rows:
-        key = (_clean(row.get("ITB Scope")), _clean(row.get("Chunk ID")), _clean(row.get("MDL Doc ID")))
-        if all(key):
+        doc_id = _clean(row.get("MDL Doc ID"))
+        key = (
+            _clean(row.get("ITB Scope")),
+            _clean(row.get("Chunk ID")),
+            _clean(row.get("Candidate Batch Index")),
+            doc_id or "__NO_SELECTION__",
+        )
+        if all(key[:3]):
             rows_by_key.setdefault(key, row)
     return [rows_by_key[key] for key in sorted(rows_by_key)]
 
@@ -382,6 +481,12 @@ def _split_doc_ids(value: Any) -> list[str]:
             seen.add(doc_id)
             doc_ids.append(doc_id)
     return doc_ids
+
+
+def _is_true(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    return str(value).strip().casefold() in {"true", "yes", "y", "1"}
 
 
 def _compact(row: dict[str, str]) -> dict[str, str]:
