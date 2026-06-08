@@ -47,6 +47,7 @@ acc-select-final = "evaluation_service.acc_experiment.cli:select_final"
 acc-evaluate-matching = "evaluation_service.acc_experiment.cli:evaluate_matching"
 acc-aggregate-final = "evaluation_service.acc_experiment.cli:aggregate_final"
 itb-eval-matching = "evaluation_service.matching_evaluation.cli:evaluate"
+schedule-eval = "evaluation_service.schedule_evaluation.cli:evaluate"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
