@@ -98,11 +98,13 @@ def schedule_generate(
 
 @router.post(
     "/candidates",
-    summary="Extract MDL document candidates from ITB matching CSV",
+    summary="Extract MDL document candidates from ITB matching output",
     description=(
-        "Reads an ITB matching CSV (output_match_*.csv), parses Matched_Doc_1..N columns, "
-        "filters by score threshold, deduplicates, and writes an MDL candidate CSV "
-        "compatible with *_MDL_classified.csv that can be fed into /schedule/generate."
+        "Reads an ITB matching output. Prefer structured JSON (output_match_*.json), "
+        "which preserves MDL metadata from Neo4j. Legacy CSV (output_match_*.csv) is "
+        "still supported as a display-string fallback. The route filters by score "
+        "threshold, deduplicates, and writes an MDL candidate CSV compatible with "
+        "*_MDL_classified.csv that can be fed into /schedule/generate."
     ),
 )
 def schedule_candidates(
@@ -110,8 +112,8 @@ def schedule_candidates(
         str,
         Query(
             min_length=1,
-            description="Path to an ITB matching CSV file.",
-            examples=["output/current_test_env/output_match_all_projects_section6.csv"],
+            description="Path to an ITB matching JSON or legacy CSV file.",
+            examples=["output/current_test_env/matching/hybrid/output_match_all_projects_section6.json"],
         ),
     ],
     score_threshold: Annotated[

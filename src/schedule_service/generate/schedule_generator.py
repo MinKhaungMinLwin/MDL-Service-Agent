@@ -79,11 +79,12 @@ def generate_schedule_file(
     _log(f"Reading MDL classified CSV: {input_csv}")
     rows = _read_csv(input_csv)
     original_count = len(rows)
+    rows, candidate_filter = _filter_accepted_candidates(rows)
     if limit > 0:
         rows = rows[:limit]
-        _log(f"Limit enabled: processing first {len(rows)} of {original_count} rows")
+        _log(f"Limit enabled: processing first {len(rows)} accepted rows from {original_count} input rows")
     if not rows:
-        raise ValueError(f"No rows found in {input_csv}")
+        raise ValueError(f"No schedulable rows found in {input_csv}")
 
     t_read = time.perf_counter()
 
@@ -139,7 +140,9 @@ def generate_schedule_file(
         "format_s": round(t_format - t_activities, 3),
         "write_s": round(t_end - t_format, 3),
         "total_s": round(t_end - t0, 3),
+        "rows_input": original_count,
         "rows_processed": len(rows),
+        **candidate_filter,
         "use_semantic_rules": bool(rule_semantic_index),
         "use_semantic_activities": bool(activity_semantic_index),
     }
@@ -170,7 +173,11 @@ def _format_schedule_row(
 
     sub_type = rule.sub_type if rule else ""
     rule_name = rule.item_name if rule else ""
+    rule_keyword = rule.doc_keyword if rule else ""
+    rule_priority = rule.priority if rule else ""
     vt_parsed: dict = rule.vt_parsed if rule else {}
+    vt_raw = vt_parsed.get("raw", "") if vt_parsed else ""
+    vt_description = rule.describe() if rule else ""
 
     # Compute FA/FC date ranges
     dr = DateRange()
@@ -181,7 +188,7 @@ def _format_schedule_row(
         anchor = resolve_anchor_date(activity.start_date, activity.finish_date, rule, shift_days)
         ntp_floor = TEMPLATE_NTP + timedelta(days=shift_days) if shift_days else None
         dr = compute_date_range(vt_parsed, anchor, sub_type, rule.priority, ntp_floor=ntp_floor)
-        date_range_status = "generated" if anchor is not None else "missing_date"
+        date_range_status = _date_range_status(anchor, dr)
 
     return {
         "source_file": row.get("Source File", ""),
@@ -194,6 +201,10 @@ def _format_schedule_row(
         "itb_sources": row.get("itb_sources", ""),
         "rule_query": rule_query,
         "matched_rule": rule_name,
+        "matched_rule_keyword": rule_keyword,
+        "matched_rule_priority": rule_priority,
+        "matched_rule_validation_time": vt_raw,
+        "matched_rule_date_formula": vt_description,
         "submission_type": sub_type,
         "matched_activity_id": activity.activity_id,
         "matched_activity_name": activity.activity_name_clean or activity.activity_name,
@@ -208,8 +219,22 @@ def _format_schedule_row(
         "fc_latest": _fmt_date(dr.fc_latest),
         "date_range_status": date_range_status,
         "date_range_confidence": f"{dr.confidence:.2f}" if dr.confidence else "",
+        "date_range_notes": dr.notes,
         "ntp_shift_days": shift_days if shift_days else "",
     }
+
+
+def _date_range_status(anchor: date | None, dr: DateRange) -> str:
+    """Return an output status that reflects date completeness, not only rule match success."""
+    if anchor is None:
+        return "missing_date"
+    if not dr.fa_recommended and not dr.fc_recommended:
+        return "missing_date_range"
+    if not dr.fa_recommended:
+        return "missing_fa"
+    if not dr.fc_recommended:
+        return "missing_fc"
+    return "generated"
 
 
 def _compute_shift(ntp_date: str) -> int:
@@ -231,6 +256,28 @@ def _read_csv(path: Path) -> list[dict[str, str]]:
     """Read an MDL classified CSV file."""
     with path.open("r", encoding="utf-8-sig", newline="") as f:
         return list(csv.DictReader(f))
+
+
+def _filter_accepted_candidates(rows: list[dict[str, str]]) -> tuple[list[dict[str, str]], dict[str, Any]]:
+    """For schedule candidate CSVs, process accepted candidates only.
+
+    Historical *_MDL_classified.csv inputs do not have candidate_status and keep the
+    previous behavior. Candidate CSVs from /schedule/candidates include the column;
+    only accepted rows are safe enough for automatic date generation.
+    """
+    if not rows or "candidate_status" not in rows[0]:
+        return rows, {
+            "candidate_filter_applied": False,
+            "rows_skipped_non_accepted": 0,
+        }
+    accepted = [row for row in rows if row.get("candidate_status", "").strip().lower() == "accepted"]
+    skipped = len(rows) - len(accepted)
+    if skipped:
+        _log(f"Candidate filter enabled: skipping {skipped} non-accepted rows")
+    return accepted, {
+        "candidate_filter_applied": True,
+        "rows_skipped_non_accepted": skipped,
+    }
 
 
 def _output_stem(input_csv: Path) -> str:

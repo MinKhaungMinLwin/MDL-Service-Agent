@@ -1,7 +1,7 @@
 """Shared cosine-similarity embedding index (numpy-backed), disk-cached by corpus hash.
 
 Base class for the two semantic indexes used in /schedule/generate:
-- activity.semantic.SemanticIndex   (corpus = activity target_text)
+- activity.semantic.SemanticIndex   (corpus = activity semantic_text)
 - rule.semantic.RuleSemanticIndex   (corpus = rule doc_keyword + item_name)
 
 Both embed a fixed corpus once at build time, cache it on disk keyed by a SHA-256 of
