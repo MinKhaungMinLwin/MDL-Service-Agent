@@ -5,8 +5,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from common.text_normalizer import build_schedule_target_text
-from schedule_service.models import ScheduleActivity
+from common.text_normalizer import build_schedule_semantic_text, build_schedule_target_text
+from schedule_service.generate.activity.models import ScheduleActivity
 
 DEFAULT_SCHEDULE_PATH = Path("data/schedule_service/processed/ccpp_guide_schedule_260527_clean.json")
 
@@ -27,6 +27,10 @@ def load_schedule_activities(schedule_path: Path) -> list[ScheduleActivity]:
             wbs_path=wbs_path,
             activity_id=activity_id,
         )
+        semantic_text = build_schedule_semantic_text(
+            activity_name=activity_name_clean,
+            wbs_path=wbs_path,
+        )
         activities.append(
             ScheduleActivity(
                 activity_id=activity_id,
@@ -36,6 +40,7 @@ def load_schedule_activities(schedule_path: Path) -> list[ScheduleActivity]:
                 start_date=row.get("start_date", "").strip(),
                 finish_date=row.get("finish_date", "").strip(),
                 target_text=target_text,
+                semantic_text=semantic_text,
             )
         )
     return activities

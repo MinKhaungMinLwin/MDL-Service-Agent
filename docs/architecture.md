@@ -40,8 +40,8 @@ a schedule showing when each technical document must be submitted (FA date, FC d
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
  [A] CCPP guide schedule XLSX
-       └─ schedule_cleaner.py (CLI)
-             └─▶ ccpp_guide_schedule_clean.json   (4039 activities, dates, WBS)
+       └─ data_prep/ccpp_schedule_cleaner.py (CLI)
+             └─▶ ccpp_guide_schedule_260527_clean.json   (4039 activities, dates, WBS)
 
  [B] Historical MDL Excel files (*_MDL.xlsx)
        └─ uv run mdl-classify  (LLM CLI)
@@ -60,23 +60,19 @@ a schedule showing when each technical document must be submitted (FA date, FC d
                                            (each ITB chunk + Matched_Doc_1..20)
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- RUNTIME API  src/api/routes/schedule.py
+ RUNTIME API  src/api/routes/schedule.py   (two endpoints)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   output_match_*.csv
   ┌──────────────────────────────────────────────────────────────────┐
-  │  ITB CHUNK side                   MDL DOCUMENT side              │
+  │  POST /schedule/candidates                                       │
+  │  ──────────────────────────                                      │
+  │  ITB chunk → extract which MDL documents are needed              │
+  │  (parse Matched_Doc_1..N, filter by score, dedup)               │
+  │  optional classify_with_llm → fill Equipment/Deliverable        │
   │                                                                  │
-  │  POST /schedule/map               POST /schedule/candidates      │
-  │  ─────────────────                ──────────────────────────     │
-  │  ITB chunk → find which           ITB chunk → extract which      │
-  │  CCPP guide schedule              MDL documents are needed       │
-  │  activity it corresponds to       (parse Matched_Doc_1..N)       │
-  │                                                                  │
-  │  Output:                          Output:                        │
-  │  schedule_mapping_*.json          mdl_candidates_*.csv           │
-  │  (activity_id per ITB chunk,      (Title, Equipment, Deliverable │
-  │   BM25 + semantic + LLM)          itb_sources, score)            │
+  │  Output: mdl_candidates_*.csv                                    │
+  │  (Title, Equipment, Deliverable, itb_sources, match_score)      │
   └──────────────────────────────────────────────────────────────────┘
                                               │
                                               ▼
@@ -85,17 +81,19 @@ a schedule showing when each technical document must be submitted (FA date, FC d
                                MDL document → FA/FC dates
 
                                For each MDL row:
-                               1. match validation_rule.csv
-                                  normalize(Deliverable) + Equipment
+                               1. match Validation Rule:
+                                  normalize(Deliverable) + " for " + Equipment
                                   → sub_type: FA / FI / SKIP
                                   → VT formula: start+4W<=FA<=start+6W
-                               2. BM25 search guide schedule
-                                  → best matching activity
-                                  → anchor_date = activity.start_date
-                               3. compute date range
+                                  hybrid token+embedding (always)
+                               2. search CCPP Guide Schedule for activity:
+                                  BM25+semantic+RRF (always)
+                                  → anchor_date = activity.start/finish_date
+                                  → + NTP shift if ntp_date provided
+                               3. compute date range:
                                   fa_earliest = anchor + lo_days
                                   fa_latest   = anchor + hi_days
-                                  fc = fa_recommended + 60 days
+                                  fc = fa_recommended + 60 days (or FC formula)
 
                                Output:
                                generated_schedule_*.json/xlsx
@@ -105,54 +103,12 @@ a schedule showing when each technical document must be submitted (FA date, FC d
                                 fc_earliest / fc_recommended / fc_latest,
                                 itb_sources ← traceability back to ITB)
 ```
-
----
-
-## /schedule/map in detail
-
-```
-INPUT: output_match_*.csv
-  Each row = 1 ITB chunk
-  Columns: Document, Page, Search Query, Keywords, Depth_Context, Matched_Doc_1..20
-
-  ┌─────────────────────────────────────────────────────────────────┐
-  │  schedule_loader                                                │
-  │  ccpp_guide_schedule_clean.json → List[ScheduleActivity]        │
-  │  4039 activities with: activity_id, name, wbs_path,            │
-  │                        start_date, finish_date, target_text     │
-  └──────────────────────────┬──────────────────────────────────────┘
-                             │
-  ┌──────────────────────────▼──────────────────────────────────────┐
-  │  BM25Index(target_text for each activity)                       │
-  │  SemanticIndex(Azure OpenAI embed all 4039 activities)  ← slow  │
-  └──────────────────────────┬──────────────────────────────────────┘
-                             │
-  For each ITB row:
-  query = row["Search Query"]   e.g. "Heat Recovery Steam Generator natural circulation"
-                             │
-  ┌──────────────────────────▼──────────────────────────────────────┐
-  │  BM25.score(query)  → [score, score, ...] × 4039               │
-  │  Semantic.score(query) → embed query → cosine sim × 4039        │
-  │  rrf_candidates() → merge via Reciprocal Rank Fusion → top 10  │
-  └──────────────────────────┬──────────────────────────────────────┘
-                             │
-  ┌──────────────────────────▼──────────────────────────────────────┐
-  │  ScheduleLLMValidator.select_activity(query, top_10_candidates) │
-  │  → LLM picks best: selected_activity_id, confidence, reason     │
-  └──────────────────────────┬──────────────────────────────────────┘
-                             │
-OUTPUT: schedule_mapping_*.json
-  Each row = 1 ITB chunk + selected activity
-  { document, search_query, llm_selected_activity_id,
-    llm_confidence, candidate_1..10 with scores }
-```
-
 ---
 
 ## /schedule/candidates in detail
 
 ```
-INPUT: output_match_*.csv  (same file as /schedule/map)
+INPUT: output_match_*.csv  (ITB→MDL Neo4j matching output)
   Uses Matched_Doc_1..20 columns (results of Neo4j vector search)
 
   Matched_Doc_N format:
@@ -162,7 +118,8 @@ INPUT: output_match_*.csv  (same file as /schedule/map)
 
   For each ITB row, for each Matched_Doc_1..N:
   ┌─────────────────────────────────────────────────────────────────┐
-  │  if final_score >= threshold (default 0.85):                   │
+  │  score = Semantic (new format, 0–1) or 최종점수/Vector (old)    │
+  │  if score >= threshold (default 0.75; old format → 0.85):      │
   │    parse doc name:                                              │
   │      strip [Project], strip score suffix                       │
   │      split on " - ": equipment | title                         │
@@ -171,6 +128,10 @@ INPUT: output_match_*.csv  (same file as /schedule/map)
   │    deduplicate by (equipment, deliverable, title)              │
   │    accumulate itb_sources for traceability                     │
   └─────────────────────────────────────────────────────────────────┘
+
+  optional classify_with_llm=true:
+    for candidates still missing Equipment/Deliverable after regex,
+    call the MDL LLM classifier (batched, parallel, disk-cached by title)
 
 OUTPUT: mdl_candidates_*.csv
   Compatible with *_MDL_classified.csv format + extra columns:
@@ -192,42 +153,47 @@ INPUT: *_MDL_classified.csv  OR  mdl_candidates_*.csv
   Columns: Title, Equipment, System, Building, Deliverable, (itb_sources)
 
   ┌─────────────────────────────────────────────────────────────────┐
-  │  schedule_loader → 4039 ScheduleActivity                       │
-  │  RuleTable.load(validation_rule.csv) → 5918 rules              │
-  │  BM25Index(activity.target_text)                               │
+  │  get_schedule_activities → 4039 ScheduleActivity  (memoized)    │
+  │  get_rule_matcher(validation_rule_clean.csv)      (memoized)    │
+  │  get_bm25_index(activity.target_text)             (memoized)    │
+  │  (resource_cache: built once per process, keyed by path+mtime)  │
   └──────────────────────────┬──────────────────────────────────────┘
                              │
-  For each MDL row:
+  Three passes (matching done up-front, then rendered):
 
-  Step 1: Rule matching
+  Pass 1: Rule matching  (resolve_rules)
   ┌──────────────────────────▼──────────────────────────────────────┐
-  │  norm_del = _DELIVERABLE_NORM["P&I DIAGRAM"] → "P&ID"          │
-  │  scope    = Equipment or System or Building                     │
-  │  query    = "P&ID for Gas Turbine Generator"                   │
+  │  norm_del  = normalize_deliverable("P&I DIAGRAM") → "P&ID"      │
+  │  scope     = Equipment or System or Building                    │
+  │  query     = "P&ID for GTG"   (equipment_to_abbr applied)       │
   │                                                                 │
-  │  RuleTable.match(query)  → Jaccard overlap vs 5918 rules       │
+  │  hybrid token+embedding (always, mandatory):                    │
+  │    token·(1−w) + semantic·w  (w=0.3), × priority_weight, thr 0.2 │
+  │    token = |kw ∩ doc| / max(|kw|,3)                             │
   │    rule.sub_type  = "FA"                                        │
-  │    rule.vt_parsed = {fa_lo_days:84, fa_hi_days:126}            │
-  │    rule.priority  = 1  (1=specific → confidence 0.9)           │
+  │    rule.vt_parsed = {fa_lo_days:84, fa_hi_days:126}             │
+  │    rule.priority  = 1  (1=specific → confidence 0.9)            │
   └──────────────────────────┬──────────────────────────────────────┘
                              │
-  Step 2: Activity matching
+  Pass 2: Activity matching  (resolve_activities)
   ┌──────────────────────────▼──────────────────────────────────────┐
-  │  activity_query = Equipment + System + norm_del + Title        │
-  │  BM25.score(activity_query) → argmax → top-1 activity          │
-  │  anchor_date = activity.start_date  (or finish_date if         │
-  │                rule.activity_keywords ∩ {delivery, fob, ...})  │
+  │  activity_query = Equipment + System + norm_del + Title         │
+  │                   + phase boost (deliverable / rule keyword)    │
+  │  BM25 + semantic + RRF (always, mandatory) → top-1              │
+  │  anchor_date = activity.start_date  (or finish_date if          │
+  │                rule.activity_keywords ∩ {delivery, fob, ...})   │
+  │  if ntp_date: anchor += (ntp_date − 2007-03-01)                 │
   └──────────────────────────┬──────────────────────────────────────┘
                              │
   Step 3: Date range
   ┌──────────────────────────▼──────────────────────────────────────┐
-  │  compute_date_range(vt_parsed, anchor, sub_type, priority)     │
+  │  compute_date_range(vt_parsed, anchor, sub_type, priority)      │
   │                                                                 │
-  │  fa_earliest    = anchor + fa_lo_days  (e.g. +84d)             │
-  │  fa_latest      = anchor + fa_hi_days  (e.g. +126d)            │
-  │  fa_recommended = midpoint                                     │
-  │  fc_recommended = fa_recommended + 60d  (default)              │
-  │  confidence     = 0.9 / 0.6 / 0.3  by priority                │
+  │  fa_earliest    = anchor + fa_lo_days  (e.g. +84d)              │
+  │  fa_latest      = anchor + fa_hi_days  (e.g. +126d)             │
+  │  fa_recommended = midpoint                                      │
+  │  fc_recommended = fa_recommended + 60d  (default)               │
+  │  confidence     = 0.9 / 0.6 / 0.3  by priority                  │
   └──────────────────────────┬──────────────────────────────────────┘
                              │
 OUTPUT: generated_schedule_*.json
@@ -289,18 +255,20 @@ The `itb_sources` column is the end-to-end traceability link:
 ## Known architectural gaps
 
 ```
-1. /schedule/map output is not connected to /schedule/generate
-   - /schedule/map finds activity_id per ITB chunk via LLM
-   - /schedule/generate finds activity via BM25 per MDL doc independently
-   - Future: use /schedule/map activity_id as anchor instead of BM25
+1. NTP shift, not real PO dates
+   - Template dates (anchored at 2007-03-01) are linearly shifted by a single
+     ntp_date offset. This is an improvement over raw template dates but still
+     assumes the whole schedule scales from one NTP; per-activity client PO dates
+     are not yet mapped. ScheduleActivity.po_finish_date always "".
 
-2. Anchor date = guide schedule template (2007–2009)
-   - ScheduleActivity.po_finish_date always ""
-   - Needs client-provided PO date mapping per project
+2. ITB chunk → activity mapping is no longer a route
+   - The old /schedule/map (LLM activity selection per ITB chunk) was removed.
+   - /schedule/generate finds the activity via BM25 (or BM25+semantic+RRF) per MDL
+     document independently. There is no LLM-validated activity selection anymore.
 
-3. ITB workflow (chunking, extraction, Neo4j matching) is CLI-first, not fully exposed as API routes
-   - Use `uv run itb-extract` and `uv run itb-match`
+3. ITB workflow (chunking, extraction, Neo4j matching) is CLI-first, not fully
+   exposed as API routes — use `uv run itb-extract` and `uv run itb-match`.
 
 4. No final MDL Excel formatter
-   - generated_schedule_*.xlsx is an internal table, not the client deliverable
+   - generated_schedule_*.xlsx is an internal table, not the client deliverable.
 ```
