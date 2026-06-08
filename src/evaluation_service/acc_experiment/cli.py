@@ -45,7 +45,7 @@ DEFAULT_SCOPE_SOURCE_FILES = {
 
 def match(argv: list[str] | None = None) -> None:
     """Run ACC hybrid matching for same-project and/or full-Neo4j modes."""
-    parser = argparse.ArgumentParser(description="Run ACC hybrid matching with cross-encoder reranking.")
+    parser = argparse.ArgumentParser(description="Run ACC hybrid matching with optional cross-encoder reranking.")
     parser.add_argument("--itb-filter-dir", type=Path, default=DEFAULT_ITB_FILTER_DIR)
     parser.add_argument("--same-project-output-dir", type=Path, default=DEFAULT_SAME_PROJECT_MATCHING_DIR)
     parser.add_argument("--full-neo4j-output-dir", type=Path, default=DEFAULT_FULL_NEO4J_MATCHING_DIR)
@@ -58,6 +58,12 @@ def match(argv: list[str] | None = None) -> None:
     )
     parser.add_argument("--retrieval-candidates", type=int, default=200)
     parser.add_argument("--output-limit", type=int, default=50)
+    parser.add_argument(
+        "--rerank-mode",
+        choices=["cross_encoder", "rrf_only"],
+        default=os.getenv("ACC_RERANK_MODE", "cross_encoder").strip().lower(),
+        help="Use cross-encoder reranking or keep the RRF retrieval ranking as final Top-K.",
+    )
     parser.add_argument("--cross-encoder-query-mode", choices=["structured", "full_chunk"], default="full_chunk")
     parser.add_argument(
         "--cross-encoder-model",
@@ -76,11 +82,13 @@ def match(argv: list[str] | None = None) -> None:
     args = parser.parse_args(argv)
 
     scopes = args.scopes or list(DEFAULT_SCOPE_SOURCE_FILES)
-    reranker = create_reranker(
-        args.cross_encoder_model,
-        batch_size=args.cross_encoder_batch_size,
-        backend=args.reranker_backend,
-    )
+    reranker = None
+    if args.rerank_mode == "cross_encoder":
+        reranker = create_reranker(
+            args.cross_encoder_model,
+            batch_size=args.cross_encoder_batch_size,
+            backend=args.reranker_backend,
+        )
     embedding_service = AzureEmbeddingService()
     modes = ["same_project", "full_neo4j"] if args.mode == "both" else [args.mode]
 
@@ -101,6 +109,7 @@ def match(argv: list[str] | None = None) -> None:
                     retrieval_mode="hybrid",
                     retrieval_candidate_limit=args.retrieval_candidates,
                     output_limit=args.output_limit,
+                    rerank_mode=args.rerank_mode,
                     cross_encoder_query_mode=args.cross_encoder_query_mode,
                     source_files=source_files,
                 )
@@ -121,7 +130,7 @@ def match(argv: list[str] | None = None) -> None:
 
 def select_final(argv: list[str] | None = None) -> None:
     """Run LLM final selection on ACC hybrid matching outputs."""
-    parser = argparse.ArgumentParser(description="Run ACC LLM final selector from cross-encoder Top-K candidates.")
+    parser = argparse.ArgumentParser(description="Run ACC LLM final selector from the final Top-K matching candidates.")
     parser.add_argument("--matching-dir", type=Path, default=DEFAULT_MATCHING_DIR)
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_SELECTION_DIR)
     parser.add_argument("--prompt-file", type=Path, default=DEFAULT_FINAL_SELECTOR_PROMPT_PATH)
@@ -131,7 +140,7 @@ def select_final(argv: list[str] | None = None) -> None:
         "--candidate-batch-size",
         type=int,
         default=int(os.getenv("ACC_FINAL_SELECTOR_CANDIDATE_BATCH_SIZE", "20")),
-        help="Number of cross-encoder candidates to send in each LLM selector call.",
+        help="Number of final Top-K candidates to send in each LLM selector call.",
     )
     parser.add_argument("--llm-retries", type=int, default=int(os.getenv("ACC_FINAL_SELECTOR_LLM_RETRIES", "2")))
     parser.add_argument(

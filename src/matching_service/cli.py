@@ -35,6 +35,12 @@ def match(argv: list[str] | None = None) -> None:
     parser.add_argument("--retrieval-candidates", type=int, default=int(os.getenv("ITB_RETRIEVAL_CANDIDATES", "100")))
     parser.add_argument("--output-limit", type=int, default=int(os.getenv("ITB_OUTPUT_LIMIT", "20")))
     parser.add_argument(
+        "--rerank-mode",
+        choices=["cross_encoder", "rrf_only"],
+        default=os.getenv("ITB_RERANK_MODE", "cross_encoder").strip().lower(),
+        help="Use cross-encoder reranking or keep the RRF retrieval ranking as final Top-K.",
+    )
+    parser.add_argument(
         "--cross-encoder-query-mode",
         choices=["structured", "full_chunk"],
         default=os.getenv("ITB_CROSS_ENCODER_QUERY_MODE", "full_chunk").strip().lower(),
@@ -68,17 +74,20 @@ def match(argv: list[str] | None = None) -> None:
         retrieval_mode=args.retrieval_mode,
         retrieval_candidate_limit=args.retrieval_candidates,
         output_limit=args.output_limit,
+        rerank_mode=args.rerank_mode,
         cross_encoder_query_mode=args.cross_encoder_query_mode,
         source_files=tuple(args.source_files or ()),
     )
     output_dir = _scoped_output_dir(args.output_dir, config.source_files) / args.retrieval_mode
     files_to_process = _files_to_process(args.inputs, args.outputs, DEFAULT_INPUT_DIR, output_dir)
     embedding_service = AzureEmbeddingService() if config.retrieval_mode in {"semantic", "hybrid"} else None
-    cross_encoder_reranker = create_reranker(
-        args.cross_encoder_model,
-        batch_size=args.cross_encoder_batch_size,
-        backend=args.reranker_backend,
-    )
+    cross_encoder_reranker = None
+    if args.rerank_mode == "cross_encoder":
+        cross_encoder_reranker = create_reranker(
+            args.cross_encoder_model,
+            batch_size=args.cross_encoder_batch_size,
+            backend=args.reranker_backend,
+        )
 
     output_dir.mkdir(parents=True, exist_ok=True)
     with Neo4jConnection() as conn:

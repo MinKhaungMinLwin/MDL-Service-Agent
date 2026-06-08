@@ -92,7 +92,7 @@ class _SelectionTask:
 
 
 class ACCFinalSelectorService:
-    """Select final MDL matches from cross-encoder Top-K candidates."""
+    """Select final MDL matches from the final Top-K candidates."""
 
     def __init__(
         self,
@@ -268,6 +268,7 @@ def load_matching_records(matching_dir: Path, top_k: int) -> list[dict[str, Any]
                     "itb": _build_itb_payload(row),
                     "candidates": candidates,
                     "retrieval_doc_ids": _split_doc_ids(row.get("Retrieval_Doc_IDs")),
+                    "final_candidate_mode": _clean(row.get("Final_Candidate_Mode")) or "cross_encoder",
                     "source_path": str(path),
                 }
             )

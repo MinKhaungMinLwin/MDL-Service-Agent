@@ -36,7 +36,7 @@ def evaluate_acc_experiment(
     """Evaluate ACC artifacts using the shared retrieval/cross-encoder metrics."""
     qrels = _load_positive_qrels(ground_truth_path)
     query_info = _load_query_info(ground_truth_path, qrels)
-    matching_rankings = _load_matching_rankings(matching_dir, cross_encoder_k)
+    matching_rankings, final_candidate_mode = _load_matching_rankings(matching_dir, cross_encoder_k)
     if scope:
         qrels = _filter_by_scope(qrels, scope)
         query_info = _filter_by_scope(query_info, scope)
@@ -57,7 +57,7 @@ def evaluate_acc_experiment(
         }
     )
 
-    cross_encoder_stage = f"cross_encoder@{cross_encoder_k}"
+    cross_encoder_stage = f"{final_candidate_mode}@{cross_encoder_k}"
     cross_encoder_rankings = _clip_rankings(matching_rankings["cross_encoder"], cross_encoder_k)
     cross_encoder_summary, _cross_encoder_metrics = evaluate_cross_encoder(
         qrels,
@@ -121,17 +121,21 @@ def _load_query_info(judgment_path: Path, qrels: Qrels) -> dict[str, dict[str, s
     return info
 
 
-def _load_matching_rankings(matching_dir: Path, cross_encoder_k: int) -> dict[str, Rankings]:
+def _load_matching_rankings(matching_dir: Path, cross_encoder_k: int) -> tuple[dict[str, Rankings], str]:
     records = load_matching_records(matching_dir, cross_encoder_k)
     retrieval: Rankings = {}
     cross_encoder: Rankings = {}
+    final_candidate_mode = "cross_encoder"
     for record in records:
         query_id = _query_id(record["itb_scope"], record["chunk_id"])
         if not query_id:
             continue
         retrieval[query_id] = record.get("retrieval_doc_ids", [])
         cross_encoder[query_id] = [candidate["doc_id"] for candidate in record["candidates"]]
-    return {"retrieval": retrieval, "cross_encoder": cross_encoder}
+        record_mode = _clean(record.get("final_candidate_mode")) or "cross_encoder"
+        if record_mode == "rrf_only":
+            final_candidate_mode = "rrf"
+    return {"retrieval": retrieval, "cross_encoder": cross_encoder}, final_candidate_mode
 
 
 def _load_llm_rankings(path: Path) -> Rankings:
