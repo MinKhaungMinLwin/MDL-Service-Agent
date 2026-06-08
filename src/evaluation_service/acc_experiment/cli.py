@@ -135,6 +135,12 @@ def select_final(argv: list[str] | None = None) -> None:
     )
     parser.add_argument("--llm-retries", type=int, default=int(os.getenv("ACC_FINAL_SELECTOR_LLM_RETRIES", "2")))
     parser.add_argument(
+        "--max-concurrency",
+        type=int,
+        default=int(os.getenv("ACC_FINAL_SELECTOR_MAX_CONCURRENCY", "1")),
+        help="Number of LLM selector candidate batches to run concurrently.",
+    )
+    parser.add_argument(
         "--max-records",
         type=int,
         default=int(os.getenv("ACC_FINAL_SELECTOR_MAX_RECORDS", "0")),
@@ -148,6 +154,7 @@ def select_final(argv: list[str] | None = None) -> None:
             top_k=args.top_k,
             candidate_batch_size=args.candidate_batch_size,
             llm_retries=args.llm_retries,
+            max_concurrency=args.max_concurrency,
             max_records=args.max_records,
         ),
         client=build_azure_openai_client(
