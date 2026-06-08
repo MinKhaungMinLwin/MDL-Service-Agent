@@ -1,4 +1,4 @@
-﻿stage,queries,positive_queries,avg_precision,avg_f1,avg_recall,recall_at_200,recall_at_50
-retrieval@200,13,8,,,,0.8645833333333334,
-cross_encoder@50,13,8,,,,,0.37390873015873016
-llm_final,14,8,0.319047619047619,0.31022859594288166,0.3713045634920635,,
+﻿stage,queries,positive_queries,avg_precision,avg_f1,avg_recall,recall_at_300,recall_at_60
+retrieval@300,13,8,,,,0.8671875,
+rrf@60,13,8,,,,,0.7294642857142857
+llm_final,14,8,0.6204619397165981,0.6638532461893296,0.6951140873015873,,

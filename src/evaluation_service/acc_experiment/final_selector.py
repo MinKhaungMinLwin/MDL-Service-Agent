@@ -5,6 +5,7 @@ from __future__ import annotations
 import csv
 import json
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -56,6 +57,7 @@ class ACCFinalSelectorConfig:
     top_k: int = 20
     candidate_batch_size: int = 20
     llm_retries: int = 2
+    max_concurrency: int = 1
     batch_delay_seconds: float = 0.5
     max_records: int = 0
 
@@ -68,14 +70,29 @@ class ACCFinalSelectorConfig:
             raise ValueError("candidate_batch_size must be positive")
         if self.llm_retries < 0:
             raise ValueError("llm_retries cannot be negative")
+        if self.max_concurrency <= 0:
+            raise ValueError("max_concurrency must be positive")
         if self.batch_delay_seconds < 0:
             raise ValueError("batch_delay_seconds cannot be negative")
         if self.max_records < 0:
             raise ValueError("max_records cannot be negative")
 
 
+@dataclass(frozen=True)
+class _SelectionTask:
+    order: int
+    record_index: int
+    record_count: int
+    record: dict[str, Any]
+    batch_index: int
+    batch_count: int
+    batch_candidates: list[dict[str, str]]
+    rank_start: str
+    rank_end: str
+
+
 class ACCFinalSelectorService:
-    """Select final MDL matches from cross-encoder Top-K candidates."""
+    """Select final MDL matches from the final Top-K candidates."""
 
     def __init__(
         self,
@@ -115,10 +132,36 @@ class ACCFinalSelectorService:
             and _is_true(row.get("Usage Row"))
         }
 
+        tasks = self._build_tasks(records, completed_batches)
+        logger.info(
+            "ACC final selector will process {} pending batch{} ({} already completed, concurrency {})",
+            len(tasks),
+            "" if len(tasks) == 1 else "es",
+            len(completed_batches),
+            self.config.max_concurrency,
+        )
+        for task, output_rows in self._run_tasks(tasks):
+            selection_rows.extend(output_rows)
+            completed_batches.add((task.record["itb_scope"], task.record["chunk_id"], str(task.batch_index)))
+            _write_csv(selection_path, SELECTION_FIELDNAMES, _dedupe_selection_rows(selection_rows))
+            self.sleep(self.config.batch_delay_seconds)
+
+        selection_rows = _dedupe_selection_rows(selection_rows)
+        _write_csv(selection_path, SELECTION_FIELDNAMES, selection_rows)
+        logger.info("Saved {} ACC final selected rows: {}", len(selection_rows), selection_path)
+        return len(selection_rows)
+
+    def _build_tasks(
+        self,
+        records: list[dict[str, Any]],
+        completed_batches: set[tuple[str, str, str]],
+    ) -> list[_SelectionTask]:
+        tasks = []
+        order = 1
         for index, record in enumerate(records, start=1):
             candidate_batches = _candidate_batches(record["candidates"], self.config.candidate_batch_size)
             logger.info(
-                "Running ACC final selector record {}/{}: {} {} ({} candidates, {} batch{})",
+                "Prepared ACC final selector record {}/{}: {} {} ({} candidates, {} batch{})",
                 index,
                 len(records),
                 record["itb_scope"],
@@ -131,52 +174,77 @@ class ACCFinalSelectorService:
                 batch_key = (record["itb_scope"], record["chunk_id"], str(batch_index))
                 if batch_key in completed_batches:
                     continue
-                rank_start = batch_candidates[0]["rank"]
-                rank_end = batch_candidates[-1]["rank"]
-                logger.info(
-                    "Running ACC final selector batch {}/{} for {} {} (candidate ranks {}-{}, {} candidates)",
-                    batch_index,
-                    len(candidate_batches),
-                    record["itb_scope"],
-                    record["chunk_id"],
-                    rank_start,
-                    rank_end,
-                    len(batch_candidates),
+                tasks.append(
+                    _SelectionTask(
+                        order=order,
+                        record_index=index,
+                        record_count=len(records),
+                        record=record,
+                        batch_index=batch_index,
+                        batch_count=len(candidate_batches),
+                        batch_candidates=batch_candidates,
+                        rank_start=batch_candidates[0]["rank"],
+                        rank_end=batch_candidates[-1]["rank"],
+                    )
                 )
-                batch_record = {**record, "candidates": batch_candidates}
-                result = _run_with_retries(
-                    lambda current_record=batch_record: _select_record(
-                        self.client,
-                        self.config.model,
-                        self.prompt,
-                        current_record,
-                    ),
-                    retries=self.config.llm_retries,
-                    sleep=self.sleep,
-                    delay_seconds=self.config.batch_delay_seconds,
-                    description=(
-                        f"final select {record['itb_scope']} {record['chunk_id']} "
-                        f"batch {batch_index}/{len(candidate_batches)}"
-                    ),
-                )
-                output_rows = _resolve_selection(
-                    record,
-                    batch_candidates,
-                    result,
-                    batch_index=batch_index,
-                    batch_count=len(candidate_batches),
-                    rank_start=rank_start,
-                    rank_end=rank_end,
-                )
-                selection_rows.extend(output_rows)
-                completed_batches.add(batch_key)
-                _write_csv(selection_path, SELECTION_FIELDNAMES, _dedupe_selection_rows(selection_rows))
-                self.sleep(self.config.batch_delay_seconds)
+                order += 1
+        return tasks
 
-        selection_rows = _dedupe_selection_rows(selection_rows)
-        _write_csv(selection_path, SELECTION_FIELDNAMES, selection_rows)
-        logger.info("Saved {} ACC final selected rows: {}", len(selection_rows), selection_path)
-        return len(selection_rows)
+    def _run_tasks(self, tasks: list[_SelectionTask]):
+        if self.config.max_concurrency == 1:
+            for task in tasks:
+                yield task, self._run_task(task)
+            return
+
+        completed: dict[int, tuple[_SelectionTask, list[dict[str, str]]]] = {}
+        next_order = 1
+        with ThreadPoolExecutor(max_workers=self.config.max_concurrency) as executor:
+            futures = {executor.submit(self._run_task, task): task for task in tasks}
+            for future in as_completed(futures):
+                task = futures[future]
+                completed[task.order] = (task, future.result())
+                while next_order in completed:
+                    yield completed.pop(next_order)
+                    next_order += 1
+
+    def _run_task(self, task: _SelectionTask) -> list[dict[str, str]]:
+        logger.info(
+            "Running ACC final selector batch {}/{} for {} {} (record {}/{}, candidate ranks {}-{}, {} candidates)",
+            task.batch_index,
+            task.batch_count,
+            task.record["itb_scope"],
+            task.record["chunk_id"],
+            task.record_index,
+            task.record_count,
+            task.rank_start,
+            task.rank_end,
+            len(task.batch_candidates),
+        )
+        batch_record = {**task.record, "candidates": task.batch_candidates}
+        result = _run_with_retries(
+            lambda current_record=batch_record: _select_record(
+                self.client,
+                self.config.model,
+                self.prompt,
+                current_record,
+            ),
+            retries=self.config.llm_retries,
+            sleep=self.sleep,
+            delay_seconds=self.config.batch_delay_seconds,
+            description=(
+                f"final select {task.record['itb_scope']} {task.record['chunk_id']} "
+                f"batch {task.batch_index}/{task.batch_count}"
+            ),
+        )
+        return _resolve_selection(
+            task.record,
+            task.batch_candidates,
+            result,
+            batch_index=task.batch_index,
+            batch_count=task.batch_count,
+            rank_start=task.rank_start,
+            rank_end=task.rank_end,
+        )
 
 
 def load_matching_records(matching_dir: Path, top_k: int) -> list[dict[str, Any]]:
@@ -200,6 +268,7 @@ def load_matching_records(matching_dir: Path, top_k: int) -> list[dict[str, Any]
                     "itb": _build_itb_payload(row),
                     "candidates": candidates,
                     "retrieval_doc_ids": _split_doc_ids(row.get("Retrieval_Doc_IDs")),
+                    "final_candidate_mode": _clean(row.get("Final_Candidate_Mode")) or "cross_encoder",
                     "source_path": str(path),
                 }
             )

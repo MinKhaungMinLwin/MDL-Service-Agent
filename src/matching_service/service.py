@@ -13,6 +13,7 @@ from common.text_normalizer import expand_abbreviation_terms
 from matching_service.models import MatchingConfig
 from matching_service.output import _format_json_candidate, build_json_record, format_candidate, write_match_outputs
 from matching_service.query import (
+    DEPTH_COLUMNS,
     build_cross_encoder_query,
     build_depth_filter_query,
     build_fulltext_query,
@@ -31,7 +32,7 @@ class MatchingService:
     def __init__(
         self,
         repository: MDLSearchRepository,
-        cross_encoder_reranker: Any,
+        cross_encoder_reranker: Any | None,
         config: MatchingConfig,
         embedding_service: Any | None = None,
     ) -> None:
@@ -79,18 +80,24 @@ class MatchingService:
                 semantic_query,
                 semantic_embedding,
             )
-            cross_encoder_query = build_cross_encoder_query(
-                depth_terms,
-                keyword_terms,
-                chunk_text=source_row.get("Chunk Text", ""),
-                mode=self.config.cross_encoder_query_mode,
-            )
             cross_encoder_candidates = retrieval.candidates[: self.config.retrieval_candidate_limit]
-            top_matches = self.cross_encoder_reranker.rerank(
-                cross_encoder_query,
-                cross_encoder_candidates,
-                top_k=self.config.output_limit,
-            )
+            if self.config.rerank_mode == "cross_encoder":
+                if self.cross_encoder_reranker is None:
+                    raise ValueError("cross_encoder_reranker is required when rerank_mode=cross_encoder")
+                cross_encoder_query = build_cross_encoder_query(
+                    depth_terms,
+                    keyword_terms,
+                    chunk_text=source_row.get("Chunk Text", ""),
+                    mode=self.config.cross_encoder_query_mode,
+                )
+                top_matches = self.cross_encoder_reranker.rerank(
+                    cross_encoder_query,
+                    cross_encoder_candidates,
+                    top_k=self.config.output_limit,
+                )
+            else:
+                cross_encoder_query = ""
+                top_matches = cross_encoder_candidates[: self.config.output_limit]
 
             output_rows.append(
                 self._build_csv_row(
@@ -118,6 +125,7 @@ class MatchingService:
                     retrieval.candidates,
                     len(retrieval.keyword_candidates),
                     len(retrieval.semantic_candidates),
+                    self.config.rerank_mode,
                     self.config.cross_encoder_query_mode,
                     cross_encoder_query,
                     len(cross_encoder_candidates),
@@ -142,6 +150,8 @@ class MatchingService:
                 _normalize_retrieval_candidate(candidate)
                 for candidate in record.get("retrieval_candidates", [])[: self.config.retrieval_candidate_limit]
             ]
+            if self.cross_encoder_reranker is None:
+                raise ValueError("cross_encoder_reranker is required to rerank existing CSV files")
             cross_encoder_query = str(record.get("cross_encoder_query", "") or "")
             top_matches = self.cross_encoder_reranker.rerank(
                 cross_encoder_query,
@@ -198,9 +208,14 @@ class MatchingService:
         row["Retrieval_Candidate_Count"] = len(retrieval.candidates)
         row["Keyword_Candidate_Count"] = len(retrieval.keyword_candidates)
         row["Semantic_Candidate_Count"] = len(retrieval.semantic_candidates)
-        row["Cross_Encoder_Query_Mode"] = self.config.cross_encoder_query_mode
+        row["Final_Candidate_Mode"] = self.config.rerank_mode
+        row["Cross_Encoder_Query_Mode"] = (
+            self.config.cross_encoder_query_mode if self.config.rerank_mode == "cross_encoder" else ""
+        )
         row["Cross_Encoder_Query"] = cross_encoder_query
-        row["Cross_Encoder_Candidate_Count"] = len(cross_encoder_candidates)
+        row["Cross_Encoder_Candidate_Count"] = (
+            len(cross_encoder_candidates) if self.config.rerank_mode == "cross_encoder" else 0
+        )
         row["Search_Queries"] = depth_filter_query
 
         for index in range(self.config.output_limit):
@@ -232,6 +247,7 @@ class MatchingService:
             "Retrieval_Candidate_Count": record.get("retrieval_candidate_count", 0),
             "Keyword_Candidate_Count": record.get("keyword_candidate_count", 0),
             "Semantic_Candidate_Count": record.get("semantic_candidate_count", 0),
+            "Final_Candidate_Mode": record.get("final_candidate_mode", self.config.rerank_mode),
             "Cross_Encoder_Query_Mode": self.config.cross_encoder_query_mode,
             "Cross_Encoder_Query": record.get("cross_encoder_query", ""),
             "Cross_Encoder_Candidate_Count": len(cross_encoder_candidates),
@@ -291,6 +307,7 @@ def _records_from_matching_csv(path: Path, output_limit: int) -> list[dict[str, 
                 "retrieval_candidate_count": _cell_text(row.get("Retrieval_Candidate_Count", "")),
                 "keyword_candidate_count": _cell_text(row.get("Keyword_Candidate_Count", "")),
                 "semantic_candidate_count": _cell_text(row.get("Semantic_Candidate_Count", "")),
+                "final_candidate_mode": _cell_text(row.get("Final_Candidate_Mode", "")),
                 "cross_encoder_query_mode": _cell_text(row.get("Cross_Encoder_Query_Mode", "")),
                 "cross_encoder_query": _cell_text(row.get("Cross_Encoder_Query", "")),
                 "cross_encoder_candidate_count": len(candidates),
