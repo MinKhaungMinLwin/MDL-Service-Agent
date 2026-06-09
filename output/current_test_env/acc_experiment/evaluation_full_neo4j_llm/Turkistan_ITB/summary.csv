@@ -1,4 +1,0 @@
-﻿stage,queries,positive_queries,avg_precision,avg_f1,avg_recall,recall_at_300,recall_at_60
-retrieval@300,2,0,,,,,
-rrf@60,2,0,,,,,
-llm_final,2,0,,,,,
