@@ -11,6 +11,7 @@ import pandas as pd
 
 from common.text_normalizer import expand_abbreviation_terms
 from matching_service.cli import _files_to_process, _json_files_to_process, _scoped_output_dir
+from matching_service.intent import build_requirement_intent
 from matching_service.models import MatchingConfig
 from matching_service.query import (
     build_cross_encoder_query,
@@ -68,6 +69,23 @@ class MatchingServiceTest(unittest.TestCase):
         self.assertTrue(query.startswith("Chunk Text:\nContractor shall submit fresh air intake layout."))
         self.assertIn("Depth:\nBuilding Services > HVAC", query)
         self.assertIn("Keywords:\nFresh Air Intake", query)
+
+    def test_requirement_intent_extracts_structured_signals(self) -> None:
+        intent = build_requirement_intent(
+            {
+                "Chunk Text": (
+                    "Contractor shall submit technical specifications and performance correction curves "
+                    "for the Air Cooled Condenser."
+                )
+            },
+            ["Plant Performance"],
+            ["ACC", "Technical Specifications"],
+        )
+
+        self.assertIn("Air Cooled Condenser", intent.equipment)
+        self.assertIn("Technical Specification", intent.deliverables)
+        self.assertIn("Performance Correction Curve", intent.deliverables)
+        self.assertIn("submit", intent.actions)
 
     def test_retrieval_modes_search_with_depth_and_keyword_queries(self) -> None:
         repository = _RetrievalRepository()
@@ -280,8 +298,10 @@ class MatchingServiceTest(unittest.TestCase):
         )
         self.assertIn("Matched_Doc_20", csv_output.columns)
         self.assertNotIn("Matched_Doc_21", csv_output.columns)
+        self.assertIn("Requirement_Intent_Deliverables", csv_output.columns)
         self.assertIn("[Sample] 1 - Doc 1", csv_output.loc[0, "Matched_Doc_1"])
         self.assertEqual(json_output[0]["retrieval_candidate_count"], 100)
+        self.assertIn("requirement_intent", json_output[0])
         self.assertEqual(json_output[0]["cross_encoder_candidate_count"], 100)
         self.assertEqual(len(json_output[0]["retrieval_candidates"]), 100)
         self.assertEqual(

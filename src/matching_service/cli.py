@@ -224,5 +224,30 @@ def _csv_files_to_process(
     ]
 
 
+def _json_files_to_process(
+    inputs: list[Path] | None,
+    outputs: list[Path] | None,
+    input_dir: Path,
+    output_dir: Path,
+) -> list[tuple[Path, Path]]:
+    if inputs:
+        if outputs and len(outputs) != len(inputs):
+            raise ValueError("--output must be provided once per --input")
+        return [
+            (input_path, outputs[index] if outputs else output_dir / input_path.with_suffix(".csv").name)
+            for index, input_path in enumerate(inputs)
+        ]
+    return [
+        (
+            input_dir / "output_match_all_projects_section6.json",
+            output_dir / "output_match_all_projects_section6.csv",
+        ),
+        (
+            input_dir / "output_match_all_projects_section7.json",
+            output_dir / "output_match_all_projects_section7.csv",
+        ),
+    ]
+
+
 if __name__ == "__main__":
     match()

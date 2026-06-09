@@ -151,9 +151,11 @@ def _extract_candidates_from_json_records(
         itb_doc = str(record.get("document", "") or "").strip()
         itb_page = str(record.get("page", "") or "").strip()
         chunk_id = str(record.get("chunk_id", "") or "").strip()
+        requirement_intent = record.get("requirement_intent", {})
 
         for candidate in record.get("candidates", [])[:top_n]:
             parsed = _candidate_from_json(candidate)
+            _apply_requirement_intent(parsed, requirement_intent)
             if parsed["score"] < score_threshold:
                 continue
             parsed["candidate_status"], parsed["quality_issues"] = _candidate_quality(parsed)
@@ -276,12 +278,21 @@ def _upsert_candidate(
         candidates[key] = {
             **parsed,
             "itb_sources": [],
+            "requirement_intent_equipment": [],
+            "requirement_intent_systems": [],
+            "requirement_intent_deliverables": [],
+            "requirement_intent_actions": [],
+            "requirement_intent_constraints": [],
         }
+    _merge_requirement_intent(candidates[key], parsed)
     candidates[key]["itb_sources"].append(_itb_source(itb_doc, itb_page, chunk_id, parsed))
     if parsed["score"] > candidates[key]["score"]:
         previous_sources = candidates[key]["itb_sources"]
+        previous_intent = _candidate_intent_lists(candidates[key])
         candidates[key].update(parsed)
         candidates[key]["itb_sources"] = previous_sources
+        for field, values in previous_intent.items():
+            candidates[key][field] = _unique_texts([*values, *parsed.get(field, [])])
 
 
 def _itb_source(itb_doc: str, itb_page: str, chunk_id: str, parsed: dict[str, Any]) -> str:
@@ -290,6 +301,50 @@ def _itb_source(itb_doc: str, itb_page: str, chunk_id: str, parsed: dict[str, An
     rank = parsed.get("rank")
     rank_part = f",rank={rank}" if rank else ""
     return f"{itb_doc}{page}{chunk}(score={parsed['score']:.2f}{rank_part})"
+
+
+def _apply_requirement_intent(candidate: dict[str, Any], requirement_intent: Any) -> None:
+    if not isinstance(requirement_intent, dict):
+        requirement_intent = {}
+    candidate["requirement_intent_equipment"] = _intent_values(requirement_intent, "equipment")
+    candidate["requirement_intent_systems"] = _intent_values(requirement_intent, "systems")
+    candidate["requirement_intent_deliverables"] = _intent_values(requirement_intent, "deliverables")
+    candidate["requirement_intent_actions"] = _intent_values(requirement_intent, "actions")
+    candidate["requirement_intent_constraints"] = _intent_values(requirement_intent, "constraints")
+
+
+def _merge_requirement_intent(target: dict[str, Any], source: dict[str, Any]) -> None:
+    for field in _candidate_intent_lists(target):
+        target[field] = _unique_texts([*target.get(field, []), *source.get(field, [])])
+
+
+def _candidate_intent_lists(candidate: dict[str, Any]) -> dict[str, list[str]]:
+    return {
+        "requirement_intent_equipment": list(candidate.get("requirement_intent_equipment", [])),
+        "requirement_intent_systems": list(candidate.get("requirement_intent_systems", [])),
+        "requirement_intent_deliverables": list(candidate.get("requirement_intent_deliverables", [])),
+        "requirement_intent_actions": list(candidate.get("requirement_intent_actions", [])),
+        "requirement_intent_constraints": list(candidate.get("requirement_intent_constraints", [])),
+    }
+
+
+def _intent_values(requirement_intent: dict[str, Any], key: str) -> list[str]:
+    values = requirement_intent.get(key, [])
+    if not isinstance(values, list):
+        return []
+    return _unique_texts(values)
+
+
+def _unique_texts(values: list[Any]) -> list[str]:
+    seen = set()
+    result = []
+    for value in values:
+        text = str(value or "").strip()
+        key = text.casefold()
+        if text and key not in seen:
+            seen.add(key)
+            result.append(text)
+    return result
 
 
 def _parse_matched_doc(raw: str) -> dict[str, Any]:
@@ -528,6 +583,11 @@ def _write_csv(path: Path, candidates: list[dict[str, Any]]) -> None:
         "candidate_selection_rank",
         "candidate_selection_score",
         "candidate_selection_reasons",
+        "requirement_intent_equipment",
+        "requirement_intent_systems",
+        "requirement_intent_deliverables",
+        "requirement_intent_actions",
+        "requirement_intent_constraints",
         "doc_id",
         "parse_source",
         "semantic_score",
@@ -558,6 +618,11 @@ def _write_csv(path: Path, candidates: list[dict[str, Any]]) -> None:
                 "candidate_selection_rank": c.get("candidate_selection_rank", ""),
                 "candidate_selection_score": _fmt_optional_score(c.get("candidate_selection_score")),
                 "candidate_selection_reasons": c.get("candidate_selection_reasons", ""),
+                "requirement_intent_equipment": _join_list(c.get("requirement_intent_equipment")),
+                "requirement_intent_systems": _join_list(c.get("requirement_intent_systems")),
+                "requirement_intent_deliverables": _join_list(c.get("requirement_intent_deliverables")),
+                "requirement_intent_actions": _join_list(c.get("requirement_intent_actions")),
+                "requirement_intent_constraints": _join_list(c.get("requirement_intent_constraints")),
                 "doc_id": c.get("doc_id", ""),
                 "parse_source": c.get("parse_source", ""),
                 "semantic_score": _fmt_optional_score(c.get("semantic_score")),
@@ -573,6 +638,12 @@ def _fmt_optional_score(value: Any) -> str:
         return f"{float(value):.4f}"
     except (TypeError, ValueError):
         return ""
+
+
+def _join_list(value: Any) -> str:
+    if not isinstance(value, list):
+        return ""
+    return " | ".join(str(item) for item in value if str(item).strip())
 
 
 def _classify_candidates(

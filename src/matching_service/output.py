@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+import os
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
@@ -27,6 +29,11 @@ BASE_COLUMNS = [
     "Keyword_Filter_Query",
     "Semantic_Query",
     "Vector_Terms",
+    "Requirement_Intent_Equipment",
+    "Requirement_Intent_Systems",
+    "Requirement_Intent_Deliverables",
+    "Requirement_Intent_Actions",
+    "Requirement_Intent_Constraints",
     "Retrieval_Mode",
     "Retrieval_Candidate_Count",
     "Keyword_Candidate_Count",
@@ -76,6 +83,7 @@ def build_json_record(
     keyword_terms: list[str],
     keyword_filter_query: str,
     semantic_query: str,
+    requirement_intent: Mapping[str, Any],
     retrieval_mode: str,
     retrieval_candidates: list[Candidate],
     keyword_candidate_count: int,
@@ -101,6 +109,14 @@ def build_json_record(
         "keyword_filter_query": keyword_filter_query,
         "semantic_query": semantic_query,
         "vector_terms": semantic_query,
+        "requirement_intent": {
+            "equipment": list(requirement_intent.get("equipment", [])),
+            "systems": list(requirement_intent.get("systems", [])),
+            "deliverables": list(requirement_intent.get("deliverables", [])),
+            "actions": list(requirement_intent.get("actions", [])),
+            "constraints": list(requirement_intent.get("constraints", [])),
+            "source_terms": list(requirement_intent.get("source_terms", [])),
+        },
         "retrieval_mode": retrieval_mode,
         "retrieval_candidate_count": len(retrieval_candidates),
         "keyword_candidate_count": keyword_candidate_count,
@@ -139,6 +155,11 @@ def write_match_outputs(
     final_cols = base_cols + match_cols + detail_cols
     result_df[final_cols].to_csv(output_path, index=False, encoding="utf-8-sig")
     logger.info("Saved successfully: {}", output_path)
+
+    json_path = _json_output_path(output_path)
+    with open(json_path, "w", encoding="utf-8") as file:
+        json.dump(json_records, file, ensure_ascii=False, indent=2)
+    logger.info("Structured JSON saved successfully: {}", json_path)
 
 
 def _format_json_candidate(candidate: Candidate, rank: int) -> dict[str, Any]:
@@ -197,6 +218,11 @@ def _format_retrieval_candidate(candidate: Candidate, rank: int) -> dict[str, An
 
 def _json_safe_value(value: Any) -> Any:
     return "" if pd.isna(value) else value
+
+
+def _json_output_path(csv_output_path: str | Path) -> str:
+    root, _ = os.path.splitext(str(csv_output_path))
+    return f"{root}.json"
 
 
 def _with_candidate_columns(row: dict[str, Any], record: dict[str, Any], output_limit: int) -> dict[str, Any]:
