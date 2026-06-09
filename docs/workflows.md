@@ -35,7 +35,7 @@ Defaults:
 
 - input chunks: `data/current_test_env/data/itb_chunks/R&N_ITB_chunks.json`
 - output CSV/JSON/token/rejected files: `output/current_test_env/itb_extract`
-- token files are section-specific, e.g. `output_itb_section7_focused_tokens.csv`
+- token files are section-specific, e.g. `itb_extraction_section7_tokens.csv`
 - packaged prompts: `src/itb_service/prompts/`
 
 ## ITB To MDL Matching
@@ -46,7 +46,7 @@ uv run itb-match
 
 Defaults:
 
-- input extraction CSV files: `output/current_test_env/itb_extract/output_itb_section*_focused.csv`
+- input extraction CSV files: `output/current_test_env/itb_extract/itb_extraction_section*.csv`
 - global output matching CSV/JSON files: `output/current_test_env/matching/<retrieval-mode>`
 - project-scoped output matching CSV/JSON files: `output/current_test_env/matching/<source-file-stem>/<retrieval-mode>`
 - retrieval mode: `keyword`, `semantic`, or `hybrid`

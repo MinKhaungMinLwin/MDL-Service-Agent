@@ -1,0 +1,4 @@
+﻿stage,queries,positive_queries,avg_precision,avg_f1,avg_recall,recall_at_300,recall_at_60
+retrieval@300,13,8,,,,0.8671875,
+rrf@60,13,8,,,,,0.7294642857142857
+llm_final,14,8,0.6204619397165981,0.6638532461893296,0.6951140873015873,,

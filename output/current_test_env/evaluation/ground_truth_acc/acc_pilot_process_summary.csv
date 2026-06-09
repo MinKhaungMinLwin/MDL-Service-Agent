@@ -1,0 +1,5 @@
+Project,ACC-Relevant ITB Chunks Found,Candidates Proposed by LLM Judge,Verified Positive Pairs,Notes
+Fadhili,5,3,1,"1 of 3 judge candidates confirmed by independent verifier as a genuine direct match (ACC steel-structure spec)"
+R&N,17,7,0,"7 judge candidates proposed across two clusters (2 + 5); none confirmed by the independent verifier as a genuine direct match"
+Turkistan,0,0,0,"ITB contains no Air Cooled Condenser content -- its only 'ACC' references are to a different system (Automatic Compressor Cleaning); contributes no ITB-side pairs, but its ~34 ACC-titled MDL documents remain usable as candidates for future cross-project prediction"
+TOTAL,22,10,1,"Strict two-stage judge-then-verify filtering correctly narrowed 10 plausible candidates down to 1 genuinely direct, fully-traceable (ITB requirement -> real MDL document) pair"

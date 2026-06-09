@@ -1,0 +1,281 @@
+﻿Document,Page,Prompt Tokens,Completion Tokens,Total Tokens,Chunk Text
+R&N_ITB,218,3218,583,3801,"- Three  phase  AC  generator,  including  excitation  and  voltage  regulation  and  all  other  required auxiliaries
+- Synchronizing facilities
+- Steam turbine related electrical facilities, including generator neutral and line connection facilities
+- Steam turbine Instrumentation and control (I&C) system.
+- Dual or Triple Pressure Stage turbine depending on the proposed design Emergency stop valves for live steam and HP steam complete, including the necessary blow-out provisions,
+- Steam strainers for installation in the emergency stop valve or including housing for installation in the live steam and HP steam admission line,
+- Hydraulically or pneumatic operated control valves at the inlet of the turbine,
+- Motorised or hydraulic turning device, complete, with manual turning equipment and one
+- (1) x 100% AC and one (1) x 100% DC motor
+- Shaft sealing glands and gland steam system complete with gland steam condenser,
+- Safety relief valve in the turbine exhaust line,
+- Turbine drain system, complete,
+- HP steam infeed line, complete, including stop and control valves,
+- Turbine exhaust steam line (to supply duct air cooled condenser),
+- Cooling system in LP section to prevent overheating at low load, e.g. spray system, if necessary,
+- Complete noise and heat insulation,
+- Turbine enclosure, complete, as required,
+- Fire protection equipment,
+- All connecting piping, bearings, fittings, safety devices, fastenings, etc.,
+- Static  and  dynamic  calculation  of  the  complete  foundations,  common  for  steam  turbine  and generator, including deflection calculation due to occurring forces and moments,
+- Extensive  vibration  monitoring  facilities  for  a  continuous  diagnosis  of  the  rotating  parts  and bearings of the turbine, and
+- Necessary supporting steelworks, access walkways, ladders, service platforms for the complete steam turbine generators area, also covering all auxiliary equipment."
+R&N_ITB,218,2925,283,3208,"Due to the scarcity of water, solutions involving wet cooling towers are not feasible and air-cooled. condensers  will  be  the  basis  for  steam  turbine  condensers.  The  steam  turbine  exhaust  and  air-cooled condenser  configuration  shall  be  as  per  manufacturer's  standard  design.  The  steam  turbines  shall  be complete with and directly coupled to 60Hz generators. Steam turbines shall be provided for the Plant as defined in this OTS and shall be located indoors in a ventilated atmosphere."
+R&N_ITB,219,2890,295,3185,"The turbine shall be a reheat, multiple pressure condensing type using an air-cooled condenser and be suitable for direct coupling to a two-pole generator for power generation at 60 Hz. Designs for impulse or reaction blading, or for combinations thereof, are equally acceptable.
+The steam admission to the HP turbine section shall be via suitable stop and control valves. The steam turbine governor shall be capable of controlling the steam turbine to maintain stable conditions."
+R&N_ITB,219,3376,450,3826,"The steam turbine shall be capable of withstanding partial and full load rejection without an overspeed trip and reverse power trip.
+The  steam  turbine  shall  be  protected  against  water  ingress.  The  recommended  practices  stated  in ANSI/ASME TDP-1- 2013 shall be provided as a minimum.
+Vacuum pumps shall be provided for air extraction from the steam turbine condenser.
+Steam turbine bypass provision shall be provided by means of a pressure reduction and desuperheating station between each HRSG superheater outlet and the steam turbine condenser. To facilitate start-up of the Plant, to reduce the impact on steam turbine trips and to improve operational flexibility, e.g. during rapid load changes, steam bypass lines for HP, IP and LP steam shall be installed from each header to the cold reheater or condenser as applicable. Each bypass line shall be designed to handle the full steam flow at all operating points. The bypass shall be automatically initiated in response to high HP steam pressure or as part of an automated steam turbine start-up sequence.
+The STG unit shall be able to continue operation when one of the GTs trips.
+Inspection  of  highly  stressed  and  back-end  ST  stages  must  be  possible  through  adequate  boroscope openings without opening the casing.
+In  order  to  protect  the  ST  from  corrosion  during  standstill  periods,  one  dehumidification unit shall be provided. This dry preservation unit shall blow heated dry air through pre-determined openings to various sections  of  the  ST  and  the  condenser.  The  drying  unit  shall  have  adequate  performance  to  reduce  the moisture  content  of  the  ST  hall  suction  air  to  the  requirement  of  STG/Condenser  OEM  requirements. Automatic control by a hydrostat shall be provided.
+A turning gear (automatically engaged and disengaged type) shall be provided to rotate the turbine rotor slowly prior to start-up and after the turbine is shutdown to allow unified warm-up or cooling, maintain eccentricity and to prevent thermal distortion of the rotor. The turning gear pinion shall be engaged only after the rotors have come to rest as indicated by the zero speed indicator and observation.
+A pressure switch shall be provided in the turning gear circuit so that loss of bearing oil pressure shall automatically stop the turning gear motor.
+- Manual hand turning can be applicable,
+- AC Turning Motor shall be supplied"
+R&N_ITB,"219, 220",3167,418,3585,"The blading shall be specially constructed to avoid the possibility of damage from vibration under any condition  of  running,  including  testing  overspeed  trips.  The  blading  shall  further  be  constructed  to withstand the high temperature shocks met with in practice and to resist deterioration through contact with the steam conditions expected during Plant service life.
+All blading shall be of proven design and shall feature the following blade strength characteristics:
+- For rotating blades with a natural frequency of less than seven (7) harmonics of rotating speed (420 Hz), tuned blades shall be applied which offer sufficient deviation from the resonant frequency;
+- For rotating blades with a natural frequency of greater that seven (7) harmonics, un-tuned blades may be proposed but the Contractor shall use its operating experience to ensure that such blades will have sufficient strength margin to withstand resonant vibrations.
+Notwithstanding the above, equipment shall comply with any electrical Network Connection Conditions in relation to maintaining operation during network frequency excursions.
+The design of blade and its root fixing as well as the material of construction shall have been used in similar applications and at similar operating conditions for a period of not less than 5 years commercial operation without serious incident.
+Blading material and design shall be selected with regard to the operating conditions during all normal operation at full load and part load.
+HP and IP Blading: The HP and IP stages shall consist of high-performance blades. These blades shall be designed using the latest flow analysis around the blade. The blades shall be of ISB, or integral shroud blade, i.e.  shrouds  and  blade  profile  shall  be  manufactured  from  one  piece,  not  separately  manufactured  and assembled."
+R&N_ITB,220,3045,432,3477,"The steam stop and throttle valves shall be constructed of material chosen to resist deterioration due to high steam temperatures and erosion. The valves shall be of the 'fail safe' type, arranged to close under spring force and to require hydraulic pressure, under governor control, to open. The main stop valves shall be fitted with internal bypass valves or pilot valves to permit them to be opened against full steam pressure. Provision shall be made for exercising all stop valves and throttle valves with the turbine on full load.
+All main inlet and control valves shall be provided with facilities for on-load testing. Positions for all valves, steam pressures and temperatures shall be brought into the DCS.
+The turbine shall have two HP stop and control valves and two IP stop and control valves, HP valves shall be  combined  in  a  common  casing  valve  body  directly  connected  to  the  turbine  casing  and,  driven  by hydraulic servomechanism, IP stop and control valves shall be as per OEM design.
+The steam strainer cylindrical in shape fits around the valve."
+R&N_ITB,220,2835,306,3141,- The control valve with its tubular valve disk and integral valve stem slides in the bushing of the valve cover. Balancing holes in the valve disk reduce the operating force required to position the valve.
+R&N_ITB,220,2949,445,3394,"- The control valves and the stop valves each have dedicated electrohydraulic actuators which opens the valves against the force of a spring with the hydraulic force of the actuator. The valves are closed by spring force in the event of a power failure.
+- The Steam Turbine shall be provided with fast cooling system (forced air cooling system) on the main steam control valve and on the reheat steam control valve. The logic to operate the system shall also be implemented. The system shall be designed to achieve a cool down time of less than 3 days.
+- Steam turbine inlet and control valves, which are stated shall be as close as possible to the Turbine casing in order not to leave any piping which cannot be flushed, cleaned with acid and blown out."
+R&N_ITB,220,2853,331,3184,"- The turbine shall have one LP stop valve subject to detailed engineering shall be driven  by on-off control of hydraulic servomotor.
+- The turbine shall have one LP control valve which is controlled by individual hydraulic servomotor. LP stop and control valve shall be of identical design."
+R&N_ITB,220,2853,329,3182,"- Valve closing test function during on-load operation shall be provided in order to confirm the valve free from sticking, therefore full closing test shall be carried out for all valves. The valves will be tested one by one and depending on valve-sets per turbine part with full or part stroke test."
+R&N_ITB,221,3017,479,3496,"In order to protect the steam turbines from foreign object damage, the Contractor shall undertake boiler steam blowing with agreed target plates and install temporary steam strainers at the stop valves which shall  prevent  that  passage  of  foreign  objects  larger  than  4mm  during  commissioning.  Following commissioning, the temporary steam strainers shall be removed by the Contractor and the stop valves shall be fitted  with permanent steam strainers designed as an integral part of the turbine stop valves. Such permanent strainers shall prevent the passage of foreign objects larger than 7mm while ensuring that the valve pressure loss is not excessive. Alternatively a dynamic separator shall be installed on the elbow of the main steam(HP/IP) line in front of main valves, to remove particles and contaminants by inertial forces.
+Alternatively, radial flow blade type strainers with a maximum slot width of 0,762 mm (that can withstand high differential pressure and in normal operation has a small pressure drop due to the diffuser action) may be used during commissioning and as permanent protection after suitable cleaning."
+R&N_ITB,221,3371,543,3914,"The lubricating oil system shall provide cooled and filtered oil under pressure to all of the bearings of the turbine and generator. The system shall comprise as a minimum:
+- an oil reservoir,
+- main and standby full duty oil pumps,
+- 2x100% AC motor driven turning oil pump sufficient for extended barring and an emergency DCdriven oil pump. The main oil pump may be shaft driven or motor driven. The standby full duty pump shall be AC motor driven.
+- Sufficient  Heat exchanger (minimum 2X100%) (to be designed and implemented according to study results, meeting OEM recommendations for maintain lube oil cooling and serving all worst case conditions)
+Lubricating oil pressure shall be automatically controlled either actively or passively.
+Low lubricating  oil  pressure  shall  start  the  standby  pumps  as  appropriate  or,  if  a  minimum  adequate pressure is not maintained, shall trip the turbine.
+Duplex filters and coolers shall be provided to allow on-line changeover and cleaning of standby equipment.
+Oil temperature leaving the coolers shall be automatically controlled.
+The oil reservoir shall be supplied with two 100% duty exhaust fans to maintain a depression in the oil return pipework and bearing pedestals. The exhaust from the fans shall be ducted to a safe location outside the building.
+Oil leakages shall be contained and prevented from entering the surface water drainage system.
+The lubricating oil system shall be common for the steam turbine and the generator. Oil piping from oil strainer/filter to bearings should be Stainless Steel material, oil piping from bearings to lube oil tank should be Carbon Steel material. To eliminate galvanic corrosion between dissimilar materials, EPC contractor should consider special gaskets, bolts and nuts for such connection as applicable.
+It is required that lubrication oil supply system and control oil supply system shall be separated. Control oil system and lubrication oil system shall be supplied from separate tanks.
+All  oil  systems shall  be flushed after the completion of installation. The oil is circulated from the tank, through the associated pipe systems and coolers to the lube oil system of the steam turbine and back to the tank again. The process is performed in accordance with the prescribed terms of pressure and flow rate. Bearings are to be bypassed during the lube oil flushing by installing a temporary hose at the return line of the lube oil to the tank. The cleanliness level of the oil is analysed by using a comparison contamination kit as well as an electric particle counter measuring instrument. The oil is to meet the specified criteria for optimal system cleanliness."
+R&N_ITB,222,2941,376,3317,Mobile  oil  purifier-separator  of  the  centrifugal  type  shall  be  provided  for  the  Plant.  It  shall  be  easily connectable to each of the oil reservoirs as required using permanent connecting points for supply and return flows as well as drain and or waste oil flows. The oil purifier-separator shall be capable of removing varnish. EPC Contractor is free to propose one mobile oil purifier-separator for 2 GTs and one mobile oil purifier-separator for 2 STs.
+R&N_ITB,222,2946,406,3352,"A control oil system shall be supplied to control and actuate the main steam turbine inlet valves. Such a system may use the same oil and the lubricating oil system and, if so, no separate control oil reservoir, pumps and coolers will be necessary. If a separate system is proposed, however, the control oil system may use  either  mineral  oil  identical  to  the  lubricating  oil  or  synthetic  fire  resistant  fluid  and  shall  have  a dedicated reservoir and dedicated pumps, coolers and filters.
+The pressure and temperature of the oil shall be automatically controlled. Failure of the control oil system pressure shall automatically trip the turbine."
+R&N_ITB,222,2905,370,3275,"A  jacking  oil  system  shall  be  provided  to  facilitate  turning  of  the  rotor  for  cooling  down  and  during maintenance activities. If required, it is preferable that the jacking oil system should only be required to assist  starting  of  the  barring  motor  and  that  normal  barring  speed  should  be  high  enough to establish hydrodynamic lubrication at the bearings using the main or auxiliary oil pumps."
+R&N_ITB,222,2911,390,3301,"There shall be a motor driven barring gear capable of turning the turbine and generator rotors continuously at a high enough speed to establish full hydrodynamic lubrication.
+The barring gear shall be capable of automatic and remote-manual engagement, disengagement, starting and stopping. Interlocks shall be provided to prevent starting and/or engagement if the turbine rotor is turning or if there is insufficient lubricating oil pressure.
+An emergency facility shall be provided for turning the turbine rotor by hand with the aid of a hand wheel or, if applicable, jacking oil."
+R&N_ITB,222,3033,480,3513,"The turbine shall be supplied with a fully automatic gland sealing system complete with all condensers, pipework, valves and control equipment. All remotely operated isolation and bypass valves required for remote switching of gland steam sources shall be provided. The system shall ensure that the rotor glands are sealed against air ingress and steam leakage to atmosphere at all turbine loads.
+The  system  shall  be  self-sufficient  in  steam  (i.e.  it  will  not  require  constant  make-up)  throughout  the majority of the load range.
+The system shall comprise as a minimum:
+- Gland steam make-up valve for low load operation
+- Gland steam regulating/dump valve
+- Gland steam receiver
+- Gland steam condenser
+- 2 x 100% condenser exhaust fans
+Intermediate gland leak-offs shall be returned to an appropriate stage of the turbine.
+The outermost gland leak-off shall be connected to the gland steam condenser, which shall be held under a slight depression by the exhaust fan. The discharge of the fan shall be directed to a safe location outside the turbine enclosure."
+R&N_ITB,223,3247,386,3633,"The  turbine  and  generator  rotors  shall  be  supported  in  a  conventional  two  or  four  journal  bearing arrangement with a solid coupling and a single thrust bearing. Sleeve-type or tilting-pad type bearings may be used.
+The bearings shall provide adequate damping to prevent excessive resonance at critical speeds.
+Main journal  bearings  shall  be  of  the  plain  bore  white-metal  type,  with  forced  lubrication.  Alternative designs featuring 'lemon bore' or 'offset halves' may be considered. Bearings for small auxiliary drives such as governor, oil pump, barring gear, may be of the rolling element type.
+Journal bearings shall be horizontally split and mounted on spherical pads within spherical housings to facilitate alignment between bearing and journal.
+Supply of jacking oil to the journal bearings shall be made.
+Each bearing shall have thermocouples to measure the temperature of the bearing metal. Each bearing shall also be supplied with at least two orthogonally mounted vibration monitors of the electronic proximity type to continuously monitor shaft radial vibration. Bearing metal temperature shall be monitored locally and remotely in DCS.
+Thrust bearings shall be of the horizontally split, tilting pad type and shall incorporate main thrust and reverse thrust bearings. At least two rotor axial position monitors of the electronic proximity type shall be provided to continuously monitor shaft axial position.
+Special attention shall be given to the design of bearings and supports, and to the accurate dynamic balance of the rotating parts of the turbines and generators, to minimise vibrations. The rotors shall be statically and dynamically balanced in the factory so that the maximum effective vibration magnitudes do not exceed the recommended values under steady running conditions at all loads. Means shall be provided so that, if necessary, adjustments to the balance may readily be made. Vibration limits shall comply with vibration criteria as per guideline ISO 20816-2. Both bearing and shaft vibrations shall meet requirements of Zone A. The  acceptance  criteria  for  the  inspections  performed  during  the  component  manufacturing  must  be defined before the start of the works.and must be submitted to the Owner for approval."
+R&N_ITB,223,2999,365,3364,"If necessary, the design of the LP turbine shall include spray cooling to maintain acceptable last stage blade temperatures when operating at part-load conditions.
+Automatic sprays shall be provided to prevent high exhaust temperature of LP turbine. When exhaust hood spray valve is opened, water from the condensate pump shall discharge to spray nozzles installed in the turbine exhaust hood chambers. Overheating of the exhaust end shall be avoided even with no load steam and  full  vacuum.  The  exhaust  hood  spray  shall  be  set  to  control  exhaust  hood  temperature  to  90°C maximum. The exhaust hood spray will be deactivated when exhaust hood temperature falls below 60°C.
+If power increase does not lead to fulfilment of the criterion (TLe-0 < 100°C ∧ Texit steam < 60°C), the exhaust hood spray will be deactivated when the power level is greater 20% of the rated power."
+R&N_ITB,223,2898,359,3257,"All  protection and control systems shall be 100% redundant including all unit protection systems. The details shall be described in detail engineering stage with Owner's Approval.
+At least the following turbine protection devices shall be included in the supply:
+- Local hand trip
+- Remote emergency push button
+- Low bearing oil pressure trip
+- Over speed protection system (duplex)
+- High back pressure
+- High exhaust temperature
+- Differential expansion between rotor and casing"
+R&N_ITB,224,2806,261,3067,Arrangements shall be provided for on-load testing of these devices.
+R&N_ITB,224,2824,332,3156,"The condensate systems shall supply condensate from condenser to the deaerator. The system shall include condenser, vacuum pumps, condensate extraction pumps, control valves, pipe work, etc."
+R&N_ITB,224,3167,422,3589,"Air cooled condenser(s) will be required to let down steam from the condensing part of the steam turbine and from the LP-steam headers.
+The system shall comprise at least the following equipment:
+- steam duct from the steam reducing stations to condenser and steam distribution ducting,
+- steam duct from turbine exhaust flange to condenser and steam distribution ducting,
+- condensate collection headers,
+- air moving system,
+- fan drives,
+- steel support structure, including maintenance platforms, access stairways and escape ladder,
+- facilities for prevention of air recirculation,
+- noise attenuation features/devices as required,
+- all  required  electrical  and  control  equipment  for  safe  operation,  monitoring  and  measuring, earthing and lightning protection,
+- air evacuation pumps, if applicable,
+- ejector condenser, drain tank and strainers at ejector steam inlets,
+- condensate tank and drain,
+- drain and vent pumping, piping, valves and traps with supports, and
+- semi-automatic ACC outside heat transfer surface cleaning system.
+The steam turbine condenser shall be complete in every respect for reliable, efficient and safe operation for a high service lifetime. The design of the air-cooled condenser shall be in accordance with the ambient conditions at Project Site and steam turbine requirements.
+The condenser shall be sized to receive:
+- Condense all steam for all operating ranges
+- Accept the full steam turbine bypass steam when the steam turbine trips.
+The  capacity  of  the  steam  turbine  condenser  shall  include  a  reserve  to  cover  possible  steam  turbine overloads."
+R&N_ITB,"224, 225",3011,439,3450,"The cooling air to each heat exchanging cell shall be forced by individual axial flow fan; each fan, whose blades shall be adjustable when the fan is out of service, shall be driven by a variable speed motor.
+All the components of the fan/drive unit shall be designed for continuous outdoor service over the range of air condenser loads, ambient air temperatures and air temperatures adjacent to the tube bundles.
+It shall be possible to initiate a cold start of the fans during any ambient air temperature within the specified range.
+All drive components shall be rated to take into account any shock loading that may occur from starting a fan which may be rotating in a reverse direction under the influence of prevailing winds or convection currents. As an alternative, a reverse rotation lock may be provided.
+Each fan drive shall be individually remotely controlled from the Control Room allowing the operator to optimize the operative configuration on the basis of actual ambient condition."
+R&N_ITB,225,2910,288,3198,"It shall be possible to clean the outside heat transfer surfaces by application of well established cleaning procedures. A semi-automatic high-pressure spray-water cleaning system shall be supplied for periodically cleaning the heat exchanger external surfaces during normal operation, keeping them free of deposits and maintaining the heat transfer coefficient of the condenser. It shall be possible for this cleaning system to be used whilst the ACC is in operation."
+R&N_ITB,225,2996,461,3457,"Inert gases shall be evacuated by the air extraction system. The system for air removal from the steam side of  the  condenser may consist of steam ejector system or water ring vacuum pump system for holding operation (2x100% units for any system). For hogging prior to start-up of the ST a water-ring vacuum pump system with one stand-by pump (e.g 4 x 33% or 5 x 25%) for parallel operation shall be applied, in case steam ejectors are provided, 1x100% steam jet air ejector can be used provided that the time required for reaching the vacuum is less than 30 minutes. If water ring pump system is selected, EPC Contractor can propose to be used as common system for holding and hogging.
+ST condenser air extraction system discharge flow indicator to provide to know the air ingress quantity."
+R&N_ITB,"225, 226",3374,571,3945,"3x50% or 2x100% duty centrifugal pumps, complete with motors, couplings, guards, suction barrel, all necessary steel supporting  structure,  cooling  and  lubrication  systems  with  mechanical  sealing  shall  be provided for each steam turbine. The CEP type (horizontal or vertical) shall be selected also considering condensate storage tank water level (height).
+The pump design point shall be selected in order to cope with all the possible operating conditions.
+The standby pump is intended as back-up (automatic start in case of failure of the operating pumps). In case of turbine bypass the third condenser extraction pump may need to come into operation.
+The pump casing shall be arranged within the suction barrel, which is submerged in the foundations. The suction and discharge pump nozzles shall be located above the floor level and arranged so that the pump can be easily withdrawn after pipe branches have been disconnected.
+The pump driving motor shall be air cooled and be flexibly coupled to the pump shaft. All bearings shall be of the removable type to permit easy replacement at site.
+Adjustable rigid coupling shall be used instead of split rigid coupling.
+Pumps may have either packing or mechanical seals, as determined by the application.
+The pumps shall work satisfactorily and free of cavitation under all operating conditions. The available NPSH at the minimum level of the condenser hotwell and with maximum head losses shall be higher than the required NPSH at all loads. The water velocity in the independent pump suction pipework shall not exceed 1 m/s.
+The characteristic curve (flow/head) will constantly decrease maintaining a uniform slope from the point of zero flow to the design point. All the identical pumps shall have the same characteristic curve.
+Pump  must  be  equipped  with  the  necessary  instruments  (suction  and  discharge  side  manometer, thermometer etc.) For condensate extraction pump, modulating automatic recirculation control valves or combined recirculation/check valves will be used.
+The pump impellor shall be made of a suitable grade of stainless steel with high resistance to pitting and erosion., The impellor shall be balanced statically and dynamically and be secured to the pump shaft in a manner, which permits easy maintenance and replacement at site.
+Interchangeable stainless steel protecting sleeves shall be provided at the shaft seals and at the lower journal bearing.
+The pump casing material shall be cast steel. The suction barrel material shall be carbon steel. A rustproof protective coating shall be applied to the surfaces of the barrel.
+Pump characteristic curves and all relevant data for each of the specified operating conditions shall be submitted as well as the arrangement and foundation drawings."
+R&N_ITB,226,3010,492,3502,"All  necessary  auxiliaries  shall  be  supplied  for  the  pumps  as  applicable  (e.g.  Associated  pipework  and valves). For each pump a stop valve shall be provided on the suction and a non-return valve and motor operated valve on the pump discharge.
+A strainer with large surface area and low-pressure losses shall be provided in the suction line of each pump.
+Venting of the upper parts of each pump shall be realized by suitable connections to the main condenser.
+A complete water sealing system shall be provided to seal the stuffing boxes and all parts subjected to vacuum at start-up, during standby operation and/or during normal operation. The sealing water shall be taken from the pump delivery.
+A minimum flow recirculating system, common for the two or three pumps and equipped with built in cascade throttling shall be provided.
+Sampling and chemical dosing points will be provided on condensate system (downstream of condensate extraction pumps)."
+R&N_ITB,226,2947,361,3308,"Each feed system shall be furnished  with all necessary equipment required  for manual and automatic control  from  the  Central  Control  Room  during  the  operations  associated  with  Start-up,  synchronising, loading and shut down of the GT/HRSG sets. Each feed system shall be designed as appropriate as to the function  with  either  Power  Block  in  case  multiple  blocks  are  provided.  The  design  shall  also  take  due consideration of all possible operating scenarios of the Plant. All materials in the feed water system shall be ferrous."
+R&N_ITB,226,2899,433,3332,"The demineralised water storage tanks shall feed 2 x 100% make-up water supply pumps for initial filling of HRSGs, deaeration facilities, condensers and makeup to the condensate water storage tanks. The Makeup water during plant operation shall then be provided from the condensate water storage tanks by 2x 100% condensate transfer pumps."
+R&N_ITB,"226, 227",3248,417,3665,"The  design,  manufacture  and  construction  of  the  deaerators  shall  be  in  accordance  with  recognised pressure vessel codes. The deaerators shall be designed to withstand full vacuum.
+The deaerators shall be of the spray-tray type (although a purely spray type will be considered) and shall consist  of  a  deaerator  vessel,  water  storage  tank,  pipes,  valves,  ancillary  equipment,  instruments  and controls  necessary to maintain operation under all normal conditions. Equipment shall be provided to maintain the minimum deaerator pressure at all steam turbine loads.
+The  deaerators  shall  be  provided  with  sufficient  connections  to  accommodate  feed  pump  suction  and recirculation  pipes,  condensate  return,  LP  steam  heating  and  instrumentation.  The  deaerators  shall  be located at high level such that the feed pump NPSH requirements are satisfied.
+The  deaerators  shall  be  designed  to  reduce  the  oxygen  content  of  the  feed  water  to  not  greater  than 0.007mg/l,  under  all  operating  conditions  above  10%  feed  flow,  as  measured  by  the  Heat  Exchanger Institute method.
+The deaerated water storage capacity shall be designed on the basis of at least 10 minutes
+In case of integrated deaerator type HRSG, each drum shall be 2 mins for HP drum, 5 mins for IP drum and 10 mins for LP drum from normal to low low water trip levels with feed water flow at full load; the actual time shall be agreed during the detailed design phase of the Project.
+The deaerator parts including spray nozzles and splash trays shall be of stainless steel.
+The EPC Contractor is free to propose the deaerator integrated with LP drum."
+R&N_ITB,227,3477,549,4026,"HRSG will have natural circulation and horizontal flow type. Each pump suction pipe from the deaerators shall be designed to avoid pump cavitation under all conditions and shall adhere to applicable international code and shall include valve connections for chemical dosing as necessary.
+Only proven feedwater pump designs at similar duties shall be proposed.
+Minimum flow recirculation bypass line and control shall be provided.
+Each HRSG shall be provided with 3x50% or 2x100% horizontal centrifugal electrically driven boiler feed pumps. Feed water pumps shall provide feed water at controlled rates via split control valves as detailed below:
+- A low load valve -used during start up and low loads.
+- A high load valve -used for higher load
+The pump total head at rated capacity shall include a margin for wear in addition to normal design margins.
+The characteristics of the pumps shall be such that the closed valve head is approximately 120% of the pressure at rated output.
+The minimum flow lines and relief lines  (if required)  shall  run  individually  to  the  deaerator  or  to  the feedwater storage tank. The minimum flow valves shall be provided for the stable start/stop of pump while protecting the pump. For these purposes all of design conditions of the valve including actuator type shall be decided The minimum flow capacity shall be as required by the feedwater pump vendor. The minimum flow shall be checked via control valve and monitored on DCS.
+It shall be possible to start the pumps safely from cold without prior warming up or other preparatory measures.
+Pumps shall be equipped with mechanical seals, single balanced type. Gland seals shall be supplied for each main pump. Seals flushing shall be provided with double magnetic separator, if applicable. The pump glands shall  be  arranged  in  such  a  way  that  the  removal  of  the  packing  can  be  carried  out  with  minimum disturbance.
+The feedwater pumps shall be equipped with bearing temperature and vibration monitoring devices.
+The discharge connection of the main pump shall be of the flanged end type.
+A  basket  type  strainer  shall  be  fitted  at  pump  inlet,  fine  mesh  baskets  shall  be  fitted  for  initial commissioning.
+Vibration and temperature monitoring and protection system shall be installed.
+The whole pumping unit shall be capable of withstanding, without detriment, reverse rotation to a speed that would occur if the pump were to stop when the differential head was at a maximum and the delivery and/or non-return valve failed to close (this would typically occur if one trips and the discharge valve remain open, while the other pump maintains operation). If the pump cannot withstand this scenario the pump must incorporate a safety system to avoid this from happening.
+Pump  must  be  equipped  with  the  necessary  instruments  (suction  and  discharge  side  manometer, thermometer etc.)
+Couplings and intermediate shafting will be guarded. Bedplates will be of ample proportions and stiffness to withstand the loads likely to be experienced in shipment and service."
+R&N_ITB,"227, 228",3071,459,3530,"The weight of the impeller and shafting for vertically suspended pumps will be supported by the motor thrust bearing.
+Pumps that have mechanical seals will be arranged to facilitate seal removal.
+Pumps may have either packing or mechanical seals, as determined by the application.
+The characteristic curve (flow/head) will constantly decrease maintaining a uniform slope from the point of zero flow to the design point. All the identical pumps shall have the same characteristic curve.
+The Contractor shall propose a suitable number of feed pumps having regard for availability and reliability requirements and shall be supplied with all necessary auxiliary equipment. Provided that the Contractor's proposed  arrangement  permits  boiler  drum  levels  to  be  adequately  controlled  by  main  and  start-up, control valves installed at the inlet of each drum, the HRSG feed water pumps may be driven by constant speed electric motors or Variable Frequency Drive (VFD)/hydraulic coupling. All pumps shall be capable of operation either singly or in parallel whilst remaining inherently stable.
+The rotating components shall be balanced to ensure minimum vibration throughout the entire speed and load range. The characteristics of the pumps shall be such that the closed valve head is approximately 120% of the pressure at rated output."
+R&N_ITB,"228, 229",3367,600,3967,"Depending on EPC Contractor design, auxiliary  boiler(s) with  natural gas  or  back-up fuel  oil  might  be required to provide auxiliary steam during the start-up phase of the ST.
+The auxiliary boiler(s) shall be of the flame/smoke tube or water tube type.
+The  auxiliary boiler(s) shall have  the  characteristic of  frequent  start-up,  long  periods  between maintenance, start-up at any time and fully automatically controlled, operated and monitored via DCMS. The cold start-up shall also be initiated and monitored by the CCR operator without any intervention from a local operator.
+The entire pressure part shall rest on a steel frame in such a way that free expansion in all directions is possible. The large water volume shall enable the boiler to adapt well to extreme load fluctuation.
+The outer lining of the insulation shall be made by galvanized steel sheets.
+Boiler protection and burner management shall be in accordance with NFPA 85 or EN 12953-7 and EN 267.
+The steam pressure at the auxiliary boiler outlet shall be a result of boiler manufacturer preoptimization considering boiler size, steam temperature and boiler capacity. The related steam pressure shall depend on the steam-cycle optimization, which would be the minimum steam pressure.
+Demineralized water shall be used as boiler make-up water which is supplied from the demineralization water plant.
+Because of characteristic difference between start-up boiler and normal boiler, the water of this boiler can be drained completely and facilities for conservation shall be provided.
+The platform and gallery of boiler shall possess enough strength and stiffness, and stairs shall be provided at operation, monitoring or maintenance locations.
+The boiler shall be provided with the necessary observation ports, manhole for maintenance and explosion vents.
+The  boiler  shall  be  provided  with  safety  valve,  vent  valve,  exhaust  piping  and  a  motor-driven  valve, silencers as necessary, etc.
+Connections  for  measuring  of  parameter  of  steam,  water,  combustion  fuel  shall  be  provided.  Local instruments and remote instruments (in the control room) shall be used for boiler water level measuring, and the pressure, temperature and flow rate shall have indications in the control room.
+An emission monitoring system shall be provided for the auxiliary boiler stack.
+The technical requirements specified above  for the steam generators shall apply also for the auxiliary boiler(s) as far as applicable.
+ASME stamp and NB registration is not applicable. Heat Recovery Steam Generator."
+R&N_ITB,229,3455,380,3835,"The steam generators shall be of proven design and be designed, manufactured, constructed and tested in accordance with relevant internationally accepted standards, e.g. ASME as well as the latest editions of all applicable local and national laws, codes and regulations in effect at the time of contract award.
+The HRSG shall be an outdoor, fully weatherproof clad, with cladding/insulation where necessary. The main pressure parts shall be arranged in the form of a self-contained construction and shall be of the selfdraining type.
+The top (or side in the case of vertical HRSGs) galleries of each HRSG shall be provided with partial sun and weather canopies (including over the HP drum) to protect Plant operation and maintenance personnel from direct exposure to the sun. Instruments and electric panels shall also be provided with local suitable sunshades.
+The HRSG shall be suitable for automatic start up, shutdown and normal operation from the Central Control Room.
+The HRSG (and the steam turbine) shall be capable of sliding pressure operation to a minimum operating pressure that may be maintained in continuous operation.
+The water side of each HRSG shall be cleaned after completion of erection by alkaline boiling-out with suitable  chemicals  in  accordance  with  accepted  chemical  cleaning  procedures.  With  respect  to  HRSG cleaning,  the  Contractor  shall  also  provide  in  its  offer  an  option  price  for  chemical/acid  cleaning  in accordance with accepted chemical cleaning procedures for the consideration of the Investor.
+HRSG pressure parts exposed to exhaust gas in the cold section of the HRSG shall be selected from materials to achieve a minimum design life as per the applicable international standard/code. The HRSG design shall be such that the temperature of water entering any heat transfer section shall be above the exhaust gas dew point or acid dew point as the case may be.
+Walkways,  ladders,  stairs  and  platforms  shall  be  provided  whereas  necessary  for  proper  operation, inspection  and  maintenance.  Elevator  shall  be  provided  to  access  top  area.  Interconnecting  platform between HRSG Units shall be provided if only one elevator is being provided for multiple HRSG units.
+Design of the HRSG shall be based on factory built  modules or HARP type with as much equipment as practicable factory assembled. HRSG shall be made up vertical tube bundles which shall be top supported and attached to the steel frames and horizontal gas flow.
+In the design phase of the HRSG, particular attention shall be paid to the exhaust-gas side pressure loss of the HRSG and of the stack and shall be minimised in order to realise a high efficiency factor of the gas turbine.
+Each element and tube bank must contain tubes on a horizontal and vertical pitch, adequately supported and of suitable depth to enable easy cleaning. Any fins used must be solidly attached to the tube throughout the fin length.
+Temperature measurements shall be provided in the transition ducting between GT and HRSG at different elevations to monitor temperature profile across the first row of tubes."
+R&N_ITB,229,2978,329,3307,"A chemical dosing system shall be provided in order to maintain the proper boiler feed water chemistry and a steam sampling system in order to monitor the steam quality.
+No drain pipes or venting pipes shall be concealed in the boiler insulation.
+To be able to reach the upper headers of modules, manholes and/or handholes shall be installed at the top of  HRSG.  Access  doors  between  modules  with  a  coverable  manway  to  the  bottom  section  (location  of bottom headers and piping) to be included.
+Steam drums, headers and major HRSG pressure parts shall be visually, radiographically and ultrasonically checked in accordance with the ASME codes for weld defects during all stages of manufacture and erection. The Contractor shall also undertake visual and random magnetic particle inspection (MPI) checks of small"
+R&N_ITB,230,3398,470,3868,"items (e.g. stub/nozzle to header connections). As noted earlier, the Contractor shall agree with the Owner, or  his  nominated  representatives,  an  inspection  and  testing  witness  and  hold  point  programme  for equipment or any other tests identified by the Owner or its representatives as requiring inspection and such a programme shall include provisions to ensure that the Owner or his nominated representatives are given adequate prior notice to attend the agreed inspections and tests. The design of each HRSG shall be such as to permit adequate access for welding and to ensure that the effective examination of all site welds is possible during fabrication and erection as well as later into the service life of the Plant.
+HRSG may have supplementary firing (SF), if required. The additional power capacity achieved by SF must not exceed 10% of the Contracted Capacity.
+Each completed boiler shall be subject to a hydraulic test using demineralised water and in accordance with procedures defined by the design codes and the insurers inspectors.
+Design life criteria of 25 years (equivalent to greater than 200,000 hours) alternatively, design life can be done considering 300 cold starts and 1100 warm starts shall be applied to materials operating in the creep region, the most stringent requirement shall apply. The HRSG design shall allow for appropriate inspection, cleaning and repair access of pressure parts and all auxiliaries. The number of rows on single header will be selected as per supplier experience on similar HRSG applications and confirmed by fatigue and stress analysis.
+All necessary installations for conservation during outages of the HRSG shall be included. For short periods wet conservation shall be used.
+Variations in the temperature of the steam generator exhaust gas and the potentially associated corrosive environmental conditions shall be considered in the design of the extended surface tubing and back-end facilities such as LP economizers and preheaters which shall include for recirculation and bypassing and adequate hot/cold end corrosion protections (no damage for Acid Dew Point).
+Design to consider and provide good accessibility for the inspection and repair of welding seams between individual pipe bundles and between heat exchanger pipes and collectors. Access openings and manhole will be provided at bottom on both side casing and top casing for each module.
+HRSG design to provide the exhaust-gas side pressure loss of HRSG and of the stack shall be paid particular attention and shall be minimised in order to realise a high efficiency factor of the gas turbine.
+A steam turbine bypass system shall be provided for each HRSG for three of pressure sections to allow fast and independent start-up and shutdown. The safety valves shall be provided for each pressure level as required by the ASME code.
+The heat recovery steam generators shall be completely drainable and shall be designed so that in case of tube  or  bend  failure,  replacement  of  tube  shall  be  performed  without  dismantling  major  components according to the manufacturer's repair standards."
+R&N_ITB,"230, 231",3093,369,3462,"Pipe wall thickness shall be dimensioned in accordance with DIN EN 12952 or equivalent ASME code. In this process, the Contractor shall select the next higher wall thickness from the series of standards.
+The HRSGs shall be designed:
+- for maximum utilization of the heat content of the gas turbine exhaust gases,
+- for triple pressure steam generation and
+HRSG stack shall have Continuous Emission Monitoring Systems (CEMS) and related instruments.
+The HP temperature at the HRSGs' outlet shall be controlled (defined by the contractor) for optimized power generation.
+The HRSG's blow down rate shall be adapted accordingly so that the guaranteed steam quality will be met by the contractor.
+All drums and pressure stages of HRSG shall be equipped with a BSE system (Boiler Stress Evaluator). The BSE system shall be connected to the DCS in order to visualise the stress data for the main components (such  as  HP,  IP,  LP  drums,  superheater/reheater  collectors,  LP  collectors  etc.).  These  data  serve  to
+determine the remaining life cycle of the critical components and the optimization of the ramp functions for start-up and/or shut-down as well as for load change processes."
+R&N_ITB,231,2868,309,3177,"The Contractor shall provide a HRSG performance prediction computer model program specific for this project.  This  program  shall  be  capable  of  running  on  a  personal  computer  with  the  latest  version  of Windows operating system. The performance prediction program shall have the following inputs, and outputs, as a minimum:"
+R&N_ITB,231,2860,362,3222,"- -Gas turbine exhaust flow rate, temperature, and composition.
+- -Terminal steam pressures for HP steam, Hot Reheat steam, and LP steam.
+- -The temperature of the water being sent to the HRSG.
+- -The temperature of the Cold Reheat at the terminal point."
+R&N_ITB,231,3109,504,3613,"- -Steam flow, steam temperature, and steam pressure at the terminal points for HP steam, Hot Reheat steam, and LP steam.
+- -Steam flow, steam temperature, and steam pressure of the IP steam.
+- -Stack temperature.
+- -HRSG  efficiency  (according  to  ASME  code,  calculation  based  on  temperature  differences  shall  not  be accepted)
+- -Gas side static pressure drop.
+The HRSG shall be foreseen with temperature measurements for both water-steam and gas side before and after each heat exchanger in order to facilitate the mapping of its performances.
+Steam and Water Analysis System (SWAS) shall be installed for each HRSG separately, the SWAS system shall be designed for continuous monitoring and control of water and steam purity in the HRSG.
+Heat recovery steam generator shall be provided separately for each gas turbine generator, which consists of following systems and components, but not limited to the following;
+- Gas turbine exhaust gas duct system
+- Pressure parts and steam drums
+- Insulation and cladding
+- HRSG associated piping, valves and fittings
+- Vent and drain systems
+- Blow-down system
+- Flue gas ducts
+- Main stack
+- HRSG related electrical facilities
+- HRSG related Instrumentation and control (I&C) system
+- HRSG steel structures and platforms
+- Provision of Online Heat Flux measurement"
+R&N_ITB,"231, 232",3374,500,3874,"The steam collecting drums (long, slim design) shall be designed in such a way that they withstand high temperature  gradients  resulting  from  fast  load  changes.  Greatest  care  shall  be  given  in  thermal  and mechanical design of the drums.
+The drums shall be fusion welded and provided with all necessary internal distributors, baffles, shields, and internal piping.
+Each HRSG evaporative section shall be provided with steam drum(s), each of adequate size to ensure stable operation under all normal load conditions and other single item trip conditions. The steam drums shall be sized to enable start up without operating any drain valves, except the one at the outlet of the superheater. Drum internals shall include steam and water separators to limit the mechanical carry over. The moisture carryover from the drum to the first stage of the superheater will be less than 0.1%. The moisture carryover after the first stage of the superheater should not be detectable.
+Internal feed-water distribution along the drum length shall be provided. Internal distribution headers for the HRSG chemical feed and saturated steam sample connections shall be provided.
+All  drums shall be fitted with leak free hydra step level indicators for both local visible indication and remote level indication.
+The  drums  shall  be  equipped  with  steam  separators  for  maintaining  the  required  steam  quality.  The chemical balance of the steam circuit shall be controlled via the steam collecting drum. Suitable connections for a continuous blowdown and an intermittent blowdown shall be installed. Chemicals shall be added in such a way that a uniform distribution of the chemicals is ensured by means of an internal distributing pipe over the entire length of the drum or by feeding them in the feed water line directly before the inlet into the drum.
+Internal distribution headers for the water and saturated steam sample connections shall be provided. All openings including down comers, steam outlets, manhole covers, and instrument and gauge connections shall be covered to provide a moisture-proof seal during shipment.
+Hinged manholes shall be provided in both heads of all drums as per ASME PG-32.3 criteria. An insulated steel cover shall be provided to cover each manhole.
+The steam drum shall be of large diameter to handle water level fluctuates during quick start-up without excessive dumping of water. At start-up, no water carryover from the drum is allowed.
+As far as the dimensioning of the drums is concerned, load rejection for isolated operation also shall be considered.
+Distribution and collection manifolds and headers shall be designed to provide uniform water or steam flow to all passes of the tube bank. Manifolds shall allow free expansion of tube banks."

@@ -35,6 +35,12 @@ def match(argv: list[str] | None = None) -> None:
     parser.add_argument("--retrieval-candidates", type=int, default=int(os.getenv("ITB_RETRIEVAL_CANDIDATES", "100")))
     parser.add_argument("--output-limit", type=int, default=int(os.getenv("ITB_OUTPUT_LIMIT", "20")))
     parser.add_argument(
+        "--rerank-mode",
+        choices=["cross_encoder", "rrf_only"],
+        default=os.getenv("ITB_RERANK_MODE", "cross_encoder").strip().lower(),
+        help="Use cross-encoder reranking or keep the RRF retrieval ranking as final Top-K.",
+    )
+    parser.add_argument(
         "--cross-encoder-query-mode",
         choices=["structured", "full_chunk"],
         default=os.getenv("ITB_CROSS_ENCODER_QUERY_MODE", "full_chunk").strip().lower(),
@@ -68,17 +74,20 @@ def match(argv: list[str] | None = None) -> None:
         retrieval_mode=args.retrieval_mode,
         retrieval_candidate_limit=args.retrieval_candidates,
         output_limit=args.output_limit,
+        rerank_mode=args.rerank_mode,
         cross_encoder_query_mode=args.cross_encoder_query_mode,
         source_files=tuple(args.source_files or ()),
     )
     output_dir = _scoped_output_dir(args.output_dir, config.source_files) / args.retrieval_mode
     files_to_process = _files_to_process(args.inputs, args.outputs, DEFAULT_INPUT_DIR, output_dir)
     embedding_service = AzureEmbeddingService() if config.retrieval_mode in {"semantic", "hybrid"} else None
-    cross_encoder_reranker = create_reranker(
-        args.cross_encoder_model,
-        batch_size=args.cross_encoder_batch_size,
-        backend=args.reranker_backend,
-    )
+    cross_encoder_reranker = None
+    if args.rerank_mode == "cross_encoder":
+        cross_encoder_reranker = create_reranker(
+            args.cross_encoder_model,
+            batch_size=args.cross_encoder_batch_size,
+            backend=args.reranker_backend,
+        )
 
     output_dir.mkdir(parents=True, exist_ok=True)
     with Neo4jConnection() as conn:
@@ -112,11 +121,11 @@ def _files_to_process(
         ]
     return [
         (
-            input_dir / "output_itb_section6_focused.csv",
+            input_dir / "itb_extraction_section6.csv",
             output_dir / "output_match_all_projects_section6.csv",
         ),
         (
-            input_dir / "output_itb_section7_focused.csv",
+            input_dir / "itb_extraction_section7.csv",
             output_dir / "output_match_all_projects_section7.csv",
         ),
     ]
@@ -134,8 +143,8 @@ def _safe_scope_name(value: str) -> str:
 
 
 def rerank_existing(argv: list[str] | None = None) -> None:
-    """Rerank existing structured matching outputs with a different reranker model."""
-    parser = argparse.ArgumentParser(description="Rerank existing matching JSON artifacts.")
+    """Rerank existing matching CSV outputs with a different reranker model."""
+    parser = argparse.ArgumentParser(description="Rerank existing matching CSV artifacts.")
     parser.add_argument("--input", action="append", type=Path, dest="inputs")
     parser.add_argument("--output", action="append", type=Path, dest="outputs")
     parser.add_argument("--input-dir", type=Path, required=True)
@@ -169,7 +178,7 @@ def rerank_existing(argv: list[str] | None = None) -> None:
         output_limit=args.output_limit,
         cross_encoder_query_mode=args.cross_encoder_query_mode,
     )
-    files_to_process = _json_files_to_process(args.inputs, args.outputs, args.input_dir, args.output_dir)
+    files_to_process = _csv_files_to_process(args.inputs, args.outputs, args.input_dir, args.output_dir)
     reranker = create_reranker(
         args.cross_encoder_model,
         batch_size=args.cross_encoder_batch_size,
@@ -185,12 +194,12 @@ def rerank_existing(argv: list[str] | None = None) -> None:
     for input_path, output_path in files_to_process:
         if input_path.exists():
             output_path.parent.mkdir(parents=True, exist_ok=True)
-            service.rerank_json_file(input_path, output_path)
+            service.rerank_csv_file(input_path, output_path)
         else:
-            logger.warning("Structured matching file not found: {}", input_path)
+            logger.warning("Matching CSV file not found: {}", input_path)
 
 
-def _json_files_to_process(
+def _csv_files_to_process(
     inputs: list[Path] | None,
     outputs: list[Path] | None,
     input_dir: Path,
@@ -205,11 +214,11 @@ def _json_files_to_process(
         ]
     return [
         (
-            input_dir / "output_match_all_projects_section6.json",
+            input_dir / "output_match_all_projects_section6.csv",
             output_dir / "output_match_all_projects_section6.csv",
         ),
         (
-            input_dir / "output_match_all_projects_section7.json",
+            input_dir / "output_match_all_projects_section7.csv",
             output_dir / "output_match_all_projects_section7.csv",
         ),
     ]

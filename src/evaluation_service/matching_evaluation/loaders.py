@@ -6,8 +6,6 @@ import csv
 from pathlib import Path
 from typing import Any
 
-from common.json_io import read_json
-
 Qrels = dict[str, dict[str, int]]
 Rankings = dict[str, list[str]]
 RunMetadata = dict[str, int | None]
@@ -49,10 +47,8 @@ def load_matching_runs(
     retrieval_limit = 0
     retrieval_artifacts_complete = True
     for section in sections:
-        path = matching_dir / mode / f"output_match_all_projects_section{section}.json"
-        records = read_json(path)
-        if not isinstance(records, list):
-            raise ValueError(f"Matching JSON must contain a list: {path}")
+        path = matching_dir / mode / f"output_match_all_projects_section{section}.csv"
+        records = _read_matching_csv(path)
         for record in records:
             chunk_id = str(record.get("chunk_id") or "").strip()
             if not chunk_id:
@@ -89,7 +85,7 @@ def discover_sections(matching_dir: Path, modes: tuple[str, ...]) -> tuple[str, 
     """Discover matching sections shared by all selected modes."""
     sections_by_mode = []
     prefix = "output_match_all_projects_section"
-    suffix = ".json"
+    suffix = ".csv"
     for mode in modes:
         sections = {
             path.name.removeprefix(prefix).removesuffix(suffix)
@@ -107,6 +103,35 @@ def _candidate_doc_ids(candidates: Any) -> list[str]:
     seen = set()
     for candidate in candidates if isinstance(candidates, list) else []:
         doc_id = str(candidate.get("doc_id") or "").strip()
+        if doc_id and doc_id not in seen:
+            seen.add(doc_id)
+            doc_ids.append(doc_id)
+    return doc_ids
+
+
+def _read_matching_csv(path: Path) -> list[dict[str, Any]]:
+    records = []
+    with open(path, newline="", encoding="utf-8-sig") as file:
+        for row in csv.DictReader(file):
+            records.append(
+                {
+                    "chunk_id": row.get("Chunk ID", ""),
+                    "candidates": _candidate_list_from_row(row, "Matched_Doc_IDs"),
+                    "retrieval_candidates": _candidate_list_from_row(row, "Retrieval_Doc_IDs"),
+                }
+            )
+    return records
+
+
+def _candidate_list_from_row(row: dict[str, Any], column: str) -> list[dict[str, str]]:
+    return [{"doc_id": doc_id} for doc_id in _split_doc_ids(row.get(column, ""))]
+
+
+def _split_doc_ids(value: Any) -> list[str]:
+    seen = set()
+    doc_ids = []
+    for doc_id in str(value or "").split("|"):
+        doc_id = doc_id.strip()
         if doc_id and doc_id not in seen:
             seen.add(doc_id)
             doc_ids.append(doc_id)

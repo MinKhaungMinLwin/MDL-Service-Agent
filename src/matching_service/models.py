@@ -15,6 +15,7 @@ class MatchingConfig:
     retrieval_mode: str = "keyword"
     retrieval_candidate_limit: int = 100
     output_limit: int = 20
+    rerank_mode: str = "cross_encoder"
     cross_encoder_query_mode: str = "full_chunk"
     source_files: tuple[str, ...] = ()
     fulltext_index_name: str = "test_mdl_document_fulltext_idx"
@@ -25,6 +26,8 @@ class MatchingConfig:
     def __post_init__(self) -> None:
         if self.retrieval_mode not in {"keyword", "semantic", "hybrid"}:
             raise ValueError("retrieval_mode must be keyword, semantic, or hybrid")
+        if self.rerank_mode not in {"cross_encoder", "rrf_only"}:
+            raise ValueError("rerank_mode must be cross_encoder or rrf_only")
         if self.cross_encoder_query_mode not in {"structured", "full_chunk"}:
             raise ValueError("cross_encoder_query_mode must be structured or full_chunk")
         if self.retrieval_candidate_limit <= 0:
