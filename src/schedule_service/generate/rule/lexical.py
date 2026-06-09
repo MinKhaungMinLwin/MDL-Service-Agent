@@ -9,6 +9,20 @@ from __future__ import annotations
 from schedule_service.generate.rule.models import ValidationRule, tokenize
 from schedule_service.normalizer import expand_query_tokens
 
+_CANDIDATE_STOP_TOKENS = {
+    "and",
+    "for",
+    "general",
+    "document",
+    "documents",
+    "drawing",
+    "drawings",
+    "system",
+    "systems",
+    "technical",
+    "with",
+}
+
 
 class RuleLexicalIndex:
     """Inverted token index over validation rules for fast candidate narrowing."""
@@ -37,16 +51,23 @@ class RuleLexicalIndex:
         return expand_query_tokens(tokenize(f"{document} {equipment}"))
 
     def candidates(self, doc_tokens: set[str]) -> list[ValidationRule]:
-        """Return rules sharing ≥1 token with doc_tokens; all rules if none match."""
+        """Return rules sharing meaningful tokens with doc_tokens.
+
+        Very common words such as "for", "system", and "drawing" explode the
+        candidate set and add little identity. If no meaningful token exists,
+        return no candidates instead of scoring every validation rule.
+        """
         seen: set[int] = set()
         result: list[ValidationRule] = []
-        for tok in doc_tokens:
+        candidate_tokens = doc_tokens - _CANDIDATE_STOP_TOKENS
+        if not candidate_tokens:
+            return []
+        for tok in candidate_tokens:
             for idx in self._index.get(tok, ()):
                 if idx not in seen:
                     seen.add(idx)
                     result.append(self._rules[idx])
-        # Fallback: if the index yields nothing, score all rules
-        return result if result else self._rules
+        return result
 
     def rule_position(self, rule: ValidationRule) -> int:
         """Return the rule's index in the rule list (aligns with semantic-index rows)."""

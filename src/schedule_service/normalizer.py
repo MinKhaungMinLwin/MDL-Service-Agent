@@ -18,6 +18,7 @@ Changing a mapping here propagates to all consumers automatically.
 from __future__ import annotations
 
 import re
+from dataclasses import dataclass
 
 # ---------------------------------------------------------------------------
 # 1. Raw / abbreviated input → canonical equipment name
@@ -263,6 +264,95 @@ _DELIVERABLE_SCAN_KEYWORDS: list[str] = [
 ]
 
 
+@dataclass(frozen=True)
+class CanonicalDocumentCandidate:
+    """Canonical MDL candidate dimensions used by candidate/rule/activity matching."""
+
+    equipment: str
+    system: str
+    building: str
+    deliverable_family: str
+    deliverable_subtype: str
+    scope_text: str
+
+
+_DELIVERABLE_CANONICAL_PATTERNS: list[tuple[str, str, tuple[str, ...]]] = [
+    (
+        "classification",
+        "hazardous_area_classification",
+        ("HAZARDOUS AREA CLASSIFICATION", "AREA CLASSIFICATION"),
+    ),
+    (
+        "curve",
+        "generator_capability_curve",
+        ("GENERATOR CAPABILITY CURVES AND DATA", "CAPABILITY CURVES AND DATA", "CAPABILITY CURVES"),
+    ),
+    (
+        "curve",
+        "performance_curve",
+        ("PERFORMANCE DATA AND CURVES", "PERFORMANCE CURVES", "PERFORMANCE CURVE", "PERFORMANCE DATA"),
+    ),
+    ("list", "io_list", ("I/O LIST", "IO LIST", "INPUT OUTPUT LIST", "INPUT / OUTPUT LIST")),
+    ("list", "instrument_list", ("INSTRUMENT LIST", "LIST AND DATA SHEET FOR INSTRUMENT")),
+    ("list", "equipment_list", ("EQUIPMENT LIST",)),
+    ("list", "valve_list", ("VALVE LIST",)),
+    ("list", "cable_schedule", ("CABLE SCHEDULE",)),
+    ("schedule", "schedule", ("SCHEDULE",)),
+    ("report", "cfd_report", ("CFD REPORT",)),
+    ("report", "pre_fat_report", ("PRE FAT REPORT", "PRE-FAT REPORT")),
+    ("report", "design_report", ("DESIGN REPORT",)),
+    ("report", "study_report", ("STUDY REPORT",)),
+    ("report", "test_report", ("TEST REPORT",)),
+    ("report", "report", ("REPORT",)),
+    ("specification", "painting_specification", ("PAINTING SPECIFICATION", "PAINT SPECIFICATION")),
+    ("specification", "insulation_specification", ("INSULATION SPECIFICATION",)),
+    ("specification", "fan_specification", ("FAN SPECIFICATION",)),
+    ("specification", "drain_pump_specification", ("DRAIN PUMP SPECIFICATION", "CONDENSATE DRAIN PUMP SPECIFICATION")),
+    ("specification", "scr_specification", ("SPECIFICATION FOR SCR", "TECHNICAL SPECIFICATION FOR SCR")),
+    ("specification", "cable_specification", ("CABLE SPECIFICATION",)),
+    ("specification", "gas_detector_specification", ("GAS DETECTOR SPECIFICATION",)),
+    ("specification", "pump_specification", ("PUMP SPECIFICATION",)),
+    ("specification", "technical_specification", ("TECHNICAL SPECIFICATIONS", "TECHNICAL SPECIFICATION")),
+    ("specification", "specification", ("SPECIFICATION",)),
+    ("datasheet", "technical_data_sheet", ("TECHNICAL DATA SHEET", "TECHNICAL DATASHEET")),
+    ("datasheet", "data_sheet", ("DATA SHEET", "DATASHEET")),
+    ("manual", "operation_maintenance_manual", ("OPERATION & MAINTENANCE MANUAL", "O&M MANUAL")),
+    ("manual", "assembly_manual", ("ASSEMBLY MANUAL",)),
+    ("manual", "manual", ("MANUAL",)),
+    ("description", "system_description", ("SYSTEM DESCRIPTION",)),
+    ("description", "control_description", ("CONTROL DESCRIPTION", "CONTROL PHILOSOPHY")),
+    ("diagram", "p_id", ("P&I DIAGRAM", "P&ID", "PIPING AND INSTRUMENTATION DIAGRAM")),
+    ("diagram", "single_line_diagram", ("SINGLE LINE DIAGRAM", "SLD")),
+    ("diagram", "power_distribution_diagram", ("POWER DISTRIBUTION CONCEPT DIAGRAM", "POWER DISTRIBUTION DIAGRAM")),
+    ("diagram", "hmi_graphic_diagram", ("HMI GRAPHIC DIAGRAM",)),
+    ("diagram", "control_logic_diagram", ("ELECTRICAL CONTROL LOGIC DIAGRAM", "CONTROL LOGIC DIAGRAM")),
+    ("diagram", "functional_loop_diagram", ("FUNCTIONAL LOOP DIAGRAM",)),
+    ("diagram", "control_loop_diagram", ("CONTROL LOOP DIAGRAM", "CONTROL LOOP")),
+    ("diagram", "wiring_diagram", ("WIRING DIAGRAM",)),
+    ("diagram", "schematic_diagram", ("SCHEMATIC DIAGRAM", "SCHEMATICS", "SCHEMATIC")),
+    ("diagram", "diagram", ("DIAGRAM",)),
+    ("drawing", "general_arrangement_drawing", ("GENERAL ARRANGEMENT DRAWING", "GENERAL ARRANGEMENT", "GA DRAWING")),
+    ("drawing", "layout_drawing", ("LAYOUT DRAWING", "LAYOUT")),
+    ("drawing", "outline_drawing", ("OUTLINE DRAWING",)),
+    ("drawing", "isometric_drawing", ("ISOMETRIC DRAWING", "ISOMETRIC")),
+    ("drawing", "detail_drawing", ("DETAIL DRAWING", "DETAIL")),
+    ("drawing", "sectional_drawing", ("SECTIONAL DRAWING", "SECTION")),
+    ("drawing", "drawing", ("DRAWING",)),
+    ("calculation", "sizing_calculation", ("SIZING CALCULATION",)),
+    ("calculation", "design_calculation", ("DESIGN CALCULATION",)),
+    ("calculation", "calculation", ("CALCULATION SHEET", "CALCULATION")),
+    ("procedure", "test_procedure", ("TEST PROCEDURE",)),
+    ("procedure", "procedure", ("PROCEDURE",)),
+    ("criteria", "design_criteria", ("DESIGN CRITERIA", "CRITERIA")),
+    ("requirements", "design_requirements", ("DESIGN REQUIREMENTS", "REQUIREMENTS")),
+    ("plan", "plan", ("PLAN",)),
+    ("notes", "general_notes", ("GENERAL NOTES", "NOTES")),
+    ("model", "model", ("MODEL",)),
+    ("data", "operational_data", ("OPERATIONAL DATA",)),
+    ("data", "data", ("DATA",)),
+]
+
+
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
@@ -272,6 +362,76 @@ def normalize_equipment(raw: str) -> str:
     cleaned = re.sub(r"\(.*?\)", "", raw).strip()
     upper = cleaned.upper()
     return _RAW_TO_CANONICAL.get(upper, cleaned) or raw.strip()
+
+
+def canonicalize_mdl_candidate(
+    *,
+    title: str,
+    equipment: str = "",
+    system: str = "",
+    building: str = "",
+    deliverable: str = "",
+) -> CanonicalDocumentCandidate:
+    """Return canonical candidate fields for downstream constrained matching.
+
+    The canonical deliverable family/subtype is intentionally deterministic. It
+    distinguishes error-prone subtypes such as instrument list vs equipment list
+    and design report vs CFD report before rule/activity matching consume the row.
+    """
+    canonical_equipment = normalize_equipment(equipment)
+    if not canonical_equipment:
+        canonical_equipment = extract_equipment_from_title(title)
+
+    canonical_system = _canonical_text(system)
+    canonical_building = _canonical_text(building)
+    family, subtype = canonical_deliverable_type(deliverable=deliverable, title=title)
+    scope_text = " | ".join(
+        value for value in (canonical_equipment, canonical_system, canonical_building) if value
+    )
+    return CanonicalDocumentCandidate(
+        equipment=canonical_equipment,
+        system=canonical_system,
+        building=canonical_building,
+        deliverable_family=family,
+        deliverable_subtype=subtype,
+        scope_text=scope_text,
+    )
+
+
+def canonical_deliverable_type(*, deliverable: str = "", title: str = "") -> tuple[str, str]:
+    """Classify raw MDL deliverable/title into stable family and subtype keys."""
+    text = _canonical_match_text(deliverable, title)
+    if not text:
+        return "", ""
+    for family, subtype, patterns in _DELIVERABLE_CANONICAL_PATTERNS:
+        if any(_norm_for_match(pattern) in text for pattern in patterns):
+            return family, subtype
+    return "other", _slugify(normalize_deliverable(deliverable) or extract_deliverable(title) or title)
+
+
+def _canonical_match_text(deliverable: str, title: str) -> str:
+    parts = [
+        deliverable,
+        normalize_deliverable(deliverable),
+        extract_deliverable(title),
+        title,
+    ]
+    return _norm_for_match(" ".join(part for part in parts if part))
+
+
+def _canonical_text(value: str) -> str:
+    return re.sub(r"\s+", " ", value.strip())
+
+
+def _norm_for_match(value: str) -> str:
+    value = value.upper().replace("&", " AND")
+    value = re.sub(r"[^A-Z0-9]+", " ", value)
+    return re.sub(r"\s+", " ", value).strip()
+
+
+def _slugify(value: str) -> str:
+    normalized = _norm_for_match(value)
+    return re.sub(r"\s+", "_", normalized.lower()).strip("_")
 
 
 def extract_equipment_from_title(title: str) -> str:

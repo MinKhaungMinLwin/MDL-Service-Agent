@@ -343,6 +343,14 @@ def _rule_quality_component(quality: RuleMatchQuality | None) -> tuple[float, st
     elif quality.family_status in {"compatible", "missing_rule_family", "missing_query_family", "unknown"}:
         component *= 0.75
         reasons.append(f"rule_family_status={quality.family_status}")
+    subtype_status = getattr(quality, "subtype_status", "")
+    if subtype_status == "mismatch":
+        component *= 0.3
+        status = "needs_review_rule"
+        reasons.append("rule_subtype_mismatch")
+    elif subtype_status in {"compatible", "unknown"}:
+        component *= 0.9
+        reasons.append(f"rule_subtype_status={subtype_status}")
     if quality.scope_status == "mismatch":
         component *= 0.3
         status = "needs_review_rule"
@@ -379,6 +387,13 @@ def _activity_quality_component(quality: ActivityMatchQuality | None) -> tuple[f
     elif quality.scope_status in {"activity_unscoped", "query_unscoped"}:
         component *= 0.8
         reasons.append(f"activity_scope_status={quality.scope_status}")
+    if getattr(quality, "scope_source", "") == "rule":
+        if quality.scope_status != "match":
+            component *= 0.5
+            status = "needs_review_activity"
+            reasons.append("activity_rule_scope_unmatched")
+        else:
+            reasons.append("activity_scope_source=rule")
     if quality.generic_activity:
         component *= 0.8
         reasons.append("activity_generic")

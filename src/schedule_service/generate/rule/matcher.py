@@ -8,6 +8,7 @@ matching is mandatory — there is no token-only path.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 
 from loguru import logger
@@ -15,11 +16,17 @@ from loguru import logger
 from schedule_service.generate.rule.lexical import RuleLexicalIndex
 from schedule_service.generate.rule.models import ValidationRule
 from schedule_service.generate.rule.semantic import RuleSemanticIndex
-from schedule_service.normalizer import equipment_to_abbr, normalize_deliverable, refine_deliverable_with_title
+from schedule_service.normalizer import (
+    canonical_deliverable_type,
+    equipment_to_abbr,
+    normalize_deliverable,
+    refine_deliverable_with_title,
+)
 
 # Priority multiplier applied to hybrid scores so specific rules (priority 1)
 # beat generic rules (priority 3) even when semantic similarity is slightly higher.
 _PRIORITY_WEIGHT: dict[int, float] = {1: 1.0, 2: 0.85, 3: 0.70}
+_MAX_RULE_CANDIDATES = 300
 
 _SCOPE_TOKENS = {
     "acc",
@@ -36,6 +43,19 @@ _SCOPE_TOKENS = {
     "st",
     "stg",
 }
+
+_SCOPE_PATTERNS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("acc", ("ACC", "AIR COOLED CONDENSER", "COND AIR EXT")),
+    ("hrsg", ("HRSG", "HEAT RECOVERY STEAM GENERATOR")),
+    ("gtg", ("GTG", "GT ", "GAS TURBINE GENERATOR", "GAS TURBINE")),
+    ("stg", ("STG", "ST ", "STEAM TURBINE GENERATOR", "STEAM TURBINE")),
+    ("dcs", ("DCS", "DISTRIBUTED CONTROL SYSTEM")),
+    ("cems", ("CEMS", "CONTINUOUS EMISSION MONITORING")),
+    ("wts", ("WATER TREATMENT", "WTS")),
+    ("reserve_boiler", ("RESERVE BOILER", "AUX BOILER", "AUXILIARY BOILER")),
+    ("bop", ("BOP", "BALANCE OF PLANT")),
+    ("fgp", ("FGP", "FUEL GAS PACKAGE", "FUEL GAS")),
+)
 
 _DELIVERABLE_FAMILIES: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("painting_specification", ("PAINTING SPECIFICATION", "PAINT SPECIFICATION")),
@@ -66,12 +86,72 @@ _STRICT_FAMILY_MATCH = {
     "classification",
     "curve",
     "design_recommendation",
-    "painting",
     "painting_specification",
     "foundation",
-    "p&id",
+    "diagram",
     "procedure",
     "study",
+}
+
+_GENERIC_SUBTYPES = {
+    "",
+    "calculation",
+    "data_sheet",
+    "diagram",
+    "drawing",
+    "list",
+    "manual",
+    "procedure",
+    "report",
+    "specification",
+    "technical_specification",
+}
+
+_GENERIC_RULE_TOKENS = {
+    "andid",
+    "accessories",
+    "and",
+    "arrangement",
+    "calculation",
+    "curve",
+    "data",
+    "datasheet",
+    "description",
+    "diagram",
+    "document",
+    "documents",
+    "drawing",
+    "for",
+    "general",
+    "list",
+    "manual",
+    "of",
+    "p",
+    "p&id",
+    "plan",
+    "procedure",
+    "report",
+    "specification",
+    "system",
+    "technical",
+}
+
+_SUBTYPE_LABELS = {
+    "cfd_report": "CFD Report",
+    "control_logic_diagram": "Control Logic Diagram",
+    "control_loop_diagram": "Control Loop Diagram",
+    "design_report": "Design Report",
+    "drain_pump_specification": "Drain Pump Specification",
+    "equipment_list": "Equipment List",
+    "fan_specification": "Fan Specification",
+    "hazardous_area_classification": "Hazardous Area Classification",
+    "insulation_specification": "Insulation Specification",
+    "instrument_list": "Instrument List",
+    "io_list": "I/O List",
+    "painting_specification": "Painting Specification",
+    "performance_curve": "Performance Curve",
+    "scr_specification": "SCR Specification",
+    "valve_list": "Valve List",
 }
 
 
@@ -83,10 +163,13 @@ class RuleMatchQuality:
     query_source: str = ""
     query_family: str = ""
     rule_family: str = ""
+    query_subtype: str = ""
+    rule_subtype: str = ""
     query_scope: str = ""
     rule_scope: str = ""
     rule_scope_type: str = ""
     family_status: str = ""
+    subtype_status: str = ""
     scope_status: str = ""
     guard_status: str = "no_match"
     guard_reason: str = ""
@@ -102,10 +185,13 @@ class RuleMatchQuality:
             "rule_match_query_source": self.query_source,
             "rule_match_query_family": self.query_family,
             "rule_match_rule_family": self.rule_family,
+            "rule_match_query_subtype": self.query_subtype,
+            "rule_match_rule_subtype": self.rule_subtype,
             "rule_match_query_scope": self.query_scope,
             "rule_match_rule_scope": self.rule_scope,
             "rule_match_rule_scope_type": self.rule_scope_type,
             "rule_match_family_status": self.family_status,
+            "rule_match_subtype_status": self.subtype_status,
             "rule_match_scope_status": self.scope_status,
             "rule_match_guard_status": self.guard_status,
             "rule_match_guard_reason": self.guard_reason,
@@ -126,7 +212,7 @@ def build_rule_query(row: dict[str, str]) -> str:
         row.get("Deliverable", "").strip(),
         row.get("Title", "").strip(),
     )
-    norm_del = normalize_deliverable(deliverable)
+    norm_del = _rule_query_deliverable(deliverable, row.get("Title", "").strip())
     scope = (
         row.get("Equipment", "").strip()
         or row.get("System", "").strip()
@@ -141,6 +227,13 @@ class RuleMatcher:
 
     def __init__(self, lexical: RuleLexicalIndex) -> None:
         self._lexical = lexical
+        self._rule_scope_key_cache = {
+            id(rule): _scope_keys(
+                f"{rule.item_name} {rule.doc_keyword}",
+                set(rule._item_tokens) | set(rule._doc_kw_tokens),
+            )
+            for rule in lexical.rules
+        }
 
     @property
     def rules(self) -> list[ValidationRule]:
@@ -173,9 +266,10 @@ class RuleMatcher:
     ) -> tuple[ValidationRule | None, RuleMatchQuality]:
         """Return the best rule plus diagnostics for quality/confidence reporting."""
         doc_tokens = self._lexical.query_tokens(document, equipment)
-        candidates = self._lexical.candidates(doc_tokens)
+        candidates = self._ranked_lexical_candidates(doc_tokens)
 
-        query_family = _deliverable_family(document)
+        query_family, query_subtype = _deliverable_type(document)
+        query_scope_tokens = _scope_keys(document, doc_tokens)
         match_candidates: list[tuple[float, ValidationRule, RuleMatchQuality]] = []
         best_rule: ValidationRule | None = None
         best_quality = _empty_quality(document, doc_tokens, query_source)
@@ -186,7 +280,16 @@ class RuleMatcher:
 
             hybrid = token_score * (1.0 - semantic_weight) + sem_score * semantic_weight
             final = hybrid * _PRIORITY_WEIGHT.get(rule.priority, 0.60)
-            guard_status, guard_reason = _rule_guard_status(document, doc_tokens, rule)
+            rule_scope_tokens = self._rule_scope_key_cache[id(rule)]
+            guard_status, guard_reason = _rule_guard_status(
+                document,
+                doc_tokens,
+                rule,
+                query_family=query_family,
+                query_subtype=query_subtype,
+                query_scope_tokens=query_scope_tokens,
+                rule_scope_tokens=rule_scope_tokens,
+            )
             quality = _quality_for_rule(
                 document=document,
                 doc_tokens=doc_tokens,
@@ -198,6 +301,10 @@ class RuleMatcher:
                 final_score=final,
                 guard_status=guard_status,
                 guard_reason=guard_reason,
+                query_family=query_family,
+                query_subtype=query_subtype,
+                query_scope_tokens=query_scope_tokens,
+                rule_scope_tokens=rule_scope_tokens,
             )
             if guard_status != "passed":
                 if best_rejected is None or quality.final_score > best_rejected.final_score:
@@ -210,25 +317,38 @@ class RuleMatcher:
                 continue
             match_candidates.append((final, rule, quality))
 
-        best = self._select_best_match(match_candidates, doc_tokens, query_family)
+        best = self._select_best_match(match_candidates, doc_tokens, query_family, query_subtype)
         if best:
             best_rule, best_quality = best
         if best_rule is None and best_rejected is not None:
             return None, best_rejected
         return best_rule, best_quality
 
+    def _ranked_lexical_candidates(self, doc_tokens: set[str]) -> list[ValidationRule]:
+        scored = [
+            (self._lexical.token_score(rule, doc_tokens), rule.priority, rule)
+            for rule in self._lexical.candidates(doc_tokens)
+        ]
+        scored = [item for item in scored if item[0] > 0.0]
+        scored.sort(key=lambda item: (-item[0], item[1]))
+        return [rule for _score, _priority, rule in scored[:_MAX_RULE_CANDIDATES]]
+
     def _select_best_match(
         self,
         candidates: list[tuple[float, ValidationRule, RuleMatchQuality]],
         doc_tokens: set[str],
         query_family: str,
+        query_subtype: str,
     ) -> tuple[ValidationRule, RuleMatchQuality] | None:
         """Select the best passed rule, preferring exact technical-spec family over compatible fallbacks."""
         if not candidates:
             return None
         pool = candidates
-        if query_family == "technical_specification":
-            exact = [item for item in candidates if item[2].rule_family == "technical_specification"]
+        if query_family == "specification":
+            exact = [item for item in candidates if item[2].rule_family == "specification"]
+            subtype_exact = [item for item in exact if item[2].rule_subtype == query_subtype]
+            if subtype_exact:
+                exact = subtype_exact
             if exact:
                 pool = exact
             schedulable_exact = [item for item in pool if item[1].sub_type != "SKIP"]
@@ -348,11 +468,20 @@ def _match_rules_semantic(
     return results, qualities
 
 
-def _rule_guard_status(document: str, doc_tokens: set[str], rule: ValidationRule) -> tuple[str, str]:
+def _rule_guard_status(
+    document: str,
+    doc_tokens: set[str],
+    rule: ValidationRule,
+    query_family: str | None = None,
+    query_subtype: str | None = None,
+    query_scope_tokens: set[str] | None = None,
+    rule_scope_tokens: set[str] | None = None,
+) -> tuple[str, str]:
     """Return passed/rejected and the reason for obvious validation-rule false positives."""
-    query_family = _deliverable_family(document)
-    rule_family = _deliverable_family(rule.doc_keyword)
-    if query_family == "painting_specification":
+    if query_family is None or query_subtype is None:
+        query_family, query_subtype = _deliverable_type(document)
+    rule_family, rule_subtype = _rule_deliverable_type(rule)
+    if query_subtype == "painting_specification":
         logger.trace(
             "Rule rejected by blocked-family guard: query='{}' rule='{}' ({})",
             document,
@@ -360,6 +489,32 @@ def _rule_guard_status(document: str, doc_tokens: set[str], rule: ValidationRule
             query_family,
         )
         return "rejected", "blocked_deliverable_family"
+    if query_scope_tokens is None:
+        query_scope_tokens = _scope_keys(document, doc_tokens)
+    if query_scope_tokens:
+        if rule_scope_tokens is None:
+            rule_scope_tokens = _rule_scope_keys(rule)
+        # Equipment-specific rules should not win for a different equipment scope
+        # (e.g. "P&ID for ACC" must not match "HRSG - P&ID for SCR").
+        if rule_scope_tokens and not query_scope_tokens.intersection(rule_scope_tokens):
+            logger.trace(
+                "Rule rejected by scope guard: query='{}' rule='{}' ({} vs {})",
+                document,
+                rule.doc_keyword,
+                sorted(query_scope_tokens),
+                sorted(rule_scope_tokens),
+            )
+            return "rejected", "scope_mismatch"
+    subtype_status = _subtype_status(query_family, query_subtype, rule_family, rule_subtype)
+    if subtype_status == "mismatch":
+        logger.trace(
+            "Rule rejected by deliverable subtype guard: query='{}' rule='{}' ({} -> {})",
+            document,
+            rule.doc_keyword,
+            query_subtype,
+            rule_subtype,
+        )
+        return "rejected", "deliverable_subtype_mismatch"
     if query_family in _STRICT_FAMILY_MATCH and not rule_family:
         logger.trace(
             "Rule rejected by missing-family guard: query='{}' rule='{}' ({})",
@@ -378,42 +533,38 @@ def _rule_guard_status(document: str, doc_tokens: set[str], rule: ValidationRule
         )
         return "rejected", "deliverable_family_mismatch"
 
-    query_scope_tokens = doc_tokens & _SCOPE_TOKENS
-    if query_scope_tokens:
-        rule_scope_tokens = (set(rule._item_tokens) | set(rule._doc_kw_tokens)) & _SCOPE_TOKENS
-        # Equipment-specific rules should not win for a different equipment scope
-        # (e.g. "P&ID for ACC" must not match "HRSG - P&ID for SCR").
-        if rule_scope_tokens and not query_scope_tokens.intersection(rule_scope_tokens):
-            logger.trace(
-                "Rule rejected by scope guard: query='{}' rule='{}' ({} vs {})",
-                document,
-                rule.doc_keyword,
-                sorted(query_scope_tokens),
-                sorted(rule_scope_tokens),
-            )
-            return "rejected", "scope_mismatch"
-        if (
-            query_family in _STRICT_FAMILY_MATCH
-            and query_family == rule_family
-            and not rule_scope_tokens
-            and _is_specific_rule_text(rule.doc_keyword)
-        ):
-            logger.trace(
-                "Rule rejected by implicit-scope guard: query='{}' rule='{}' ({})",
-                document,
-                rule.doc_keyword,
-                sorted(query_scope_tokens),
-            )
-            return "rejected", "implicit_scope_mismatch"
+    if (
+        query_scope_tokens
+        and query_family in _STRICT_FAMILY_MATCH
+        and query_family == rule_family
+        and not rule_scope_tokens
+        and _is_specific_rule_text(rule.doc_keyword)
+    ):
+        logger.trace(
+            "Rule rejected by implicit-scope guard: query='{}' rule='{}' ({})",
+            document,
+            rule.doc_keyword,
+            sorted(query_scope_tokens),
+        )
+        return "rejected", "implicit_scope_mismatch"
+    if _object_token_mismatch(document, doc_tokens, rule, query_family, query_subtype, rule_family, rule_subtype):
+        logger.trace(
+            "Rule rejected by object-token guard: query='{}' rule='{}'",
+            document,
+            rule.doc_keyword,
+        )
+        return "rejected", "object_token_mismatch"
     return "passed", ""
 
 
 def _empty_quality(document: str, doc_tokens: set[str], query_source: str = "") -> RuleMatchQuality:
-    query_scope = sorted(doc_tokens & _SCOPE_TOKENS)
+    query_scope = sorted(_scope_keys(document, doc_tokens))
+    query_family, query_subtype = _deliverable_type(document)
     return RuleMatchQuality(
         query=document,
         query_source=query_source,
-        query_family=_deliverable_family(document),
+        query_family=query_family,
+        query_subtype=query_subtype,
         query_scope="|".join(query_scope),
         scope_status="query_unscoped" if not query_scope else "no_rule",
     )
@@ -430,20 +581,30 @@ def _quality_for_rule(
     final_score: float,
     guard_status: str,
     guard_reason: str,
+    query_family: str | None = None,
+    query_subtype: str | None = None,
+    query_scope_tokens: set[str] | None = None,
+    rule_scope_tokens: set[str] | None = None,
 ) -> RuleMatchQuality:
-    query_family = _deliverable_family(document)
-    rule_family = _deliverable_family(rule.doc_keyword)
-    query_scope_tokens = doc_tokens & _SCOPE_TOKENS
-    rule_scope_tokens = (set(rule._item_tokens) | set(rule._doc_kw_tokens)) & _SCOPE_TOKENS
+    if query_family is None or query_subtype is None:
+        query_family, query_subtype = _deliverable_type(document)
+    rule_family, rule_subtype = _rule_deliverable_type(rule)
+    if query_scope_tokens is None:
+        query_scope_tokens = _scope_keys(document, doc_tokens)
+    if rule_scope_tokens is None:
+        rule_scope_tokens = _rule_scope_keys(rule)
     return RuleMatchQuality(
         query=document,
         query_source=query_source,
         query_family=query_family,
         rule_family=rule_family,
+        query_subtype=query_subtype,
+        rule_subtype=rule_subtype,
         query_scope="|".join(sorted(query_scope_tokens)),
         rule_scope="|".join(sorted(rule_scope_tokens)),
         rule_scope_type=_rule_scope_type(rule),
         family_status=_family_status(query_family, rule_family),
+        subtype_status=_subtype_status(query_family, query_subtype, rule_family, rule_subtype),
         scope_status=_scope_status(query_scope_tokens, rule_scope_tokens),
         guard_status=guard_status,
         guard_reason=guard_reason,
@@ -456,7 +617,7 @@ def _quality_for_rule(
 
 
 def _rule_scope_type(rule: ValidationRule) -> str:
-    rule_scope_tokens = (set(rule._item_tokens) | set(rule._doc_kw_tokens)) & _SCOPE_TOKENS
+    rule_scope_tokens = _rule_scope_keys(rule)
     if rule_scope_tokens:
         return "scoped"
     if _is_specific_rule_text(rule.doc_keyword):
@@ -484,30 +645,119 @@ def _scope_status(query_scope_tokens: set[str], rule_scope_tokens: set[str]) -> 
     return "match" if query_scope_tokens.intersection(rule_scope_tokens) else "mismatch"
 
 
+def _object_token_mismatch(
+    document: str,
+    query_tokens: set[str],
+    rule: ValidationRule,
+    query_family: str,
+    query_subtype: str,
+    rule_family: str,
+    rule_subtype: str,
+) -> bool:
+    if query_family != rule_family:
+        return False
+    if query_subtype != rule_subtype:
+        return False
+    query_content = _content_tokens(query_tokens | _free_text_tokens(document))
+    rule_content = _content_tokens(set(rule._item_tokens) | set(rule._doc_kw_tokens))
+    if not query_content or not rule_content:
+        return False
+    if query_content.intersection(rule_content):
+        return False
+    if query_subtype not in _GENERIC_SUBTYPES:
+        return True
+    return query_family in {"diagram", "specification", "list", "report", "drawing"}
+
+
+def _content_tokens(tokens: set[str]) -> set[str]:
+    return {
+        token
+        for token in tokens
+        if token
+        and token not in _GENERIC_RULE_TOKENS
+        and token not in _SCOPE_TOKENS
+        and len(token) > 1
+        and not token.isdigit()
+    }
+
+
+def _free_text_tokens(value: str) -> set[str]:
+    return set(_norm_scope_text(value).lower().split())
+
+
 def _families_compatible(query_family: str, rule_family: str) -> bool:
     if query_family == rule_family:
         return True
     if query_family in _STRICT_FAMILY_MATCH or rule_family in _STRICT_FAMILY_MATCH:
         return False
-    if query_family == "technical_specification" and rule_family in {"datasheet", "system_description"}:
+    if query_family == "specification" and rule_family in {"datasheet", "description"}:
         return True
-    if query_family == "datasheet" and rule_family == "technical_specification":
+    if query_family == "datasheet" and rule_family == "specification":
         return True
-    if query_family == "diagram" and rule_family in {"logic", "configuration"}:
+    if query_family == "drawing" and rule_family in {"diagram"}:
         return True
-    if query_family == "logic" and rule_family == "diagram":
-        return True
-    if query_family == "outline" and rule_family in {"arrangement", "diagram"}:
-        return True
-    return query_family == "arrangement" and rule_family in {"outline", "diagram"}
+    return query_family == "diagram" and rule_family in {"drawing"}
 
 
-def _deliverable_family(value: str) -> str:
-    text = value.upper().replace("P&I DIAGRAM", "P&ID").replace("P&I DRAWING", "P&ID")
-    for family, patterns in _DELIVERABLE_FAMILIES:
-        if any(pattern in text for pattern in patterns):
-            return family
-    return ""
+def _rule_query_deliverable(deliverable: str, title: str) -> str:
+    family, subtype = canonical_deliverable_type(deliverable=deliverable, title=title)
+    if subtype in _SUBTYPE_LABELS:
+        return _SUBTYPE_LABELS[subtype]
+    return normalize_deliverable(deliverable)
+
+
+def _deliverable_type(value: str) -> tuple[str, str]:
+    return canonical_deliverable_type(deliverable=value, title=value)
+
+
+def _rule_deliverable_type(rule: ValidationRule) -> tuple[str, str]:
+    return rule.canonical_deliverable_family, rule.canonical_deliverable_subtype
+
+
+def _subtype_status(query_family: str, query_subtype: str, rule_family: str, rule_subtype: str) -> str:
+    if not query_subtype or not rule_subtype:
+        return "unknown"
+    if query_subtype == rule_subtype:
+        return "match"
+    if query_family != rule_family:
+        return "not_applicable"
+    if query_subtype in _GENERIC_SUBTYPES and rule_subtype in _GENERIC_SUBTYPES:
+        return "compatible"
+    if query_subtype in _GENERIC_SUBTYPES or rule_subtype in _GENERIC_SUBTYPES:
+        return "mismatch"
+    return "mismatch"
+
+
+def _scope_keys(text: str, tokens: set[str] | None = None) -> set[str]:
+    normalized = _norm_scope_text(text)
+    keys = {
+        key
+        for key, aliases in _SCOPE_PATTERNS
+        if any(_scope_alias_matches(normalized, alias) for alias in aliases)
+    }
+    if tokens:
+        keys |= tokens & _SCOPE_TOKENS
+    return keys
+
+
+def _rule_scope_keys(rule: ValidationRule) -> set[str]:
+    text = f"{rule.item_name} {rule.doc_keyword}"
+    return _scope_keys(text, set(rule._item_tokens) | set(rule._doc_kw_tokens))
+
+
+def _scope_alias_matches(text: str, alias: str) -> bool:
+    normalized = _norm_scope_text(alias)
+    if not normalized:
+        return False
+    if re.fullmatch(r"[A-Z0-9]+", normalized):
+        return bool(re.search(rf"(?<![A-Z0-9]){re.escape(normalized)}(?![A-Z0-9])", text))
+    return normalized in text
+
+
+def _norm_scope_text(value: str) -> str:
+    text = value.upper().replace("&", " AND")
+    text = re.sub(r"[^A-Z0-9]+", " ", text)
+    return re.sub(r"\s+", " ", text).strip()
 
 
 def _is_specific_rule_text(value: str) -> bool:

@@ -35,6 +35,7 @@ _SCOPE_MULTIPLIER: dict[str, float] = {
     "query_unscoped": 0.75,
     "activity_unscoped": 0.75,
     "mismatch": 0.25,
+    "rule_scope_only": 0.85,
 }
 _GENERIC_ACTIVITY_MULTIPLIER = 0.8
 
@@ -83,6 +84,7 @@ _SCOPE_ALIASES: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("lab", ("LAB", "LABORATORY")),
     ("mv_lv", ("MV SWGR", "LV SWGR", "SWITCHGEAR", "MCC", "MOTOR CONTROL CENTER")),
     ("n2", ("N2", "NITROGEN")),
+    ("reserve_boiler", ("RESERVE BOILER", "AUX BOILER", "AUXILIARY BOILER")),
     ("stg", ("STG", "ST", "STEAM TURBINE")),
     ("wts", ("WTS", "WWTS", "WATER TREATMENT", "WASTE WATER", "EFFLUENT", "STP", "SEWAGE")),
 )
@@ -102,6 +104,9 @@ class ActivityMatchQuality:
     activity_phase: str = ""
     phase_status: str = ""
     query_scope: str = ""
+    rule_scope: str = ""
+    effective_scope: str = ""
+    scope_source: str = ""
     activity_scope: str = ""
     scope_status: str = ""
     generic_activity: bool = False
@@ -119,6 +124,9 @@ class ActivityMatchQuality:
             "activity_match_activity_phase": self.activity_phase,
             "activity_match_phase_status": self.phase_status,
             "activity_match_query_scope": self.query_scope,
+            "activity_match_rule_scope": self.rule_scope,
+            "activity_match_effective_scope": self.effective_scope,
+            "activity_match_scope_source": self.scope_source,
             "activity_match_activity_scope": self.activity_scope,
             "activity_match_scope_status": self.scope_status,
             "activity_match_generic_activity": "true" if self.generic_activity else "false",
@@ -328,6 +336,8 @@ def _activity_adjusted_score(quality: ActivityMatchQuality) -> float:
     score *= _SCOPE_MULTIPLIER.get(quality.scope_status, 0.75)
     if quality.generic_activity:
         score *= _GENERIC_ACTIVITY_MULTIPLIER
+    if quality.scope_source == "rule" and quality.scope_status != "match":
+        score *= 0.5
     return score
 
 def _activity_quality(
@@ -341,6 +351,8 @@ def _activity_quality(
     query_phase = _query_phase(row, rule)
     activity_phase = _activity_phase(activity_text)
     query_scope = _scope_keys(" ".join([row.get("Equipment", ""), row.get("System", ""), row.get("Building", "")]))
+    rule_scope = _rule_scope_keys(rule)
+    effective_scope, scope_source = _effective_query_scope(query_scope, rule_scope)
     activity_scope = _scope_keys(activity_text)
     return ActivityMatchQuality(
         query=query,
@@ -348,8 +360,11 @@ def _activity_quality(
         activity_phase=activity_phase,
         phase_status=_phase_status(query_phase, activity_phase, rule),
         query_scope="|".join(query_scope),
+        rule_scope="|".join(rule_scope),
+        effective_scope="|".join(effective_scope),
+        scope_source=scope_source,
         activity_scope="|".join(activity_scope),
-        scope_status=_scope_status(query_scope, activity_scope),
+        scope_status=_scope_status(effective_scope, activity_scope),
         generic_activity=_is_generic_activity(activity),
         bm25_rank=candidate.bm25_rank,
         semantic_rank=candidate.semantic_rank,
@@ -461,6 +476,21 @@ def _scope_status(query_scope: list[str], activity_scope: list[str]) -> str:
     if not activity_scope:
         return "activity_unscoped"
     return "match" if set(query_scope).intersection(activity_scope) else "mismatch"
+
+
+def _rule_scope_keys(rule: ValidationRule | None) -> list[str]:
+    if rule is None:
+        return []
+    text = " ".join(part for part in [rule.item_name, rule.doc_keyword] if part)
+    return _scope_keys(text)
+
+
+def _effective_query_scope(query_scope: list[str], rule_scope: list[str]) -> tuple[list[str], str]:
+    if rule_scope:
+        return rule_scope, "rule"
+    if query_scope:
+        return query_scope, "query"
+    return [], ""
 
 
 def _is_generic_activity(activity: ScheduleActivity) -> bool:
