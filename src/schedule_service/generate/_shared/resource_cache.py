@@ -20,6 +20,7 @@ from schedule_service.generate.activity.lexical import BM25Index
 from schedule_service.generate.activity.loader import load_schedule_activities
 from schedule_service.generate.activity.models import ScheduleActivity
 from schedule_service.generate.activity.semantic import SemanticIndex
+from schedule_service.generate.activity.structured import StructuredActivityIndex, build_structured_activity_index
 from schedule_service.generate.rule.lexical import RuleLexicalIndex
 from schedule_service.generate.rule.loader import load_rules
 from schedule_service.generate.rule.matcher import RuleMatcher
@@ -30,6 +31,7 @@ _activities: dict[tuple[str, float], list[ScheduleActivity]] = {}
 _bm25: dict[int, BM25Index] = {}
 _rule_matchers: dict[tuple[str, float], RuleMatcher | None] = {}
 _activity_semantic: dict[int, SemanticIndex] = {}
+_structured_activity: dict[int, StructuredActivityIndex] = {}
 _rule_semantic: dict[int, RuleSemanticIndex] = {}
 
 
@@ -93,6 +95,27 @@ def get_activity_semantic_index(activities: list[ScheduleActivity], cache_dir: P
         return cached
 
 
+def get_structured_activity_index(
+    activities: list[ScheduleActivity],
+    *,
+    activity_phase,
+    scope_keys,
+) -> StructuredActivityIndex:
+    """Build (memoized) the structured system x phase lookup index."""
+    key = id(activities)
+    with _lock:
+        cached = _structured_activity.get(key)
+        if cached is None:
+            logger.info("Resource cache MISS — building structured activity index")
+            cached = build_structured_activity_index(
+                activities,
+                activity_phase=activity_phase,
+                scope_keys=scope_keys,
+            )
+            _structured_activity[key] = cached
+        return cached
+
+
 def get_rule_semantic_index(matcher: RuleMatcher, cache_dir: Path) -> RuleSemanticIndex:
     """Build (memoized) the rule semantic embedding index, keyed by matcher identity.
 
@@ -116,4 +139,5 @@ def clear() -> None:
         _bm25.clear()
         _rule_matchers.clear()
         _activity_semantic.clear()
+        _structured_activity.clear()
         _rule_semantic.clear()

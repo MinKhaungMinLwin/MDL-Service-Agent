@@ -17,8 +17,14 @@ from loguru import logger
 from schedule_service.generate.activity.lexical import BM25Index
 from schedule_service.generate.activity.models import Candidate, ScheduleActivity
 from schedule_service.generate.activity.semantic import SemanticIndex
+from schedule_service.generate.activity.structured import StructuredActivityIndex
+from schedule_service.generate.domain_mapping import DomainMapping, find_domain_mapping, load_domain_mappings
 from schedule_service.generate.rule.models import ValidationRule
-from schedule_service.normalizer import normalize_deliverable, refine_deliverable_with_title
+from schedule_service.normalizer import (
+    canonical_deliverable_type,
+    normalize_deliverable,
+    refine_deliverable_with_title,
+)
 
 _RRF_K = 60
 _RERANK_TOP_K = 10
@@ -127,6 +133,11 @@ class ActivityMatchQuality:
     semantic_score: float = 0.0
     rrf_score: float = 0.0
     adjusted_score: float = 0.0
+    resolver_mode: str = "text"
+    resolution_reason: str = ""
+    structured_scope: str = ""
+    structured_allowed_phases: str = ""
+    structured_cell_size: int = 0
 
     def output_fields(self) -> dict[str, str]:
         """Return stable string fields for generated schedule outputs."""
@@ -147,6 +158,11 @@ class ActivityMatchQuality:
             "activity_match_semantic_score": _fmt_score(self.semantic_score),
             "activity_match_rrf_score": _fmt_score(self.rrf_score),
             "activity_match_adjusted_score": _fmt_score(self.adjusted_score),
+            "activity_match_resolver_mode": self.resolver_mode,
+            "activity_match_resolution_reason": self.resolution_reason,
+            "activity_match_structured_scope": self.structured_scope,
+            "activity_match_structured_allowed_phases": self.structured_allowed_phases,
+            "activity_match_structured_cell_size": str(self.structured_cell_size or ""),
         }
 
 
@@ -190,6 +206,8 @@ def resolve_activities(
     bm25: BM25Index,
     rules: list[ValidationRule | None],
     semantic_index: SemanticIndex,
+    resolver_mode: str = "text",
+    structured_index: StructuredActivityIndex | None = None,
 ) -> list[ScheduleActivity]:
     """Resolve the CCPP guide schedule activity for every row.
 
@@ -197,7 +215,15 @@ def resolve_activities(
     The activity query is rule-boosted via build_activity_query.
     Deduplicates queries across rows to avoid re-scoring identical queries.
     """
-    matched, _qualities = resolve_activity_matches(rows, activities, bm25, rules, semantic_index)
+    matched, _qualities = resolve_activity_matches(
+        rows,
+        activities,
+        bm25,
+        rules,
+        semantic_index,
+        resolver_mode=resolver_mode,
+        structured_index=structured_index,
+    )
     return matched
 
 
@@ -207,9 +233,19 @@ def resolve_activity_matches(
     bm25: BM25Index,
     rules: list[ValidationRule | None],
     semantic_index: SemanticIndex,
+    resolver_mode: str = "text",
+    structured_index: StructuredActivityIndex | None = None,
 ) -> tuple[list[ScheduleActivity], list[ActivityMatchQuality]]:
     """Resolve CCPP guide schedule activities and match-quality diagnostics."""
-    return _match_activities_semantic(rows, activities, bm25, semantic_index, rules)
+    return _match_activities_semantic(
+        rows,
+        activities,
+        bm25,
+        semantic_index,
+        rules,
+        resolver_mode=resolver_mode,
+        structured_index=structured_index,
+    )
 
 
 def _match_activities_semantic(
@@ -218,6 +254,8 @@ def _match_activities_semantic(
     bm25: BM25Index,
     semantic_index: SemanticIndex,
     rules: list[ValidationRule | None],
+    resolver_mode: str = "text",
+    structured_index: StructuredActivityIndex | None = None,
 ) -> tuple[list[ScheduleActivity], list[ActivityMatchQuality]]:
     """Batch-embed activity queries and return the quality-reranked activity for each row.
 
@@ -240,6 +278,7 @@ def _match_activities_semantic(
     # One matmul: (n_unique, dims) → (n_unique, n_activities) cosine similarities.
     all_semantic_scores = semantic_index.score_matrix(np.array(raw_embeddings, dtype=np.float32))
     query_to_idx = {q: i for i, q in enumerate(unique_queries)}
+    domain_mappings = load_domain_mappings() if resolver_mode in {"structured", "hybrid"} else []
 
     # Deduplicate BM25 scoring: score each unique query once
     query_bm25_scores = {q: bm25.score(q) for q in unique_queries}
@@ -265,7 +304,18 @@ def _match_activities_semantic(
             has_semantic=True,
             allowed_indexes=allowed_indexes,
         )
-        candidate, quality = _select_activity_candidate(row, rule, query, candidates)
+        candidate, quality = _select_activity_candidate_for_mode(
+            row,
+            rule,
+            query,
+            candidates,
+            activities,
+            bm25_scores,
+            semantic_scores,
+            resolver_mode=resolver_mode,
+            structured_index=structured_index,
+            domain_mappings=domain_mappings,
+        )
         results.append(candidate.activity)
         qualities.append(quality)
     return results, qualities
@@ -332,6 +382,142 @@ def rrf_candidates(
             )
         )
 
+    candidates.sort(key=lambda item: item.rrf_score, reverse=True)
+    return candidates[:top_k]
+
+
+def _select_activity_candidate_for_mode(
+    row: dict[str, str],
+    rule: ValidationRule | None,
+    query: str,
+    text_candidates: list[Candidate],
+    activities: list[ScheduleActivity],
+    bm25_scores: list[float],
+    semantic_scores: list[float],
+    *,
+    resolver_mode: str,
+    structured_index: StructuredActivityIndex | None,
+    domain_mappings: list[DomainMapping],
+) -> tuple[Candidate, ActivityMatchQuality]:
+    if resolver_mode == "text":
+        candidate, quality = _select_activity_candidate(row, rule, query, text_candidates)
+        return candidate, replace(quality, resolver_mode="text", resolution_reason="text_rrf")
+
+    structured_candidates, meta = _structured_candidates_for_row(
+        row,
+        rule,
+        activities,
+        bm25_scores,
+        semantic_scores,
+        structured_index=structured_index,
+        domain_mappings=domain_mappings,
+    )
+    if structured_candidates:
+        candidate, quality = _select_activity_candidate(row, rule, query, structured_candidates)
+        return candidate, replace(
+            quality,
+            resolver_mode="structured",
+            resolution_reason="structured_cell_match",
+            structured_scope="|".join(meta["effective_scope"]),
+            structured_allowed_phases="|".join(meta["allowed_phases"]),
+            structured_cell_size=len(structured_candidates),
+        )
+
+    candidate, quality = _select_activity_candidate(row, rule, query, text_candidates)
+    if resolver_mode == "hybrid":
+        return candidate, replace(
+            quality,
+            resolver_mode="hybrid",
+            resolution_reason=meta["reason"],
+            structured_scope="|".join(meta["effective_scope"]),
+            structured_allowed_phases="|".join(meta["allowed_phases"]),
+            structured_cell_size=0,
+        )
+
+    # Structured-only mode: keep the explanatory text candidate for output, but
+    # force the gate to abstain when no (system, phase) cell exists.
+    quality = replace(
+        quality,
+        resolver_mode="structured",
+        resolution_reason=meta["reason"],
+        structured_scope="|".join(meta["effective_scope"]),
+        structured_allowed_phases="|".join(meta["allowed_phases"]),
+        structured_cell_size=0,
+        rrf_score=0.0,
+        adjusted_score=0.0,
+    )
+    return candidate, quality
+
+
+def _structured_candidates_for_row(
+    row: dict[str, str],
+    rule: ValidationRule | None,
+    activities: list[ScheduleActivity],
+    bm25_scores: list[float],
+    semantic_scores: list[float],
+    *,
+    structured_index: StructuredActivityIndex | None,
+    domain_mappings: list[DomainMapping],
+) -> tuple[list[Candidate], dict[str, object]]:
+    query_scope = _scope_keys(" ".join([row.get("Equipment", ""), row.get("System", ""), row.get("Building", "")]))
+    rule_scope = _rule_scope_keys(rule)
+    effective_scope, _scope_source = _effective_query_scope(query_scope, rule_scope)
+    query_phase = _query_phase(row, rule)
+    allowed_phases = _structured_allowed_phases(row, effective_scope, query_phase, domain_mappings)
+    meta = {
+        "effective_scope": effective_scope,
+        "allowed_phases": allowed_phases,
+        "reason": "",
+    }
+    if structured_index is None:
+        meta["reason"] = "structured_index_missing"
+        return [], meta
+    if not effective_scope:
+        meta["reason"] = "structured_no_system"
+        return [], meta
+    if not allowed_phases:
+        meta["reason"] = "structured_no_phase"
+        return [], meta
+
+    candidate_indexes = structured_index.indexes_for(effective_scope, allowed_phases)
+    if candidate_indexes:
+        return _candidates_from_indexes(candidate_indexes, activities, bm25_scores, semantic_scores), meta
+    if any(scope in structured_index.systems for scope in effective_scope):
+        meta["reason"] = "structured_phase_gap"
+    else:
+        meta["reason"] = "structured_system_absent"
+    return [], meta
+
+
+def _candidates_from_indexes(
+    indexes: list[int],
+    activities: list[ScheduleActivity],
+    bm25_scores: list[float],
+    semantic_scores: list[float],
+    *,
+    top_k: int = _RERANK_TOP_K,
+) -> list[Candidate]:
+    bm25_ranks = {index: rank for rank, index in enumerate(rank_desc(bm25_scores), start=1)}
+    semantic_ranks = {index: rank for rank, index in enumerate(rank_desc(semantic_scores), start=1)}
+    candidates: list[Candidate] = []
+    for index in indexes:
+        bm25_rank = bm25_ranks.get(index)
+        semantic_rank = semantic_ranks.get(index)
+        rrf_score = 0.0
+        if bm25_rank is not None:
+            rrf_score += 1.0 / (_RRF_K + bm25_rank)
+        if semantic_rank is not None:
+            rrf_score += 1.0 / (_RRF_K + semantic_rank)
+        candidates.append(
+            Candidate(
+                activity=activities[index],
+                bm25_rank=bm25_rank,
+                semantic_rank=semantic_rank,
+                bm25_score=bm25_scores[index],
+                semantic_score=semantic_scores[index],
+                rrf_score=rrf_score,
+            )
+        )
     candidates.sort(key=lambda item: item.rrf_score, reverse=True)
     return candidates[:top_k]
 
@@ -443,6 +629,52 @@ def _query_phase(row: dict[str, str], rule: ValidationRule | None) -> str:
         boosted = _activity_keyword_phase(rule.activity_keywords)
         if boosted:
             return boosted
+    return ""
+
+
+def _structured_allowed_phases(
+    row: dict[str, str],
+    effective_scope: list[str],
+    query_phase: str,
+    domain_mappings: list[DomainMapping],
+) -> list[str]:
+    deliverable = row.get("Deliverable", "").strip()
+    title = row.get("Title", "").strip()
+    family, subtype = canonical_deliverable_type(
+        deliverable=refine_deliverable_with_title(deliverable, title),
+        title=title,
+    )
+    mapping_keys = [key for key in [_deliverable_mapping_key(family, subtype)] if key]
+    mapping_keys.append(family)
+    scope_families = list(effective_scope) if effective_scope else ["*"]
+    scope_families.append("*")
+
+    phases: list[str] = []
+    for mapping_key in mapping_keys:
+        for scope_family in scope_families:
+            mapping = find_domain_mapping(mapping_key, scope_family, domain_mappings)
+            if mapping and mapping.allowed_activity_phases:
+                phases.extend(mapping.allowed_activity_phases)
+                break
+        if phases:
+            break
+
+    if not phases and query_phase:
+        phases.extend(_PHASE_BUCKETS.get(query_phase, ()))
+        if not phases:
+            phases.append(query_phase)
+    return list(dict.fromkeys(phase for phase in phases if phase))
+
+
+def _deliverable_mapping_key(family: str, subtype: str) -> str:
+    if subtype == "p_id":
+        return "p&id"
+    if subtype == "technical_specification":
+        return "technical_specification"
+    if subtype == "system_description":
+        return "system_description"
+    if family in {"diagram", "classification", "curve"}:
+        return family
     return ""
 
 
