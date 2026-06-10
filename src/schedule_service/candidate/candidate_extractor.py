@@ -17,6 +17,11 @@ from typing import Any
 from loguru import logger
 
 from schedule_service.normalizer import (
+    canonical_deliverable_type,
+    canonicalize_mdl_candidate,
+    refine_deliverable_with_title,
+)
+from schedule_service.normalizer import (
     extract_deliverable as _extract_deliverable_fn,
 )
 from schedule_service.normalizer import (
@@ -26,9 +31,54 @@ from schedule_service.normalizer import (
     normalize_equipment as _normalize_equipment_fn,
 )
 
-DEFAULT_SCORE_THRESHOLD = 0.75
-DEFAULT_TOP_N = 5          # how many Matched_Doc_N per row to consider
+DEFAULT_SCORE_THRESHOLD = 0.70
+DEFAULT_TOP_N = 20         # how many Matched_Doc_N per row to consider
+DEFAULT_SELECTION_TOP_PER_CHUNK = 5
+DEFAULT_SELECTION_HIGH_SCORE = 0.82
 DEFAULT_OUTPUT_DIR = Path("output/schedule_service/candidates")
+
+_ALIGNMENT_APPROVED_MIN = 0.18
+_ALIGNMENT_WEAK_MIN = 0.02
+_ALIGNMENT_MISMATCH_MAX = -0.10
+_SELECTION_UNKNOWN_CAP = 1
+_SELECTION_MISMATCH_FALLBACK_CAP = 1
+
+_EQUIPMENT_ALIASES: dict[str, tuple[str, ...]] = {
+    "Air Cooled Condenser": ("AIR COOLED CONDENSER", "ACC"),
+    "Heat Recovery Steam Generator": ("HEAT RECOVERY STEAM GENERATOR", "HRSG"),
+    "Gas Turbine Generator": ("GAS TURBINE GENERATOR", "GAS TURBINE", "GTG", "GT"),
+    "Steam Turbine Generator": ("STEAM TURBINE GENERATOR", "STEAM TURBINE", "STG", "ST"),
+    "Distributed Control System": ("DISTRIBUTED CONTROL SYSTEM", "DCS"),
+    "Continuous Emission Monitoring System": ("CONTINUOUS EMISSION MONITORING SYSTEM", "CEMS"),
+    "Water Treatment System": ("WATER TREATMENT SYSTEM", "WATER TREATMENT", "WASTE WATER", "WASTEWATER"),
+}
+
+_REQUIREMENT_DELIVERABLE_ALIASES: dict[str, tuple[str, ...]] = {
+    "Technical Specification": ("TECHNICAL SPECIFICATION", "SPECIFICATION"),
+    "Performance Correction Curve": ("PERFORMANCE CORRECTION CURVE", "PERFORMANCE CURVE"),
+    "Performance Curve": ("PERFORMANCE CURVE", "CAPABILITY CURVE", "CORRECTION CURVE"),
+    "Degradation Curve": ("DEGRADATION CURVE", "PERFORMANCE CURVE"),
+    "Hazardous Area Classification": ("HAZARDOUS AREA CLASSIFICATION", "AREA CLASSIFICATION"),
+    "P&ID": ("P&ID", "P&I DIAGRAM"),
+    "System Description": ("SYSTEM DESCRIPTION",),
+    "Functional Design Specification": ("FUNCTIONAL DESIGN SPECIFICATION", "FDS"),
+    "Design Report": ("DESIGN REPORT",),
+    "CFD Report": ("CFD REPORT",),
+    "Report": ("REPORT",),
+    "Process Flow Diagram": ("PROCESS FLOW DIAGRAM", "PFD"),
+    "Control Logic Diagram": ("CONTROL LOGIC DIAGRAM",),
+    "Power Distribution Diagram": ("POWER DISTRIBUTION DIAGRAM", "POWER DISTRIBUTION CONCEPT DIAGRAM"),
+    "Diagram": ("DIAGRAM",),
+    "Datasheet & Drawings": ("DATA SHEET", "DATASHEET", "DRAWING"),
+    "Instrument List": ("INSTRUMENT LIST",),
+    "Equipment List": ("EQUIPMENT LIST",),
+    "List": ("LIST",),
+    "General Arrangement": ("GENERAL ARRANGEMENT", "GA DRAWING"),
+    "Outline Drawing": ("OUTLINE DRAWING",),
+    "Calculation": ("CALCULATION",),
+    "Procedure": ("PROCEDURE",),
+    "Manual": ("MANUAL",),
+}
 
 
 def extract_candidates(
@@ -68,6 +118,7 @@ def extract_candidates(
         "Extracted {} unique MDL candidates (threshold={}, top_n={})",
         len(candidate_list), score_threshold, top_n,
     )
+    _select_final_candidates(candidate_list)
 
     llm_timing: dict[str, Any] = {"llm_enabled": False}
     if classify_with_llm and candidate_list:
@@ -76,6 +127,8 @@ def extract_candidates(
             len(candidate_list),
         )
         llm_timing = _classify_candidates(candidate_list)
+        _refresh_candidate_quality(candidate_list)
+        _select_final_candidates(candidate_list)
 
     t_llm = time.perf_counter()
 
@@ -145,12 +198,15 @@ def _extract_candidates_from_json_records(
         itb_doc = str(record.get("document", "") or "").strip()
         itb_page = str(record.get("page", "") or "").strip()
         chunk_id = str(record.get("chunk_id", "") or "").strip()
+        requirement_intent = record.get("requirement_intent", {})
 
         for candidate in record.get("candidates", [])[:top_n]:
             parsed = _candidate_from_json(candidate)
+            _apply_requirement_intent(parsed, requirement_intent)
             if parsed["score"] < score_threshold:
                 continue
             parsed["candidate_status"], parsed["quality_issues"] = _candidate_quality(parsed)
+            _apply_intent_alignment_fields(parsed)
             key = _structured_dedup_key(parsed)
             _upsert_candidate(candidates, key, parsed, itb_doc, itb_page, chunk_id)
 
@@ -160,11 +216,14 @@ def _extract_candidates_from_json_records(
 def _candidate_from_json(candidate: dict[str, Any]) -> dict[str, Any]:
     """Normalize one structured JSON candidate into the schedule-candidate shape."""
     title = _as_text(candidate.get("title"))
-    deliverable = _as_text(candidate.get("deliverable")) or _extract_deliverable(title)
+    deliverable = refine_deliverable_with_title(
+        _as_text(candidate.get("deliverable")) or _extract_deliverable(title),
+        title,
+    )
     equipment = _normalize_equipment(_as_text(candidate.get("equipment")))
     if not equipment:
         equipment = _extract_equipment_from_title(title)
-    return {
+    parsed = {
         "project": "",
         "doc_id": _as_text(candidate.get("doc_id")),
         "source_file": _as_text(candidate.get("source_file")),
@@ -182,6 +241,123 @@ def _candidate_from_json(candidate: dict[str, Any]) -> dict[str, Any]:
         "retrieval_rank": candidate.get("retrieval_rank"),
         "parse_source": "json_metadata",
     }
+    _apply_canonical_candidate_fields(parsed)
+    return parsed
+
+
+def _select_final_candidates(
+    candidates: list[dict[str, Any]],
+    top_per_chunk: int = DEFAULT_SELECTION_TOP_PER_CHUNK,
+    high_score_threshold: float = DEFAULT_SELECTION_HIGH_SCORE,
+) -> None:
+    """Mark the final candidates to feed into schedule generation while keeping backups for audit."""
+    selected: set[int] = set()
+    reasons: dict[int, set[str]] = {idx: set() for idx in range(len(candidates))}
+    chunk_candidates: dict[str, list[tuple[int, float, int, int]]] = {}
+    for idx, candidate in enumerate(candidates):
+        _apply_intent_alignment_fields(candidate)
+        selection_score = _candidate_selection_score(candidate)
+        for chunk_id, rank in _candidate_chunk_ranks(candidate).items():
+            priority = _alignment_selection_priority(candidate)
+            chunk_candidates.setdefault(chunk_id, []).append((priority, -selection_score, rank, idx))
+        if (
+            float(candidate.get("score") or 0.0) >= high_score_threshold
+            and candidate.get("intent_alignment_status") in {"aligned", "weak"}
+        ):
+            selected.add(idx)
+            reasons[idx].add(f"high_score>={high_score_threshold:.2f}")
+
+    best_selected_rank: dict[int, int] = {}
+    for chunk_id, items in chunk_candidates.items():
+        for rank, idx, reason in _select_chunk_candidates(items, top_per_chunk):
+            selected.add(idx)
+            reasons[idx].add(f"{reason}:{chunk_id}")
+            best_selected_rank[idx] = min(best_selected_rank.get(idx, rank), rank)
+
+    for idx, candidate in enumerate(candidates):
+        chunk_ranks = _candidate_chunk_ranks(candidate)
+        candidate["candidate_selection_status"] = "selected" if idx in selected else "backup"
+        candidate["candidate_selection_rank"] = best_selected_rank.get(idx, min(chunk_ranks.values() or [0])) or ""
+        candidate["candidate_selection_score"] = _candidate_selection_score(candidate)
+        candidate["candidate_selection_reasons"] = (
+            ";".join(sorted(reasons[idx])) if idx in selected else "outside_top_k"
+        )
+
+
+def _select_chunk_candidates(
+    items: list[tuple[int, float, int, int]],
+    top_per_chunk: int,
+    unknown_cap: int = _SELECTION_UNKNOWN_CAP,
+    mismatch_fallback_cap: int = _SELECTION_MISMATCH_FALLBACK_CAP,
+) -> list[tuple[int, int, str]]:
+    """Select candidates for one ITB chunk by alignment tier, then score.
+
+    Tuple input is ``(priority, -selection_score, rank, candidate_idx)``.
+    Priority order: aligned, weak, unknown, mismatch. Mismatch is only used as a
+    small fallback when the chunk has no non-mismatch candidates.
+    """
+    selected: list[tuple[int, int, str]] = []
+    seen: set[int] = set()
+    by_priority: dict[int, list[tuple[int, float, int, int]]] = {}
+    for item in items:
+        by_priority.setdefault(item[0], []).append(item)
+    for group in by_priority.values():
+        group.sort()
+
+    def take(priority: int, limit: int, reason: str) -> None:
+        remaining = max(0, min(limit, top_per_chunk - len(selected)))
+        if remaining <= 0:
+            return
+        for _priority, _score_sort, rank, idx in by_priority.get(priority, []):
+            if idx in seen:
+                continue
+            selected.append((rank, idx, reason))
+            seen.add(idx)
+            if len(selected) >= top_per_chunk or sum(1 for _, _, r in selected if r == reason) >= remaining:
+                break
+
+    take(0, top_per_chunk, f"top_{top_per_chunk}_aligned")
+    take(1, top_per_chunk, f"top_{top_per_chunk}_weak")
+    take(2, unknown_cap, f"top_{top_per_chunk}_unknown_cap")
+    if not selected:
+        take(3, mismatch_fallback_cap, f"top_{top_per_chunk}_mismatch_fallback")
+    return selected
+
+
+def _alignment_selection_priority(candidate: dict[str, Any]) -> int:
+    status = candidate.get("intent_alignment_status")
+    if status == "aligned":
+        return 0
+    if status == "weak":
+        return 1
+    if status == "unknown":
+        return 2
+    return 3
+
+
+def _candidate_chunk_ranks(candidate: dict[str, Any]) -> dict[str, int]:
+    ranks: dict[str, int] = {}
+    for source in candidate.get("itb_sources", []):
+        for chunk_id in re.findall(r"[A-Za-z0-9_.&-]+_chunk_\d+", source):
+            rank_match = re.search(r"rank=(\d+)", source)
+            rank = int(rank_match.group(1)) if rank_match else int(candidate.get("rank") or 999)
+            ranks[chunk_id] = min(ranks.get(chunk_id, rank), rank)
+    return ranks
+
+
+def _candidate_selection_score(candidate: dict[str, Any]) -> float:
+    score = float(candidate.get("score") or 0.0)
+    best_rank = min(_candidate_chunk_ranks(candidate).values() or [99])
+    rank_bonus = max(0, DEFAULT_TOP_N + 1 - best_rank) * 0.003
+    completeness_bonus = 0.0
+    if candidate.get("deliverable", "").strip():
+        completeness_bonus += 0.015
+    if any(candidate.get(field, "").strip() for field in ("equipment", "system", "building")):
+        completeness_bonus += 0.015
+    if candidate.get("candidate_status") == "accepted":
+        completeness_bonus += 0.010
+    alignment_bonus = float(candidate.get("intent_alignment_score") or 0.0)
+    return score + rank_bonus + completeness_bonus + alignment_bonus
 
 
 def _candidate_score(candidate: dict[str, Any]) -> float:
@@ -209,12 +385,23 @@ def _upsert_candidate(
         candidates[key] = {
             **parsed,
             "itb_sources": [],
+            "requirement_intent_equipment": [],
+            "requirement_intent_systems": [],
+            "requirement_intent_deliverables": [],
+            "requirement_intent_actions": [],
+            "requirement_intent_constraints": [],
         }
+    _merge_requirement_intent(candidates[key], parsed)
+    _apply_intent_alignment_fields(candidates[key])
     candidates[key]["itb_sources"].append(_itb_source(itb_doc, itb_page, chunk_id, parsed))
     if parsed["score"] > candidates[key]["score"]:
         previous_sources = candidates[key]["itb_sources"]
+        previous_intent = _candidate_intent_lists(candidates[key])
         candidates[key].update(parsed)
         candidates[key]["itb_sources"] = previous_sources
+        for field, values in previous_intent.items():
+            candidates[key][field] = _unique_texts([*values, *parsed.get(field, [])])
+        _apply_intent_alignment_fields(candidates[key])
 
 
 def _itb_source(itb_doc: str, itb_page: str, chunk_id: str, parsed: dict[str, Any]) -> str:
@@ -223,6 +410,50 @@ def _itb_source(itb_doc: str, itb_page: str, chunk_id: str, parsed: dict[str, An
     rank = parsed.get("rank")
     rank_part = f",rank={rank}" if rank else ""
     return f"{itb_doc}{page}{chunk}(score={parsed['score']:.2f}{rank_part})"
+
+
+def _apply_requirement_intent(candidate: dict[str, Any], requirement_intent: Any) -> None:
+    if not isinstance(requirement_intent, dict):
+        requirement_intent = {}
+    candidate["requirement_intent_equipment"] = _intent_values(requirement_intent, "equipment")
+    candidate["requirement_intent_systems"] = _intent_values(requirement_intent, "systems")
+    candidate["requirement_intent_deliverables"] = _intent_values(requirement_intent, "deliverables")
+    candidate["requirement_intent_actions"] = _intent_values(requirement_intent, "actions")
+    candidate["requirement_intent_constraints"] = _intent_values(requirement_intent, "constraints")
+
+
+def _merge_requirement_intent(target: dict[str, Any], source: dict[str, Any]) -> None:
+    for field in _candidate_intent_lists(target):
+        target[field] = _unique_texts([*target.get(field, []), *source.get(field, [])])
+
+
+def _candidate_intent_lists(candidate: dict[str, Any]) -> dict[str, list[str]]:
+    return {
+        "requirement_intent_equipment": list(candidate.get("requirement_intent_equipment", [])),
+        "requirement_intent_systems": list(candidate.get("requirement_intent_systems", [])),
+        "requirement_intent_deliverables": list(candidate.get("requirement_intent_deliverables", [])),
+        "requirement_intent_actions": list(candidate.get("requirement_intent_actions", [])),
+        "requirement_intent_constraints": list(candidate.get("requirement_intent_constraints", [])),
+    }
+
+
+def _intent_values(requirement_intent: dict[str, Any], key: str) -> list[str]:
+    values = requirement_intent.get(key, [])
+    if not isinstance(values, list):
+        return []
+    return _unique_texts(values)
+
+
+def _unique_texts(values: list[Any]) -> list[str]:
+    seen = set()
+    result = []
+    for value in values:
+        text = str(value or "").strip()
+        key = text.casefold()
+        if text and key not in seen:
+            seen.add(key)
+            result.append(text)
+    return result
 
 
 def _parse_matched_doc(raw: str) -> dict[str, Any]:
@@ -278,7 +509,7 @@ def _parse_matched_doc(raw: str) -> dict[str, Any]:
         equipment = _extract_equipment_from_title(title)
     deliverable = _extract_deliverable(title) or forced_deliverable
 
-    return {
+    parsed = {
         "project": "",        # stripped above
         "doc_id": "",
         "source_file": "",
@@ -296,6 +527,227 @@ def _parse_matched_doc(raw: str) -> dict[str, Any]:
         "retrieval_rank": "",
         "parse_source": "csv_display",
     }
+    _apply_canonical_candidate_fields(parsed)
+    return parsed
+
+
+def _apply_canonical_candidate_fields(candidate: dict[str, Any]) -> None:
+    canonical = canonicalize_mdl_candidate(
+        title=_as_text(candidate.get("title")),
+        equipment=_as_text(candidate.get("equipment")),
+        system=_as_text(candidate.get("system")),
+        building=_as_text(candidate.get("building")),
+        deliverable=_as_text(candidate.get("deliverable")),
+    )
+    candidate["canonical_equipment"] = canonical.equipment
+    candidate["canonical_system"] = canonical.system
+    candidate["canonical_building"] = canonical.building
+    candidate["canonical_deliverable_family"] = canonical.deliverable_family
+    candidate["canonical_deliverable_subtype"] = canonical.deliverable_subtype
+    candidate["canonical_scope_text"] = canonical.scope_text
+
+
+def _apply_intent_alignment_fields(candidate: dict[str, Any]) -> None:
+    score, status, reasons = _intent_alignment(candidate)
+    candidate["intent_alignment_score"] = score
+    candidate["intent_alignment_status"] = status
+    candidate["intent_alignment_reasons"] = ";".join(reasons)
+
+
+def _intent_alignment(candidate: dict[str, Any]) -> tuple[float, str, list[str]]:
+    """Score how well the MDL candidate covers the ITB-side requirement intent."""
+    intent_equipment = _unique_texts(candidate.get("requirement_intent_equipment", []))
+    intent_systems = _unique_texts(candidate.get("requirement_intent_systems", []))
+    intent_deliverables = _unique_texts(candidate.get("requirement_intent_deliverables", []))
+    intent_constraints = _unique_texts(candidate.get("requirement_intent_constraints", []))
+    if not any((intent_equipment, intent_systems, intent_deliverables, intent_constraints)):
+        return 0.0, "unknown", ["no_requirement_intent"]
+
+    score = 0.0
+    reasons: list[str] = []
+    mismatch = False
+
+    equipment_score, equipment_mismatch, equipment_reasons = _equipment_alignment(candidate, intent_equipment)
+    score += equipment_score
+    mismatch = mismatch or equipment_mismatch
+    reasons.extend(equipment_reasons)
+
+    system_score, system_reasons = _system_alignment(candidate, intent_systems)
+    score += system_score
+    reasons.extend(system_reasons)
+
+    deliverable_score, deliverable_mismatch, deliverable_reasons = _deliverable_alignment(
+        candidate,
+        intent_deliverables,
+    )
+    score += deliverable_score
+    mismatch = mismatch or deliverable_mismatch
+    reasons.extend(deliverable_reasons)
+
+    constraint_score, constraint_reasons = _constraint_alignment(candidate, intent_constraints)
+    score += constraint_score
+    reasons.extend(constraint_reasons)
+
+    if mismatch and score <= _ALIGNMENT_MISMATCH_MAX:
+        status = "mismatch"
+    elif not mismatch and score >= _ALIGNMENT_APPROVED_MIN:
+        status = "aligned"
+    elif score >= _ALIGNMENT_WEAK_MIN:
+        status = "weak"
+    else:
+        status = "mismatch" if mismatch else "weak"
+    return round(score, 4), status, reasons or ["no_clear_alignment_signal"]
+
+
+def _equipment_alignment(candidate: dict[str, Any], intent_equipment: list[str]) -> tuple[float, bool, list[str]]:
+    if not intent_equipment:
+        return 0.0, False, []
+
+    candidate_scope = _candidate_scope_text(candidate)
+    if any(_contains_any_alias(candidate_scope, _equipment_aliases(equipment)) for equipment in intent_equipment):
+        return 0.12, False, ["equipment_match"]
+
+    candidate_equipment = _as_text(candidate.get("canonical_equipment") or candidate.get("equipment"))
+    if candidate_equipment:
+        return -0.16, True, ["equipment_mismatch"]
+    return -0.04, False, ["equipment_missing"]
+
+
+def _system_alignment(candidate: dict[str, Any], intent_systems: list[str]) -> tuple[float, list[str]]:
+    if not intent_systems:
+        return 0.0, []
+    text = _candidate_text_for_alignment(candidate)
+    matches = [system for system in intent_systems if _contains_phrase(text, system)]
+    if matches:
+        return 0.04, ["system_match"]
+    return 0.0, []
+
+
+def _deliverable_alignment(candidate: dict[str, Any], intent_deliverables: list[str]) -> tuple[float, bool, list[str]]:
+    if not intent_deliverables:
+        return 0.0, False, []
+
+    candidate_family = _as_text(candidate.get("canonical_deliverable_family"))
+    candidate_subtype = _as_text(candidate.get("canonical_deliverable_subtype"))
+    candidate_text = _candidate_text_for_alignment(candidate)
+    best_score = -0.18 if candidate_family else -0.06
+    best_reasons = ["deliverable_missing"] if not candidate_family else ["deliverable_mismatch"]
+    mismatch = bool(candidate_family)
+
+    for deliverable in intent_deliverables:
+        req_family, req_subtype = _requirement_deliverable_type(deliverable)
+        aliases = _REQUIREMENT_DELIVERABLE_ALIASES.get(deliverable, (deliverable,))
+        exact_text_match = _contains_any_alias(candidate_text, aliases)
+
+        if req_subtype and req_subtype == candidate_subtype:
+            candidate_score = 0.18 + (0.04 if exact_text_match else 0.0)
+            if candidate_score > best_score:
+                best_score = candidate_score
+                best_reasons = ["deliverable_subtype_match"]
+                if exact_text_match:
+                    best_reasons.append("deliverable_exact_term")
+                mismatch = False
+            continue
+
+        if req_family and req_family == candidate_family and not _is_subtype_conflict(req_subtype, candidate_subtype):
+            candidate_score = 0.08 + (0.03 if exact_text_match else 0.0)
+            if candidate_score > best_score:
+                best_score = candidate_score
+                best_reasons = ["deliverable_family_match"]
+                if exact_text_match:
+                    best_reasons.append("deliverable_exact_term")
+                mismatch = False
+            continue
+
+        if exact_text_match:
+            candidate_score = 0.05
+            if candidate_score > best_score:
+                best_score = candidate_score
+                best_reasons = ["deliverable_exact_term"]
+                mismatch = False
+
+    return best_score, mismatch, best_reasons
+
+
+def _constraint_alignment(candidate: dict[str, Any], intent_constraints: list[str]) -> tuple[float, list[str]]:
+    if not intent_constraints:
+        return 0.0, []
+    text = _candidate_text_for_alignment(candidate)
+    if any(_contains_phrase(text, constraint) for constraint in intent_constraints):
+        return 0.03, ["constraint_match"]
+    return 0.0, []
+
+
+def _requirement_deliverable_type(deliverable: str) -> tuple[str, str]:
+    aliases = _REQUIREMENT_DELIVERABLE_ALIASES.get(deliverable, (deliverable,))
+    return canonical_deliverable_type(deliverable=deliverable, title=" ".join(aliases))
+
+
+def _is_subtype_conflict(required_subtype: str, candidate_subtype: str) -> bool:
+    if not required_subtype or not candidate_subtype:
+        return False
+    if required_subtype in {"report", "specification", "diagram", "list"}:
+        return False
+    if candidate_subtype in {"report", "specification", "diagram", "list"}:
+        return False
+    return required_subtype != candidate_subtype
+
+
+def _candidate_scope_text(candidate: dict[str, Any]) -> str:
+    return " ".join(
+        _as_text(candidate.get(field))
+        for field in (
+            "canonical_equipment",
+            "canonical_system",
+            "canonical_building",
+            "equipment",
+            "system",
+            "building",
+            "title",
+        )
+    )
+
+
+def _candidate_text_for_alignment(candidate: dict[str, Any]) -> str:
+    return " ".join(
+        _as_text(candidate.get(field))
+        for field in (
+            "title",
+            "deliverable",
+            "canonical_deliverable_family",
+            "canonical_deliverable_subtype",
+            "canonical_equipment",
+            "canonical_system",
+            "canonical_building",
+            "equipment",
+            "system",
+            "building",
+        )
+    )
+
+
+def _equipment_aliases(equipment: str) -> tuple[str, ...]:
+    return _EQUIPMENT_ALIASES.get(equipment, (equipment,))
+
+
+def _contains_any_alias(text: str, aliases: tuple[str, ...]) -> bool:
+    return any(_contains_phrase(text, alias) for alias in aliases)
+
+
+def _contains_phrase(text: str, phrase: str) -> bool:
+    normalized_text = _norm_for_alignment(text)
+    normalized_phrase = _norm_for_alignment(phrase)
+    if not normalized_phrase:
+        return False
+    if re.fullmatch(r"[A-Z0-9]+", normalized_phrase):
+        return bool(re.search(rf"(?<![A-Z0-9]){re.escape(normalized_phrase)}(?![A-Z0-9])", normalized_text))
+    return normalized_phrase in normalized_text
+
+
+def _norm_for_alignment(value: str) -> str:
+    text = value.upper().replace("&", " AND")
+    text = re.sub(r"[^A-Z0-9]+", " ", text)
+    return re.sub(r"\s+", " ", text).strip()
 
 
 def _extract_score(raw: str) -> float:
@@ -371,7 +823,7 @@ def _candidate_quality(candidate: dict[str, Any]) -> tuple[str, str]:
     )
     if not candidate.get("title", "").strip():
         issues.append("missing_title")
-    if not scope.strip():
+    if not scope.strip() and not _is_global_scope_candidate(candidate):
         issues.append("missing_scope")
     if not candidate.get("deliverable", "").strip():
         issues.append("missing_deliverable")
@@ -379,6 +831,44 @@ def _candidate_quality(candidate: dict[str, Any]) -> tuple[str, str]:
         issues.append("equipment_looks_like_document_code")
     status = "accepted" if not issues else "needs_review"
     return status, ";".join(issues)
+
+
+def _is_global_scope_candidate(candidate: dict[str, Any]) -> bool:
+    """Return True when a candidate is intentionally plant-level instead of scoped to equipment/system/building."""
+    title = _norm(candidate.get("title", ""))
+    deliverable = _norm(candidate.get("deliverable", ""))
+    text = f"{title} {deliverable}"
+    if not title or not deliverable:
+        return False
+
+    global_title_patterns = (
+        "PLANT OVERALL",
+        "PLANT PERFORMANCE",
+        "PLANT GENERAL",
+        "OVERALL PLANT",
+        "OVERALL PROTECTION",
+        "OVERALL SYSTEM",
+        "SITE",
+    )
+    if any(pattern in text for pattern in global_title_patterns):
+        return True
+
+    global_deliverable_patterns = (
+        "HAZARDOUS AREA CLASSIFICATION",
+        "AREA CLASSIFICATION",
+        "PERFORMANCE CORRECTION CURVE",
+        "PERFORMANCE CURVE",
+        "CAPABILITY CURVE",
+        "CORRECTION CURVE",
+    )
+    if any(pattern in text for pattern in global_deliverable_patterns):
+        return True
+
+    if "CLASSIFICATION" in deliverable and any(pattern in title for pattern in ("PLANT", "OVERALL", "SITE")):
+        return True
+    return "CURVE" in deliverable and any(
+        pattern in title for pattern in ("PLANT PERFORMANCE", "PERFORMANCE", "CAPABILITY")
+    )
 
 
 def _looks_like_document_code(value: str) -> bool:
@@ -419,6 +909,24 @@ def _write_csv(path: Path, candidates: list[dict[str, Any]]) -> None:
         "candidate_status",
         "quality_issues",
         "needs_review",
+        "candidate_selection_status",
+        "candidate_selection_rank",
+        "candidate_selection_score",
+        "candidate_selection_reasons",
+        "intent_alignment_score",
+        "intent_alignment_status",
+        "intent_alignment_reasons",
+        "canonical_equipment",
+        "canonical_system",
+        "canonical_building",
+        "canonical_deliverable_family",
+        "canonical_deliverable_subtype",
+        "canonical_scope_text",
+        "requirement_intent_equipment",
+        "requirement_intent_systems",
+        "requirement_intent_deliverables",
+        "requirement_intent_actions",
+        "requirement_intent_constraints",
         "doc_id",
         "parse_source",
         "semantic_score",
@@ -445,6 +953,24 @@ def _write_csv(path: Path, candidates: list[dict[str, Any]]) -> None:
                 "candidate_status": c.get("candidate_status", ""),
                 "quality_issues": c.get("quality_issues", ""),
                 "needs_review": "true" if c.get("candidate_status") != "accepted" else "false",
+                "candidate_selection_status": c.get("candidate_selection_status", ""),
+                "candidate_selection_rank": c.get("candidate_selection_rank", ""),
+                "candidate_selection_score": _fmt_optional_score(c.get("candidate_selection_score")),
+                "candidate_selection_reasons": c.get("candidate_selection_reasons", ""),
+                "intent_alignment_score": _fmt_optional_score(c.get("intent_alignment_score")),
+                "intent_alignment_status": c.get("intent_alignment_status", ""),
+                "intent_alignment_reasons": c.get("intent_alignment_reasons", ""),
+                "canonical_equipment": c.get("canonical_equipment", ""),
+                "canonical_system": c.get("canonical_system", ""),
+                "canonical_building": c.get("canonical_building", ""),
+                "canonical_deliverable_family": c.get("canonical_deliverable_family", ""),
+                "canonical_deliverable_subtype": c.get("canonical_deliverable_subtype", ""),
+                "canonical_scope_text": c.get("canonical_scope_text", ""),
+                "requirement_intent_equipment": _join_list(c.get("requirement_intent_equipment")),
+                "requirement_intent_systems": _join_list(c.get("requirement_intent_systems")),
+                "requirement_intent_deliverables": _join_list(c.get("requirement_intent_deliverables")),
+                "requirement_intent_actions": _join_list(c.get("requirement_intent_actions")),
+                "requirement_intent_constraints": _join_list(c.get("requirement_intent_constraints")),
                 "doc_id": c.get("doc_id", ""),
                 "parse_source": c.get("parse_source", ""),
                 "semantic_score": _fmt_optional_score(c.get("semantic_score")),
@@ -460,6 +986,12 @@ def _fmt_optional_score(value: Any) -> str:
         return f"{float(value):.4f}"
     except (TypeError, ValueError):
         return ""
+
+
+def _join_list(value: Any) -> str:
+    if not isinstance(value, list):
+        return ""
+    return " | ".join(str(item) for item in value if str(item).strip())
 
 
 def _classify_candidates(
@@ -554,6 +1086,7 @@ def _classify_candidates(
                     candidate["system"] = result.system
                 if result.deliverable:
                     candidate["deliverable"] = result.deliverable
+                _apply_canonical_candidate_fields(candidate)
                 candidate["candidate_status"], candidate["quality_issues"] = _candidate_quality(candidate)
                 cache.put(candidate["title"], candidate)
 
@@ -578,10 +1111,16 @@ def _needs_llm_classification(candidate: dict[str, Any]) -> bool:
     if not candidate.get("deliverable", "").strip():
         return True
     has_scope = any(candidate.get(field, "").strip() for field in ("equipment", "system", "building"))
-    if not has_scope:
+    if not has_scope and not _is_global_scope_candidate(candidate):
         return True
     return _looks_like_document_code(candidate.get("equipment", ""))
 
 
 def _field_needs_repair(field: str, value: str) -> bool:
     return field == "equipment" and _looks_like_document_code(value)
+
+
+def _refresh_candidate_quality(candidates: list[dict[str, Any]]) -> None:
+    for candidate in candidates:
+        _apply_canonical_candidate_fields(candidate)
+        candidate["candidate_status"], candidate["quality_issues"] = _candidate_quality(candidate)

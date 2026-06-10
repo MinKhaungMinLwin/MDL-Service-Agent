@@ -81,6 +81,7 @@ def build_cross_encoder_query(
     keyword_terms: list[str] | None = None,
     chunk_text: str = "",
     mode: str = "structured",
+    intent_terms: list[str] | None = None,
 ) -> str:
     """Build the complete ITB context used for cross-encoder scoring."""
     sections = []
@@ -94,6 +95,8 @@ def build_cross_encoder_query(
     expanded_terms = expand_abbreviation_terms(original_terms)[len(unique_preserve_order(original_terms)) :]
     if expanded_terms:
         sections.append(f"Expanded terms:\n{'; '.join(expanded_terms)}")
+    if intent_terms:
+        sections.append(f"Requirement intent:\n{'; '.join(unique_preserve_order(intent_terms))}")
     return "\n\n".join(sections)
 
 

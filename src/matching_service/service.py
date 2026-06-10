@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any
 
@@ -10,6 +11,7 @@ from loguru import logger
 from tqdm import tqdm
 
 from common.text_normalizer import expand_abbreviation_terms
+from matching_service.intent import build_requirement_intent
 from matching_service.models import MatchingConfig
 from matching_service.output import _format_json_candidate, build_json_record, format_candidate, write_match_outputs
 from matching_service.query import (
@@ -71,6 +73,7 @@ class MatchingService:
         for _, source_row in tqdm(target_df.iterrows(), total=len(target_df)):
             depth_filter_query, depth_terms = build_depth_filter_query(source_row)
             keyword_terms = get_keyword_terms(source_row)
+            requirement_intent = build_requirement_intent(source_row, depth_terms, keyword_terms)
             keyword_filter_query = build_fulltext_query(expand_abbreviation_terms(keyword_terms))
             semantic_query = build_semantic_query(depth_terms, keyword_terms)
             semantic_embedding = semantic_embeddings.get(semantic_query, [])
@@ -89,6 +92,7 @@ class MatchingService:
                     keyword_terms,
                     chunk_text=source_row.get("Chunk Text", ""),
                     mode=self.config.cross_encoder_query_mode,
+                    intent_terms=requirement_intent.as_query_terms(),
                 )
                 top_matches = self.cross_encoder_reranker.rerank(
                     cross_encoder_query,
@@ -107,6 +111,7 @@ class MatchingService:
                     keyword_terms,
                     keyword_filter_query,
                     semantic_query,
+                    requirement_intent.to_dict(),
                     retrieval,
                     cross_encoder_query,
                     cross_encoder_candidates,
@@ -121,6 +126,7 @@ class MatchingService:
                     keyword_terms,
                     keyword_filter_query,
                     semantic_query,
+                    requirement_intent.to_dict(),
                     self.config.retrieval_mode,
                     retrieval.candidates,
                     len(retrieval.keyword_candidates),
@@ -192,6 +198,7 @@ class MatchingService:
         keyword_terms: list[str],
         keyword_filter_query: str,
         semantic_query: str,
+        requirement_intent: dict[str, Any],
         retrieval: Any,
         cross_encoder_query: str,
         cross_encoder_candidates: list[dict[str, Any]],
@@ -204,6 +211,7 @@ class MatchingService:
         row["Keyword_Filter_Query"] = keyword_filter_query
         row["Semantic_Query"] = semantic_query
         row["Vector_Terms"] = semantic_query
+        _apply_intent_csv_fields(row, requirement_intent)
         row["Retrieval_Mode"] = self.config.retrieval_mode
         row["Retrieval_Candidate_Count"] = len(retrieval.candidates)
         row["Keyword_Candidate_Count"] = len(retrieval.keyword_candidates)
@@ -243,6 +251,11 @@ class MatchingService:
             "Keyword_Filter_Query": record.get("keyword_filter_query", ""),
             "Semantic_Query": record.get("semantic_query", ""),
             "Vector_Terms": record.get("vector_terms", ""),
+            "Requirement_Intent_Equipment": _join_intent(record, "equipment"),
+            "Requirement_Intent_Systems": _join_intent(record, "systems"),
+            "Requirement_Intent_Deliverables": _join_intent(record, "deliverables"),
+            "Requirement_Intent_Actions": _join_intent(record, "actions"),
+            "Requirement_Intent_Constraints": _join_intent(record, "constraints"),
             "Retrieval_Mode": record.get("retrieval_mode", self.config.retrieval_mode),
             "Retrieval_Candidate_Count": record.get("retrieval_candidate_count", 0),
             "Keyword_Candidate_Count": record.get("keyword_candidate_count", 0),
@@ -259,11 +272,65 @@ class MatchingService:
             row[f"Matched_Doc_{index + 1}"] = format_candidate(top_matches[index]) if index < len(top_matches) else ""
         return row
 
+    def rerank_json_file(self, json_path: str | Path, output_path: str | Path) -> None:
+        """Rerank existing retrieval candidates from a structured matching JSON artifact."""
+        logger.info("Reading structured matching file: {}", json_path)
+        records = json.loads(Path(json_path).read_text(encoding="utf-8"))
+        if not records:
+            logger.info("No structured matching records. Skipping.")
+            return
+
+        output_rows = []
+        reranked_records = []
+        for record in tqdm(records, total=len(records)):
+            cross_encoder_candidates = [
+                _normalize_retrieval_candidate(candidate)
+                for candidate in record.get("retrieval_candidates", [])[: self.config.retrieval_candidate_limit]
+            ]
+            if self.cross_encoder_reranker is None:
+                raise ValueError("cross_encoder_reranker is required to rerank existing JSON files")
+            cross_encoder_query = str(record.get("cross_encoder_query", "") or "")
+            top_matches = self.cross_encoder_reranker.rerank(
+                cross_encoder_query,
+                cross_encoder_candidates,
+                top_k=self.config.output_limit,
+            )
+            output_rows.append(self._build_csv_row_from_record(record, cross_encoder_candidates, top_matches))
+            reranked_record = dict(record)
+            reranked_record["cross_encoder_query_mode"] = self.config.cross_encoder_query_mode
+            reranked_record["cross_encoder_candidate_count"] = len(cross_encoder_candidates)
+            reranked_record["candidates"] = [
+                _format_json_candidate(candidate, rank)
+                for rank, candidate in enumerate(top_matches, start=1)
+            ]
+            reranked_records.append(reranked_record)
+
+        write_match_outputs(output_path, output_rows, reranked_records, self.config.output_limit)
+
 
 def _normalize_retrieval_candidate(candidate: dict[str, Any]) -> dict[str, Any]:
     normalized = dict(candidate)
     normalized.pop("rank", None)
     return normalized
+
+
+def _apply_intent_csv_fields(row: dict[str, Any], requirement_intent: dict[str, Any]) -> None:
+    row["Requirement_Intent_Equipment"] = _join_values(requirement_intent.get("equipment", []))
+    row["Requirement_Intent_Systems"] = _join_values(requirement_intent.get("systems", []))
+    row["Requirement_Intent_Deliverables"] = _join_values(requirement_intent.get("deliverables", []))
+    row["Requirement_Intent_Actions"] = _join_values(requirement_intent.get("actions", []))
+    row["Requirement_Intent_Constraints"] = _join_values(requirement_intent.get("constraints", []))
+
+
+def _join_intent(record: dict[str, Any], key: str) -> str:
+    intent = record.get("requirement_intent", {})
+    return _join_values(intent.get(key, []) if isinstance(intent, dict) else [])
+
+
+def _join_values(values: Any) -> str:
+    if not isinstance(values, list | tuple):
+        return ""
+    return " | ".join(str(value) for value in values if str(value).strip())
 
 
 def _records_from_matching_csv(path: Path, output_limit: int) -> list[dict[str, Any]]:
@@ -303,6 +370,14 @@ def _records_from_matching_csv(path: Path, output_limit: int) -> list[dict[str, 
                 "keyword_filter_query": _cell_text(row.get("Keyword_Filter_Query", "")),
                 "semantic_query": _cell_text(row.get("Semantic_Query", "")),
                 "vector_terms": _cell_text(row.get("Vector_Terms", "")),
+                "requirement_intent": {
+                    "equipment": _split_values(row.get("Requirement_Intent_Equipment", "")),
+                    "systems": _split_values(row.get("Requirement_Intent_Systems", "")),
+                    "deliverables": _split_values(row.get("Requirement_Intent_Deliverables", "")),
+                    "actions": _split_values(row.get("Requirement_Intent_Actions", "")),
+                    "constraints": _split_values(row.get("Requirement_Intent_Constraints", "")),
+                    "source_terms": [],
+                },
                 "retrieval_mode": _cell_text(row.get("Retrieval_Mode", "")),
                 "retrieval_candidate_count": _cell_text(row.get("Retrieval_Candidate_Count", "")),
                 "keyword_candidate_count": _cell_text(row.get("Keyword_Candidate_Count", "")),
@@ -326,6 +401,13 @@ def _cell_text(value: Any) -> str:
     if pd.isna(value):
         return ""
     return str(value)
+
+
+def _split_values(value: Any) -> list[str]:
+    text = _cell_text(value)
+    if not text:
+        return []
+    return [part.strip() for part in text.split("|") if part.strip()]
 
 
 def _is_mdl_retrieval_candidate(value: Any) -> bool:

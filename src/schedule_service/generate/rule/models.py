@@ -5,6 +5,8 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
+from schedule_service.normalizer import canonical_deliverable_type
+
 _TOKEN_RE = re.compile(r"[a-z0-9&]+")
 _MIN_TOKEN_LEN = 2
 
@@ -28,6 +30,8 @@ class ValidationRule:
     _doc_kw_tokens: frozenset = field(default=frozenset(), init=False, repr=False, compare=False)
     # Tokens from item_name only — used in tiebreak to require equipment context
     _item_tokens: frozenset = field(default=frozenset(), init=False, repr=False, compare=False)
+    canonical_deliverable_family: str = field(default="", init=False, compare=False)
+    canonical_deliverable_subtype: str = field(default="", init=False, compare=False)
 
     def __post_init__(self) -> None:
         # Combine doc_keyword + item_name so queries without equipment context
@@ -35,6 +39,9 @@ class ValidationRule:
         combined = f"{self.doc_keyword} {self.item_name}"
         object.__setattr__(self, "_doc_kw_tokens", frozenset(tokenize(combined)))
         object.__setattr__(self, "_item_tokens", frozenset(tokenize(self.item_name)))
+        family, subtype = canonical_deliverable_type(deliverable=self.doc_keyword, title=combined)
+        object.__setattr__(self, "canonical_deliverable_family", family)
+        object.__setattr__(self, "canonical_deliverable_subtype", subtype)
 
     def describe(self) -> str:
         from schedule_service.generate.rule.vt_parser import describe
