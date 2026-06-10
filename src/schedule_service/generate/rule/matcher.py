@@ -8,6 +8,7 @@ matching is mandatory — there is no token-only path.
 
 from __future__ import annotations
 
+import os
 import re
 from dataclasses import dataclass
 
@@ -33,6 +34,7 @@ _SCOPE_TOKENS = {
     "bfp",
     "bop",
     "bsedg",
+    "ccr",
     "ccwp",
     "cep",
     "dcs",
@@ -40,15 +42,24 @@ _SCOPE_TOKENS = {
     "gt",
     "gtg",
     "hrsg",
+    "leb",
+    "piperack",
+    "pump",
     "st",
     "stg",
+    "tank",
 }
 
 _SCOPE_PATTERNS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("acc", ("ACC", "AIR COOLED CONDENSER", "COND AIR EXT")),
+    ("ccr", ("CCR", "CENTRAL CONTROL BUILDING", "CONTROL ROOM")),
     ("hrsg", ("HRSG", "HEAT RECOVERY STEAM GENERATOR")),
     ("gtg", ("GTG", "GT ", "GAS TURBINE GENERATOR", "GAS TURBINE")),
+    ("leb", ("LEB", "LOCAL ELECTRICAL BUILDING")),
+    ("piperack", ("PIPE RACK", "PIPERACK")),
+    ("pump", ("PUMP",)),
     ("stg", ("STG", "ST ", "STEAM TURBINE GENERATOR", "STEAM TURBINE")),
+    ("tank", ("TANK", "TANKS")),
     ("dcs", ("DCS", "DISTRIBUTED CONTROL SYSTEM")),
     ("cems", ("CEMS", "CONTINUOUS EMISSION MONITORING")),
     ("wts", ("WATER TREATMENT", "WTS")),
@@ -136,6 +147,36 @@ _GENERIC_RULE_TOKENS = {
     "technical",
 }
 
+_GENERIC_SCOPE_WORDS = {
+    "and",
+    "area",
+    "arrangement",
+    "building",
+    "control",
+    "data",
+    "description",
+    "detail",
+    "diagram",
+    "document",
+    "drawing",
+    "equipment",
+    "general",
+    "layout",
+    "list",
+    "manual",
+    "of",
+    "package",
+    "plan",
+    "procedure",
+    "process",
+    "report",
+    "section",
+    "sheet",
+    "specification",
+    "system",
+    "technical",
+}
+
 _SUBTYPE_LABELS = {
     "cfd_report": "CFD Report",
     "control_logic_diagram": "Control Logic Diagram",
@@ -202,6 +243,15 @@ class RuleMatchQuality:
         }
 
 
+@dataclass(frozen=True)
+class QueryScopeResolution:
+    """Resolved scope text/tokens for one MDL row's rule query."""
+
+    text: str = ""
+    tokens: frozenset[str] = frozenset()
+    bucket: str = "default"
+
+
 def build_rule_query(row: dict[str, str]) -> str:
     """Build the validation-rule match query: normalize(Deliverable) + 'for' + abbreviated scope.
 
@@ -212,12 +262,9 @@ def build_rule_query(row: dict[str, str]) -> str:
         row.get("Deliverable", "").strip(),
         row.get("Title", "").strip(),
     )
+    family, subtype = canonical_deliverable_type(deliverable=deliverable, title=row.get("Title", "").strip())
     norm_del = _rule_query_deliverable(deliverable, row.get("Title", "").strip())
-    scope = (
-        row.get("Equipment", "").strip()
-        or row.get("System", "").strip()
-        or row.get("Building", "").strip()
-    )
+    scope = _resolve_query_scope(row, family, subtype).text
     abbr_scope = equipment_to_abbr(scope)
     return f"{norm_del} for {abbr_scope}" if abbr_scope else norm_del
 
@@ -263,13 +310,18 @@ class RuleMatcher:
         equipment: str = "",
         semantic_weight: float = 0.5,
         query_source: str = "",
+        query_family: str | None = None,
+        query_subtype: str | None = None,
+        query_scope_tokens: set[str] | None = None,
     ) -> tuple[ValidationRule | None, RuleMatchQuality]:
         """Return the best rule plus diagnostics for quality/confidence reporting."""
         doc_tokens = self._lexical.query_tokens(document, equipment)
         candidates = self._ranked_lexical_candidates(doc_tokens)
 
-        query_family, query_subtype = _deliverable_type(document)
-        query_scope_tokens = _scope_keys(document, doc_tokens)
+        if query_family is None or query_subtype is None:
+            query_family, query_subtype = _deliverable_type(document)
+        if query_scope_tokens is None:
+            query_scope_tokens = _scope_keys(document, doc_tokens)
         match_candidates: list[tuple[float, ValidationRule, RuleMatchQuality]] = []
         best_rule: ValidationRule | None = None
         best_quality = _empty_quality(document, doc_tokens, query_source)
@@ -406,7 +458,33 @@ def resolve_rule_matches(
 ) -> tuple[list[ValidationRule | None], list[RuleMatchQuality]]:
     """Resolve validation rules and match-quality diagnostics for every row."""
     if matcher is None:
-        return [None] * len(rows), [_empty_quality(build_rule_query(row), set(), "rule_query") for row in rows]
+        return [
+            None
+        ] * len(rows), [
+            _empty_quality(
+                build_rule_query(row),
+                set(),
+                "rule_query",
+                query_family=canonical_deliverable_type(
+                    deliverable=row.get("Deliverable", "").strip(),
+                    title=row.get("Title", "").strip(),
+                )[0],
+                query_subtype=canonical_deliverable_type(
+                    deliverable=row.get("Deliverable", "").strip(),
+                    title=row.get("Title", "").strip(),
+                )[1],
+                query_scope_tokens=set(
+                    _resolve_query_scope(
+                        row,
+                        *canonical_deliverable_type(
+                            deliverable=row.get("Deliverable", "").strip(),
+                            title=row.get("Title", "").strip(),
+                        ),
+                    ).tokens
+                ),
+            )
+            for row in rows
+        ]
     if semantic_index is None:
         raise ValueError("resolve_rule_matches requires a semantic_index when a rule matcher is present")
     return _match_rules_semantic(rows, matcher, semantic_index, semantic_weight)
@@ -425,10 +503,25 @@ def _match_rules_semantic(
     from schedule_service.generate._shared.embedding_cache import embed_texts_cached
 
     # (rule_query, title) per row — same logic as the token path's queries.
-    query_pairs = [(build_rule_query(row), row.get("Title", "").strip()) for row in rows]
+    query_contexts = []
+    for row in rows:
+        query_family, query_subtype = canonical_deliverable_type(
+            deliverable=row.get("Deliverable", "").strip(),
+            title=row.get("Title", "").strip(),
+        )
+        scope_resolution = _resolve_query_scope(row, query_family, query_subtype)
+        query_contexts.append(
+            (
+                build_rule_query(row),
+                row.get("Title", "").strip(),
+                query_family,
+                query_subtype,
+                set(scope_resolution.tokens),
+            )
+        )
 
     # Deduplicate queries to minimise embedding API calls.
-    all_queries = [q for pair in query_pairs for q in pair]
+    all_queries = [query for rule_query, title, *_ in query_contexts for query in (rule_query, title)]
     unique_queries = list(dict.fromkeys(all_queries))
     logger.info(
         "Semantic rule matching: embedding {} unique queries for {} rows",
@@ -446,26 +539,84 @@ def _match_rules_semantic(
 
     results: list[ValidationRule | None] = []
     qualities: list[RuleMatchQuality] = []
-    for rule_query, title in query_pairs:
+    for rule_query, title, query_family, query_subtype, query_scope_tokens in query_contexts:
         rule, quality = matcher.match_with_embedding_quality(
             rule_query,
             sims_for(rule_query),
             semantic_weight=semantic_weight,
             query_source="rule_query",
+            query_family=query_family,
+            query_subtype=query_subtype,
+            query_scope_tokens=query_scope_tokens,
         )
-        if rule is None:
+        need_title = rule is None or (_TITLE_RESCUE_ON and _rule_query_is_weak(rule, quality))
+        if title and title != rule_query and need_title:
             title_rule, title_quality = matcher.match_with_embedding_quality(
                 title,
                 sims_for(title),
                 semantic_weight=semantic_weight,
                 query_source="title",
+                query_family=query_family,
+                query_subtype=query_subtype,
+                query_scope_tokens=query_scope_tokens,
             )
-            if title_rule is not None or title_quality.final_score > quality.final_score:
+            if _TITLE_RESCUE_ON:
+                # Lever A: build_rule_query collapses the title to its deliverable
+                # label (e.g. "FIRE STUDY" -> "Study"), discarding the discriminating
+                # noun, so the primary match scores low and gets gated. When the primary
+                # match is weak in exactly the way the date gate punishes (no rule, or
+                # scope-ambiguous below 0.7), keep the title match only if it yields a
+                # strictly stronger, non-None rule.
+                if _rule_query_is_weak(rule, quality) and _prefer_title(
+                    title_rule, title_quality, rule, quality
+                ):
+                    rule = title_rule
+                    quality = title_quality
+            elif title_rule is not None or title_quality.final_score > quality.final_score:
+                # Original staged behaviour: title is only a fallback for a None match.
                 rule = title_rule
                 quality = title_quality
         results.append(rule)
         qualities.append(quality)
     return results, qualities
+
+
+# Lever A helpers: title-rescue for weak rule-query matches.
+# Toggle with RULE_TITLE_RESCUE=0 to reproduce the original None-only title fallback
+# (used for clean A/B measurement of the rescue's contribution).
+_TITLE_RESCUE_ON = os.getenv("RULE_TITLE_RESCUE", "1").strip().lower() not in {"0", "false", "no", ""}
+_TITLE_RESCUE_BELOW = 0.7
+
+
+def _rule_query_is_weak(rule: ValidationRule | None, quality: RuleMatchQuality) -> bool:
+    """True when the primary rule-query match would be gated for scope ambiguity.
+
+    Mirrors the date gate's ``rule_scope_ambiguous`` condition so the title rescue
+    only fires for rows the gate is about to block — never for scoped/usable matches.
+    """
+    if rule is None:
+        return True
+    return (
+        quality.scope_status in {"rule_generic", "query_unscoped", "no_rule"}
+        and quality.final_score < _TITLE_RESCUE_BELOW
+    )
+
+
+def _prefer_title(
+    title_rule: ValidationRule | None,
+    title_quality: RuleMatchQuality,
+    base_rule: ValidationRule | None,
+    base_quality: RuleMatchQuality,
+) -> bool:
+    """Prefer the title match only when it is a real, strictly-stronger improvement.
+
+    Never replaces a usable rule with nothing; never swaps a stronger primary match.
+    """
+    if title_rule is None:
+        return False
+    if base_rule is None:
+        return True
+    return title_quality.final_score > base_quality.final_score
 
 
 def _rule_guard_status(
@@ -557,9 +708,19 @@ def _rule_guard_status(
     return "passed", ""
 
 
-def _empty_quality(document: str, doc_tokens: set[str], query_source: str = "") -> RuleMatchQuality:
-    query_scope = sorted(_scope_keys(document, doc_tokens))
-    query_family, query_subtype = _deliverable_type(document)
+def _empty_quality(
+    document: str,
+    doc_tokens: set[str],
+    query_source: str = "",
+    query_family: str | None = None,
+    query_subtype: str | None = None,
+    query_scope_tokens: set[str] | None = None,
+) -> RuleMatchQuality:
+    if query_scope_tokens is None:
+        query_scope_tokens = _scope_keys(document, doc_tokens)
+    query_scope = sorted(query_scope_tokens)
+    if query_family is None or query_subtype is None:
+        query_family, query_subtype = _deliverable_type(document)
     return RuleMatchQuality(
         query=document,
         query_source=query_source,
@@ -728,6 +889,88 @@ def _subtype_status(query_family: str, query_subtype: str, rule_family: str, rul
     return "mismatch"
 
 
+def _resolve_query_scope(row: dict[str, str], family: str, subtype: str) -> QueryScopeResolution:
+    """Resolve the most useful rule-query scope from the row using a deliverable bucket."""
+    title = row.get("Title", "").strip()
+    document_no = row.get("Document No", "").strip()
+    equipment = row.get("Equipment", "").strip()
+    system = row.get("System", "").strip()
+    building = row.get("Building", "").strip()
+    title_scope = _extract_title_scope_text(title, document_no)
+
+    bucket = _scope_bucket(family, subtype, title)
+    if bucket == "system":
+        ordered = [system, equipment, title_scope, building]
+    elif bucket == "civil":
+        ordered = [building, title_scope, system, equipment]
+    elif bucket == "equipment":
+        ordered = [equipment, system, title_scope, building]
+    else:
+        ordered = [equipment, system, building, title_scope]
+
+    chosen = next((value for value in ordered if value), "")
+    token_sources = [value for value in [equipment, system, building, title_scope, title, document_no] if value]
+    if bucket == "civil":
+        token_sources = [value for value in [building, title_scope, title, document_no, system, equipment] if value]
+    elif bucket == "equipment":
+        token_sources = [value for value in [equipment, title_scope, system, title, document_no, building] if value]
+    tokens = set()
+    for value in token_sources:
+        tokens |= _scope_keys(value)
+    if chosen:
+        tokens |= _scope_keys(chosen)
+        tokens |= _free_text_scope_tokens(chosen)
+    if title_scope:
+        tokens |= _free_text_scope_tokens(title_scope)
+    return QueryScopeResolution(text=chosen, tokens=frozenset(tokens), bucket=bucket)
+
+
+def _scope_bucket(family: str, subtype: str, title: str) -> str:
+    """Return the row-level scope resolver bucket for a deliverable family/subtype."""
+    title_upper = title.upper()
+    if family in {"diagram", "description", "classification", "logic"}:
+        return "system"
+    if family in {"datasheet", "list"}:
+        return "equipment"
+    if family == "plan":
+        return "civil"
+    if family == "drawing":
+        if subtype in {"layout_drawing", "detail_drawing", "sectional_drawing"}:
+            return "civil"
+        if subtype == "general_arrangement_drawing" and " FOR " in title_upper:
+            return "equipment"
+        if any(term in title_upper for term in ("PIPE RACK", "BUILDING", "ELEVATION", "SECTION", "EMBEDDED", "REBAR")):
+            return "civil"
+        return "equipment"
+    if family == "specification":
+        return "equipment"
+    return "default"
+
+
+def _extract_title_scope_text(title: str, document_no: str) -> str:
+    """Extract a practical scope phrase from title/document number when row fields are empty."""
+    source = " ".join(part for part in [title, document_no] if part)
+    normalized = _norm_scope_text(source)
+    if not normalized:
+        return ""
+    phrase_patterns: tuple[tuple[str, tuple[str, ...]], ...] = (
+        ("Central Control Building", ("CENTRAL CONTROL BUILDING", "CCR")),
+        ("Local Electrical Building", ("LOCAL ELECTRICAL BUILDING", "LEB")),
+        ("Pipe Rack", ("PIPE RACK", "PIPERACK")),
+        ("Air Cooled Condenser", ("AIR COOLED CONDENSER", "ACC")),
+        ("Heat Recovery Steam Generator", ("HEAT RECOVERY STEAM GENERATOR", "HRSG")),
+        ("Gas Turbine Generator", ("GAS TURBINE GENERATOR", "GTG")),
+        ("Steam Turbine Generator", ("STEAM TURBINE GENERATOR", "STG")),
+        ("Distributed Control System", ("DISTRIBUTED CONTROL SYSTEM", "DCS")),
+        ("Tank", ("TANK", "TANKS")),
+        ("Pump", ("PUMP",)),
+    )
+    for phrase, aliases in phrase_patterns:
+        if any(_scope_alias_matches(normalized, alias) for alias in aliases):
+            return phrase
+    return ""
+
+
 def _scope_keys(text: str, tokens: set[str] | None = None) -> set[str]:
     normalized = _norm_scope_text(text)
     keys = {
@@ -742,7 +985,7 @@ def _scope_keys(text: str, tokens: set[str] | None = None) -> set[str]:
 
 def _rule_scope_keys(rule: ValidationRule) -> set[str]:
     text = f"{rule.item_name} {rule.doc_keyword}"
-    return _scope_keys(text, set(rule._item_tokens) | set(rule._doc_kw_tokens))
+    return _scope_keys(text, set(rule._item_tokens) | set(rule._doc_kw_tokens)) | _free_text_scope_tokens(text)
 
 
 def _scope_alias_matches(text: str, alias: str) -> bool:
@@ -758,6 +1001,19 @@ def _norm_scope_text(value: str) -> str:
     text = value.upper().replace("&", " AND")
     text = re.sub(r"[^A-Z0-9]+", " ", text)
     return re.sub(r"\s+", " ", text).strip()
+
+
+def _free_text_scope_tokens(value: str) -> set[str]:
+    """Extract non-generic object tokens from scope text when no alias exists."""
+    return {
+        token.lower()
+        for token in _norm_scope_text(value).split()
+        if token
+        and token.lower() not in _GENERIC_SCOPE_WORDS
+        and token.lower() not in _SCOPE_TOKENS
+        and len(token) > 2
+        and not token.isdigit()
+    }
 
 
 def _is_specific_rule_text(value: str) -> bool:
