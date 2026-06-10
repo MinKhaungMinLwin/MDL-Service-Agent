@@ -72,7 +72,7 @@ def evaluate_acc_experiment(
     )
 
     if llm_selection_path:
-        llm_stage = f"llm_final@{llm_k}" if llm_k > 0 else "llm_final"
+        llm_stage = f"itb_chunk_level@{llm_k}" if llm_k > 0 else "itb_chunk_level"
         llm_rankings = _clip_rankings(_load_llm_rankings(llm_selection_path), llm_k)
         if scope:
             llm_rankings = _filter_by_scope(llm_rankings, scope)
