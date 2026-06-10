@@ -13,6 +13,7 @@ from typing import Any
 from loguru import logger
 
 from common.llm_json import parse_json_output
+from evaluation_service.selector_tuning.dspy_selector import DSPySelectorPredictor
 
 PROMPTS_DIR = Path(__file__).resolve().parent / "prompts"
 DEFAULT_FINAL_SELECTOR_PROMPT_PATH = PROMPTS_DIR / "acc_final_selector.md"
@@ -98,14 +99,16 @@ class ACCFinalSelectorService:
         self,
         config: ACCFinalSelectorConfig,
         client: Any,
-        prompt: str,
+        prompt: str = "",
+        predictor: DSPySelectorPredictor | None = None,
         sleep=time.sleep,
     ) -> None:
-        if not prompt:
-            raise ValueError("prompt is required")
+        if not prompt and predictor is None:
+            raise ValueError("prompt or predictor is required")
         self.config = config
         self.client = client
         self.prompt = prompt
+        self.predictor = predictor
         self.sleep = sleep
 
     def select(self, matching_dir: Path, output_dir: Path) -> int:
@@ -222,12 +225,7 @@ class ACCFinalSelectorService:
         )
         batch_record = {**task.record, "candidates": task.batch_candidates}
         result = _run_with_retries(
-            lambda current_record=batch_record: _select_record(
-                self.client,
-                self.config.model,
-                self.prompt,
-                current_record,
-            ),
+            lambda current_record=batch_record: self._select_record(current_record),
             retries=self.config.llm_retries,
             sleep=self.sleep,
             delay_seconds=self.config.batch_delay_seconds,
@@ -244,6 +242,16 @@ class ACCFinalSelectorService:
             batch_count=task.batch_count,
             rank_start=task.rank_start,
             rank_end=task.rank_end,
+        )
+
+    def _select_record(self, record: dict[str, Any]) -> dict[str, Any]:
+        if self.predictor is not None:
+            return self.predictor.select(record)
+        return _select_record(
+            self.client,
+            self.config.model,
+            self.prompt,
+            record,
         )
 
 
