@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 import csv
-import json
 from pathlib import Path
 from typing import Any
 
-from itb_service.extraction import as_list_text, as_text, fallback_search_query
+from itb_service.extraction import as_list_text, as_text
 from itb_service.models import OUTPUT_HEADER, REJECTED_HEADER, TOKEN_HEADER
 
 
@@ -19,14 +18,8 @@ def build_csv_row(
     verification: dict[str, Any] | None = None,
 ) -> list[str]:
     """Convert one extracted source chunk to the downstream CSV schema."""
-    verification = verification or {}
     depths = [as_text(extraction.get(f"depth_{index}")) for index in range(1, 6)]
     keywords = as_list_text(extraction.get("keywords"))
-    search_query = as_text(extraction.get("search_query"))
-    search_query_source = "llm" if search_query else "fallback"
-    if not search_query:
-        search_query = fallback_search_query(depths, keywords)
-    suggested_depths = verification.get("suggested_depths")
     return [
         document_name,
         as_text(chunk.get("chunk_id")),
@@ -38,18 +31,11 @@ def build_csv_row(
         hierarchy,
         *depths,
         keywords,
-        search_query,
-        search_query_source,
+        _candidate_value(extraction),
+        as_text(extraction.get("skip_reason")),
         as_text(extraction.get("confidence")),
         as_text(extraction.get("needs_review")),
         as_text(extraction.get("reason")),
-        as_text(verification.get("is_valid")),
-        as_text(verification.get("severity")),
-        as_list_text(verification.get("issues")),
-        json.dumps(suggested_depths, ensure_ascii=False) if suggested_depths else "",
-        as_list_text(verification.get("suggested_keywords")),
-        as_text(verification.get("suggested_search_query")),
-        as_text(verification.get("reason")),
         _source_text(chunk),
     ]
 
@@ -86,15 +72,23 @@ def build_json_record(
     return record
 
 
-def build_token_row(document_name: str, chunk: dict[str, Any], token_usage: dict[str, int]) -> list[Any]:
-    """Build one per-chunk token usage row."""
+def build_token_row(
+    document_name: str,
+    batch_index: int,
+    chunks: list[dict[str, Any]],
+    token_usage: dict[str, int],
+) -> list[Any]:
+    """Build one token usage row for a single LLM batch request."""
+    chunk_count = len(chunks)
     return [
         document_name,
-        ", ".join(map(str, chunk.get("page_num", []))),
+        batch_index,
+        chunk_count,
+        ";".join(as_text(chunk.get("chunk_id")) for chunk in chunks if as_text(chunk.get("chunk_id"))),
+        _batch_pages(chunks),
         token_usage.get("prompt_tokens", 0),
         token_usage.get("completion_tokens", 0),
         token_usage.get("total_tokens", 0),
-        _source_text(chunk),
     ]
 
 
@@ -146,33 +140,37 @@ def build_rejected_json_record(
 
 def write_outputs(
     csv_path: str | Path,
-    json_path: str | Path,
     token_path: str | Path,
     csv_rows: list[list[Any]],
-    json_records: list[dict[str, Any]],
     token_rows: list[list[Any]],
 ) -> None:
-    """Write CSV, JSON, and token usage artifacts."""
-    paths = [Path(csv_path), Path(json_path), Path(token_path)]
+    """Write CSV and token usage artifacts."""
+    paths = [Path(csv_path), Path(token_path)]
     for path in paths:
         path.parent.mkdir(parents=True, exist_ok=True)
     _write_csv(paths[0], OUTPUT_HEADER, csv_rows)
-    _write_csv(paths[2], TOKEN_HEADER, token_rows)
-    paths[1].write_text(json.dumps(json_records, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    _write_csv(paths[1], TOKEN_HEADER, token_rows)
+
+
+def read_csv_rows(path: str | Path) -> list[list[str]]:
+    """Read existing CSV rows without the header for resume."""
+    csv_path = Path(path)
+    if not csv_path.exists():
+        return []
+    with open(csv_path, newline="", encoding="utf-8-sig") as file:
+        reader = csv.reader(file)
+        next(reader, None)
+        return [row for row in reader]
 
 
 def write_rejected_outputs(
     csv_path: str | Path,
-    json_path: str | Path,
     csv_rows: list[list[Any]],
-    json_records: list[dict[str, Any]],
 ) -> None:
     """Write section-boundary rejection audit artifacts."""
-    paths = [Path(csv_path), Path(json_path)]
-    for path in paths:
-        path.parent.mkdir(parents=True, exist_ok=True)
-    _write_csv(paths[0], REJECTED_HEADER, csv_rows)
-    paths[1].write_text(json.dumps(json_records, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    csv_output_path = Path(csv_path)
+    csv_output_path.parent.mkdir(parents=True, exist_ok=True)
+    _write_csv(csv_output_path, REJECTED_HEADER, csv_rows)
 
 
 def _write_csv(path: Path, header: list[str], rows: list[list[Any]]) -> None:
@@ -184,3 +182,19 @@ def _write_csv(path: Path, header: list[str], rows: list[list[Any]]) -> None:
 
 def _source_text(chunk: dict[str, Any]) -> str:
     return str(chunk.get("text") or "")
+
+
+def _batch_pages(chunks: list[dict[str, Any]]) -> str:
+    pages = []
+    for chunk in chunks:
+        pages.extend(str(page) for page in chunk.get("page_num", []))
+    return ", ".join(dict.fromkeys(pages))
+
+
+def _candidate_value(extraction: dict[str, Any]) -> str:
+    value = extraction.get("is_mdl_retrieval_candidate")
+    if isinstance(value, bool):
+        return str(value)
+    if value is None or as_text(value) == "":
+        return "True"
+    return as_text(value)

@@ -64,6 +64,5 @@ def failed_verification(error: Exception | str) -> dict[str, Any]:
         "issues": [str(error)],
         "suggested_depths": {},
         "suggested_keywords": [],
-        "suggested_search_query": "",
         "reason": "LLM verification failed.",
     }

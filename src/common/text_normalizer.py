@@ -23,6 +23,20 @@ def build_schedule_target_text(activity_name: str, wbs_path: str, activity_id: s
     return join_unique_texts([original, expanded])
 
 
+def build_schedule_semantic_text(activity_name: str, wbs_path: str) -> str:
+    """Build compact semantic text for embedding a schedule activity.
+
+    BM25 benefits from the full WBS path and activity id in ``target_text``. Dense
+    embeddings work better with a shorter text that keeps the activity meaning and
+    nearby engineering context while dropping generic schedule/root metadata.
+    """
+    activity = normalize_space(activity_name)
+    levels = _semantic_wbs_levels(wbs_path)
+    original = join_unique_texts([activity, " ".join(levels)])
+    expanded = expand_schedule_abbreviations(original)
+    return join_unique_texts([original, expanded])
+
+
 def expand_schedule_abbreviations(text: str) -> str:
     """Expand known schedule abbreviations without removing the original text."""
     expanded = text
@@ -49,6 +63,26 @@ def normalize_space(text: str) -> str:
 def join_unique_texts(texts: list[str]) -> str:
     """Join text variants while preserving order and removing duplicates."""
     return " ".join(_unique_texts(texts))
+
+
+def _semantic_wbs_levels(wbs_path: str, keep_last: int = 3) -> list[str]:
+    """Return the most useful WBS levels for dense activity retrieval."""
+    raw_levels = re.split(r"\s*>\s*", wbs_path)
+    levels = [normalize_space(level) for level in raw_levels if _is_semantic_wbs_level(normalize_space(level))]
+    return levels[-keep_last:]
+
+
+def _is_semantic_wbs_level(level: str) -> bool:
+    if not level:
+        return False
+    lowered = level.casefold()
+    generic_parts = (
+        "ccpp project standard schedule",
+        "standard schedule",
+        "idea power plant",
+        "block #",
+    )
+    return not any(part in lowered for part in generic_parts)
 
 
 def _unique_texts(texts: list[str]) -> list[str]:

@@ -9,6 +9,8 @@ description = "Doosan MDL parsing and matching workspace"
 requires-python = ">=3.11"
 dependencies = [
     "docling>=2.0.0",
+    "dspy>=3.2.1",
+    "einops>=0.8.0",
     "fastapi>=0.115.0",
     "loguru>=0.7.3",
     "neo4j>=5.28.0",
@@ -19,6 +21,7 @@ dependencies = [
     "pydantic>=2.11.3",
     "python-multipart>=0.0.20",
     "sentence-transformers>=5.0.0",
+    "transformers>=4.41.0,<5",
     "tqdm>=4.66.0",
     "uvicorn[standard]>=0.34.0",
 ]
@@ -31,11 +34,22 @@ dev = [
 [project.scripts]
 mdl-classify = "mdl_service.cli:classify"
 mdl-ingest = "mdl_service.cli:ingest"
+mdl-export-catalog = "mdl_service.cli:export_catalog"
+mdl-filter-acc = "mdl_service.cli:filter_acc"
 itb-extract = "itb_service.cli:extract"
+itb-clean-chunks = "itb_service.cli:clean_chunks"
+itb-filter-acc = "itb_service.cli:filter_acc"
 itb-match = "matching_service.cli:match"
+itb-rerank-matching = "matching_service.cli:rerank_existing"
 itb-eval-build-ground-truth = "evaluation_service.ground_truth.cli:build_ground_truth"
-itb-eval-audit-ground-truth = "evaluation_service.ground_truth.cli:audit_ground_truth"
+acc-build-ground-truth = "evaluation_service.ground_truth.cli:build_acc_ground_truth"
+acc-match = "evaluation_service.acc_experiment.cli:match"
+acc-select-final = "evaluation_service.acc_experiment.cli:select_final"
+acc-tune-selector = "evaluation_service.acc_experiment.cli:tune_selector"
+acc-evaluate-matching = "evaluation_service.acc_experiment.cli:evaluate_matching"
+acc-aggregate-final = "evaluation_service.acc_experiment.cli:aggregate_final"
 itb-eval-matching = "evaluation_service.matching_evaluation.cli:evaluate"
+schedule-eval = "evaluation_service.schedule_evaluation.cli:evaluate"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
@@ -47,6 +61,7 @@ where = ["src"]
 mdl_service = ["prompts/*.md"]
 itb_service = ["prompts/*.md"]
 evaluation_service = ["ground_truth/prompts/*.md"]
+"evaluation_service.acc_experiment" = ["prompts/*.md"]
 
 [tool.ruff]
 line-length = 120

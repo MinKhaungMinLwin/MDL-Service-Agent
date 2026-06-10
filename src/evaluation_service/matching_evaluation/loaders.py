@@ -6,10 +6,9 @@ import csv
 from pathlib import Path
 from typing import Any
 
-from common.json_io import read_json
-
 Qrels = dict[str, dict[str, int]]
 Rankings = dict[str, list[str]]
+RunMetadata = dict[str, int | None]
 
 
 def load_qrels(path: Path, sections: tuple[str, ...]) -> Qrels:
@@ -40,27 +39,38 @@ def load_matching_runs(
     matching_dir: Path,
     mode: str,
     sections: tuple[str, ...],
-) -> tuple[Rankings, Rankings | None]:
+) -> tuple[Rankings, Rankings | None, RunMetadata]:
     """Load post-cross-encoder rankings and optional retrieval rankings for one mode."""
     cross_encoder_rankings: Rankings = {}
     retrieval_rankings: Rankings = {}
+    output_limit = 0
+    retrieval_limit = 0
     retrieval_artifacts_complete = True
     for section in sections:
-        path = matching_dir / mode / f"output_match_all_projects_section{section}.json"
-        records = read_json(path)
-        if not isinstance(records, list):
-            raise ValueError(f"Matching JSON must contain a list: {path}")
+        path = matching_dir / mode / f"output_match_all_projects_section{section}.csv"
+        records = _read_matching_csv(path)
         for record in records:
             chunk_id = str(record.get("chunk_id") or "").strip()
             if not chunk_id:
                 continue
             query_id = f"{section}:{chunk_id}"
-            cross_encoder_rankings[query_id] = _candidate_doc_ids(record.get("candidates"))
+            candidates = record.get("candidates")
+            retrieval_candidates = record.get("retrieval_candidates")
+            cross_encoder_rankings[query_id] = _candidate_doc_ids(candidates)
+            output_limit = max(output_limit, _candidate_count(candidates))
             if "retrieval_candidates" not in record:
                 retrieval_artifacts_complete = False
                 continue
-            retrieval_rankings[query_id] = _candidate_doc_ids(record.get("retrieval_candidates"))
-    return cross_encoder_rankings, retrieval_rankings if retrieval_artifacts_complete else None
+            retrieval_rankings[query_id] = _candidate_doc_ids(retrieval_candidates)
+            retrieval_limit = max(retrieval_limit, _candidate_count(retrieval_candidates))
+    return (
+        cross_encoder_rankings,
+        retrieval_rankings if retrieval_artifacts_complete else None,
+        {
+            "output_limit": output_limit or None,
+            "retrieval_limit": retrieval_limit or None,
+        },
+    )
 
 
 def discover_modes(matching_dir: Path) -> tuple[str, ...]:
@@ -75,7 +85,7 @@ def discover_sections(matching_dir: Path, modes: tuple[str, ...]) -> tuple[str, 
     """Discover matching sections shared by all selected modes."""
     sections_by_mode = []
     prefix = "output_match_all_projects_section"
-    suffix = ".json"
+    suffix = ".csv"
     for mode in modes:
         sections = {
             path.name.removeprefix(prefix).removesuffix(suffix)
@@ -97,6 +107,39 @@ def _candidate_doc_ids(candidates: Any) -> list[str]:
             seen.add(doc_id)
             doc_ids.append(doc_id)
     return doc_ids
+
+
+def _read_matching_csv(path: Path) -> list[dict[str, Any]]:
+    records = []
+    with open(path, newline="", encoding="utf-8-sig") as file:
+        for row in csv.DictReader(file):
+            records.append(
+                {
+                    "chunk_id": row.get("Chunk ID", ""),
+                    "candidates": _candidate_list_from_row(row, "Matched_Doc_IDs"),
+                    "retrieval_candidates": _candidate_list_from_row(row, "Retrieval_Doc_IDs"),
+                }
+            )
+    return records
+
+
+def _candidate_list_from_row(row: dict[str, Any], column: str) -> list[dict[str, str]]:
+    return [{"doc_id": doc_id} for doc_id in _split_doc_ids(row.get(column, ""))]
+
+
+def _split_doc_ids(value: Any) -> list[str]:
+    seen = set()
+    doc_ids = []
+    for doc_id in str(value or "").split("|"):
+        doc_id = doc_id.strip()
+        if doc_id and doc_id not in seen:
+            seen.add(doc_id)
+            doc_ids.append(doc_id)
+    return doc_ids
+
+
+def _candidate_count(candidates: Any) -> int:
+    return len(candidates) if isinstance(candidates, list) else 0
 
 
 def _clamp_relevance(value: Any) -> int:

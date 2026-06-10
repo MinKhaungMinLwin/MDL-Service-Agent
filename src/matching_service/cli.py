@@ -11,7 +11,7 @@ from loguru import logger
 from common.embedding_client import AzureEmbeddingService
 from common.neo4j_client import Neo4jConnection
 from matching_service.models import MatchingConfig
-from matching_service.ranking import CrossEncoderReranker
+from matching_service.ranking import create_reranker
 from matching_service.repository import MDLSearchRepository
 from matching_service.service import MatchingService
 
@@ -35,6 +35,18 @@ def match(argv: list[str] | None = None) -> None:
     parser.add_argument("--retrieval-candidates", type=int, default=int(os.getenv("ITB_RETRIEVAL_CANDIDATES", "100")))
     parser.add_argument("--output-limit", type=int, default=int(os.getenv("ITB_OUTPUT_LIMIT", "20")))
     parser.add_argument(
+        "--rerank-mode",
+        choices=["cross_encoder", "rrf_only"],
+        default=os.getenv("ITB_RERANK_MODE", "cross_encoder").strip().lower(),
+        help="Use cross-encoder reranking or keep the RRF retrieval ranking as final Top-K.",
+    )
+    parser.add_argument(
+        "--cross-encoder-query-mode",
+        choices=["structured", "full_chunk"],
+        default=os.getenv("ITB_CROSS_ENCODER_QUERY_MODE", "full_chunk").strip().lower(),
+        help="Use structured depth/keyword context or prepend full ITB chunk text for cross-encoder reranking.",
+    )
+    parser.add_argument(
         "--source-file",
         action="append",
         dest="source_files",
@@ -50,21 +62,32 @@ def match(argv: list[str] | None = None) -> None:
         type=int,
         default=int(os.getenv("ITB_CROSS_ENCODER_BATCH_SIZE", "32")),
     )
+    parser.add_argument(
+        "--reranker-backend",
+        choices=["auto", "sentence_transformers", "transformers"],
+        default=os.getenv("ITB_RERANKER_BACKEND", "auto").strip().lower(),
+        help="Reranker implementation backend used to score query-document pairs.",
+    )
     args = parser.parse_args(argv)
 
     config = MatchingConfig(
         retrieval_mode=args.retrieval_mode,
         retrieval_candidate_limit=args.retrieval_candidates,
         output_limit=args.output_limit,
+        rerank_mode=args.rerank_mode,
+        cross_encoder_query_mode=args.cross_encoder_query_mode,
         source_files=tuple(args.source_files or ()),
     )
     output_dir = _scoped_output_dir(args.output_dir, config.source_files) / args.retrieval_mode
     files_to_process = _files_to_process(args.inputs, args.outputs, DEFAULT_INPUT_DIR, output_dir)
     embedding_service = AzureEmbeddingService() if config.retrieval_mode in {"semantic", "hybrid"} else None
-    cross_encoder_reranker = CrossEncoderReranker(
-        args.cross_encoder_model,
-        batch_size=args.cross_encoder_batch_size,
-    )
+    cross_encoder_reranker = None
+    if args.rerank_mode == "cross_encoder":
+        cross_encoder_reranker = create_reranker(
+            args.cross_encoder_model,
+            batch_size=args.cross_encoder_batch_size,
+            backend=args.reranker_backend,
+        )
 
     output_dir.mkdir(parents=True, exist_ok=True)
     with Neo4jConnection() as conn:
@@ -98,11 +121,11 @@ def _files_to_process(
         ]
     return [
         (
-            input_dir / "output_itb_section6_focused.csv",
+            input_dir / "itb_extraction_section6.csv",
             output_dir / "output_match_all_projects_section6.csv",
         ),
         (
-            input_dir / "output_itb_section7_focused.csv",
+            input_dir / "itb_extraction_section7.csv",
             output_dir / "output_match_all_projects_section7.csv",
         ),
     ]
@@ -117,6 +140,113 @@ def _scoped_output_dir(output_dir: Path, source_files: tuple[str, ...]) -> Path:
 
 def _safe_scope_name(value: str) -> str:
     return "".join(character if character.isalnum() else "_" for character in value).strip("_") or "project"
+
+
+def rerank_existing(argv: list[str] | None = None) -> None:
+    """Rerank existing matching CSV outputs with a different reranker model."""
+    parser = argparse.ArgumentParser(description="Rerank existing matching CSV artifacts.")
+    parser.add_argument("--input", action="append", type=Path, dest="inputs")
+    parser.add_argument("--output", action="append", type=Path, dest="outputs")
+    parser.add_argument("--input-dir", type=Path, required=True)
+    parser.add_argument("--output-dir", type=Path, required=True)
+    parser.add_argument("--retrieval-candidates", type=int, default=int(os.getenv("ITB_RETRIEVAL_CANDIDATES", "100")))
+    parser.add_argument("--output-limit", type=int, default=int(os.getenv("ITB_OUTPUT_LIMIT", "20")))
+    parser.add_argument(
+        "--cross-encoder-query-mode",
+        choices=["structured", "full_chunk"],
+        default=os.getenv("ITB_CROSS_ENCODER_QUERY_MODE", "full_chunk").strip().lower(),
+    )
+    parser.add_argument(
+        "--cross-encoder-model",
+        default=os.getenv("ITB_CROSS_ENCODER_MODEL", DEFAULT_CROSS_ENCODER_MODEL),
+    )
+    parser.add_argument(
+        "--cross-encoder-batch-size",
+        type=int,
+        default=int(os.getenv("ITB_CROSS_ENCODER_BATCH_SIZE", "32")),
+    )
+    parser.add_argument(
+        "--reranker-backend",
+        choices=["auto", "sentence_transformers", "transformers"],
+        default=os.getenv("ITB_RERANKER_BACKEND", "auto").strip().lower(),
+    )
+    args = parser.parse_args(argv)
+
+    config = MatchingConfig(
+        retrieval_mode="hybrid",
+        retrieval_candidate_limit=args.retrieval_candidates,
+        output_limit=args.output_limit,
+        cross_encoder_query_mode=args.cross_encoder_query_mode,
+    )
+    files_to_process = _csv_files_to_process(args.inputs, args.outputs, args.input_dir, args.output_dir)
+    reranker = create_reranker(
+        args.cross_encoder_model,
+        batch_size=args.cross_encoder_batch_size,
+        backend=args.reranker_backend,
+    )
+    service = MatchingService(
+        repository=None,
+        cross_encoder_reranker=reranker,
+        config=config,
+        embedding_service=None,
+    )
+    args.output_dir.mkdir(parents=True, exist_ok=True)
+    for input_path, output_path in files_to_process:
+        if input_path.exists():
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            service.rerank_csv_file(input_path, output_path)
+        else:
+            logger.warning("Matching CSV file not found: {}", input_path)
+
+
+def _csv_files_to_process(
+    inputs: list[Path] | None,
+    outputs: list[Path] | None,
+    input_dir: Path,
+    output_dir: Path,
+) -> list[tuple[Path, Path]]:
+    if inputs:
+        if outputs and len(outputs) != len(inputs):
+            raise ValueError("--output must be provided once per --input")
+        return [
+            (input_path, outputs[index] if outputs else output_dir / input_path.with_suffix(".csv").name)
+            for index, input_path in enumerate(inputs)
+        ]
+    return [
+        (
+            input_dir / "output_match_all_projects_section6.csv",
+            output_dir / "output_match_all_projects_section6.csv",
+        ),
+        (
+            input_dir / "output_match_all_projects_section7.csv",
+            output_dir / "output_match_all_projects_section7.csv",
+        ),
+    ]
+
+
+def _json_files_to_process(
+    inputs: list[Path] | None,
+    outputs: list[Path] | None,
+    input_dir: Path,
+    output_dir: Path,
+) -> list[tuple[Path, Path]]:
+    if inputs:
+        if outputs and len(outputs) != len(inputs):
+            raise ValueError("--output must be provided once per --input")
+        return [
+            (input_path, outputs[index] if outputs else output_dir / input_path.with_suffix(".csv").name)
+            for index, input_path in enumerate(inputs)
+        ]
+    return [
+        (
+            input_dir / "output_match_all_projects_section6.json",
+            output_dir / "output_match_all_projects_section6.csv",
+        ),
+        (
+            input_dir / "output_match_all_projects_section7.json",
+            output_dir / "output_match_all_projects_section7.csv",
+        ),
+    ]
 
 
 if __name__ == "__main__":

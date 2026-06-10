@@ -21,6 +21,26 @@ CLASSIFIED_FIELDNAMES = [
     "Note",
 ]
 
+CATALOG_FIELDNAMES = [
+    "Project Name",
+    "Doc ID",
+    "Source File",
+    "Document No",
+    "Title",
+    "Equipment",
+    "Building",
+    "System",
+    "Study/Survey",
+    "Others",
+    "Deliverable",
+    "Text Content",
+]
+
+ACC_FILTER_FIELDNAMES = [
+    *CATALOG_FIELDNAMES,
+    "Is ACC Related",
+]
+
 
 class DocumentClassification(BaseModel):
     """Structured classification returned by the LLM for one MDL title."""

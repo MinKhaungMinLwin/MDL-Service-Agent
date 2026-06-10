@@ -35,7 +35,7 @@ Defaults:
 
 - input chunks: `data/current_test_env/data/itb_chunks/R&N_ITB_chunks.json`
 - output CSV/JSON/token/rejected files: `output/current_test_env/itb_extract`
-- token files are section-specific, e.g. `output_itb_section7_focused_tokens.csv`
+- token files are section-specific, e.g. `itb_extraction_section7_tokens.csv`
 - packaged prompts: `src/itb_service/prompts/`
 
 ## ITB To MDL Matching
@@ -46,7 +46,7 @@ uv run itb-match
 
 Defaults:
 
-- input extraction CSV files: `output/current_test_env/itb_extract/output_itb_section*_focused.csv`
+- input extraction CSV files: `output/current_test_env/itb_extract/itb_extraction_section*.csv`
 - global output matching CSV/JSON files: `output/current_test_env/matching/<retrieval-mode>`
 - project-scoped output matching CSV/JSON files: `output/current_test_env/matching/<source-file-stem>/<retrieval-mode>`
 - retrieval mode: `keyword`, `semantic`, or `hybrid`
@@ -90,8 +90,9 @@ Defaults:
 - resume state: `output/current_test_env/evaluation/ground_truth/itb_mdl_matching_ground_truth_resume_state.json`
 - LLM judge payloads do not expose retrieval mode, rank, or score
 - positive-only judging is enabled by default; the judge selects direct positive MDL matches instead of scoring every candidate
-- verification runs only for selected positive judgments by default
+- verification runs only for selected positive judgments and groups them by ITB chunk
 - verified positives are merged into the final ground-truth file by default; intermediate CSV files are not written by the CLI
+- the verified final file is used directly for evaluation; there is no separate audit step
 
 For the current R&N-only benchmark:
 
@@ -99,32 +100,6 @@ For the current R&N-only benchmark:
 uv run itb-match --retrieval-mode hybrid --source-file R&N_MDL.xlsx
 uv run itb-eval-build-ground-truth --sections 6 7 --modes hybrid --matching-dir output/current_test_env/matching/R_N_MDL --resume
 ```
-
-Use full 0-3 candidate judging only when negative labels are needed:
-
-```powershell
-uv run itb-eval-build-ground-truth --full-judgment
-```
-
-To skip verification for a quick silver-label run:
-
-```powershell
-uv run itb-eval-build-ground-truth --no-verify
-```
-
-Audit the final ground truth after building it:
-
-```powershell
-uv run itb-eval-audit-ground-truth --sections 6 7
-```
-
-Defaults:
-
-- input ground truth: `output/current_test_env/evaluation/ground_truth/itb_mdl_matching_ground_truth_final.csv`
-- MDL context source: Neo4j node label `TestMDLDocument`
-- output audit report: `output/current_test_env/evaluation/ground_truth/itb_mdl_matching_ground_truth_audit.csv`
-- audit statuses: `ok`, `suspicious`, `remove`, or `unresolved`
-- unresolved means the row could not be checked because ITB extract or Neo4j MDL content was not found
 
 ## ITB To MDL Matching Evaluation
 
@@ -139,7 +114,6 @@ Defaults:
 - input matching JSON files: `output/current_test_env/matching/<retrieval-mode>`
 - input ground truth: `output/current_test_env/evaluation/ground_truth/itb_mdl_matching_ground_truth_final.csv`
 - output reports: `output/current_test_env/evaluation/matching`
-- retrieval stage metrics: `recall_at_100` and `judged_at_100`
-- cross-encoder stage metrics: `recall_at_20`, `hit_rate_at_20`, and `judged_at_20`
-- all stages report `positive_query_coverage`
+- retrieval stage metric: `recall_at_100`
+- cross-encoder stage metrics: `recall_at_20` and `hit_rate_at_20`
 - recall uses `relevance_threshold=3`, recorded once in `report.json`

@@ -76,9 +76,17 @@ def build_semantic_query(depth_terms: list[str], keyword_terms: list[str]) -> st
     return ", ".join(expand_abbreviation_terms([*depth_terms, *keyword_terms]))
 
 
-def build_cross_encoder_query(depth_terms: list[str], keyword_terms: list[str] | None = None) -> str:
+def build_cross_encoder_query(
+    depth_terms: list[str],
+    keyword_terms: list[str] | None = None,
+    chunk_text: str = "",
+    mode: str = "structured",
+    intent_terms: list[str] | None = None,
+) -> str:
     """Build the complete ITB context used for cross-encoder scoring."""
     sections = []
+    if mode == "full_chunk" and (cleaned_chunk_text := _clean_term(chunk_text)):
+        sections.append(f"Chunk Text:\n{cleaned_chunk_text}")
     if depth_terms:
         sections.append(f"Depth:\n{' > '.join(depth_terms)}")
     if keyword_terms:
@@ -87,4 +95,11 @@ def build_cross_encoder_query(depth_terms: list[str], keyword_terms: list[str] |
     expanded_terms = expand_abbreviation_terms(original_terms)[len(unique_preserve_order(original_terms)) :]
     if expanded_terms:
         sections.append(f"Expanded terms:\n{'; '.join(expanded_terms)}")
+    if intent_terms:
+        sections.append(f"Requirement intent:\n{'; '.join(unique_preserve_order(intent_terms))}")
     return "\n\n".join(sections)
+
+
+def _clean_term(value: Any) -> str:
+    text = str(value or "").strip()
+    return "" if text.lower() == "nan" else text

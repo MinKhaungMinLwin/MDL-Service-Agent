@@ -7,19 +7,19 @@ import os
 from pathlib import Path
 
 from common.config import required_env
-from common.neo4j_client import Neo4jConnection
 from common.openai_client import build_azure_openai_client
 from common.prompts import load_prompt
+from evaluation_service.ground_truth.acc_itb_mdl import (
+    DEFAULT_ACC_SELECT_PROMPT_PATH,
+    DEFAULT_ACC_VERIFY_PROMPT_PATH,
+    ACCGroundTruthConfig,
+    ACCGroundTruthService,
+)
 from evaluation_service.ground_truth.service import (
-    DEFAULT_AUDIT_PROMPT_PATH,
-    DEFAULT_JUDGE_PROMPT_PATH,
     DEFAULT_POSITIVE_JUDGE_PROMPT_PATH,
     DEFAULT_VERIFY_PROMPT_PATH,
-    AuditConfig,
     EvaluationConfig,
-    GroundTruthAuditService,
     GroundTruthService,
-    MDLGroundTruthRepository,
     build_verified_positive_ground_truth_rows,
     write_merged_positive_ground_truth_rows,
 )
@@ -30,13 +30,15 @@ DEFAULT_MATCHING_DIR = DEFAULT_BASE_DIR / "matching"
 DEFAULT_OUTPUT_DIR = DEFAULT_BASE_DIR / "evaluation" / "ground_truth"
 DEFAULT_OUTPUT_STEM = "itb_mdl_matching"
 DEFAULT_FINAL_GROUND_TRUTH_PATH = DEFAULT_OUTPUT_DIR / f"{DEFAULT_OUTPUT_STEM}_ground_truth_final.csv"
-DEFAULT_AUDIT_OUTPUT_PATH = DEFAULT_OUTPUT_DIR / f"{DEFAULT_OUTPUT_STEM}_ground_truth_audit.csv"
-DEFAULT_SUSPICIOUS_OUTPUT_PATH = DEFAULT_OUTPUT_DIR / f"{DEFAULT_OUTPUT_STEM}_ground_truth_suspicious.csv"
+DEFAULT_ACC_EXPERIMENT_DIR = DEFAULT_BASE_DIR / "acc_experiment"
+DEFAULT_ACC_MDL_CATALOG_PATH = DEFAULT_ACC_EXPERIMENT_DIR / "mdl_filter" / "acc_mdl_catalog.csv"
+DEFAULT_ACC_ITB_FILTER_DIR = DEFAULT_ACC_EXPERIMENT_DIR / "itb_filter"
+DEFAULT_ACC_GROUND_TRUTH_DIR = DEFAULT_ACC_EXPERIMENT_DIR / "ground_truth"
 
 
 def _discover_sections(extract_dir: Path) -> tuple[str, ...]:
-    prefix = "output_itb_section"
-    suffix = "_focused.csv"
+    prefix = "itb_extraction_section"
+    suffix = ".csv"
     sections = []
     for path in extract_dir.glob(f"{prefix}*{suffix}"):
         section = path.name.removeprefix(prefix).removesuffix(suffix)
@@ -64,13 +66,6 @@ def build_ground_truth(argv: list[str] | None = None) -> None:
     parser.add_argument("--extract-dir", type=Path, default=DEFAULT_EXTRACT_DIR)
     parser.add_argument("--matching-dir", type=Path, default=DEFAULT_MATCHING_DIR)
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
-    parser.add_argument("--pool-top-k", type=int, default=int(os.getenv("ITB_EVAL_POOL_TOP_K", "20")))
-    parser.add_argument("--batch-size", type=int, default=int(os.getenv("ITB_EVAL_BATCH_SIZE", "5")))
-    parser.add_argument(
-        "--judge-candidates-per-call",
-        type=int,
-        default=int(os.getenv("ITB_EVAL_JUDGE_CANDIDATES_PER_CALL", "25")),
-    )
     parser.add_argument("--llm-retries", type=int, default=int(os.getenv("ITB_EVAL_LLM_RETRIES", "2")))
     parser.add_argument("--max-concurrency", type=int, default=int(os.getenv("ITB_EVAL_MAX_CONCURRENCY", "1")))
     parser.add_argument(
@@ -101,21 +96,7 @@ def build_ground_truth(argv: list[str] | None = None) -> None:
         help="Skip verification and write the unverified silver ground-truth file.",
     )
     parser.add_argument("--resume", action="store_true")
-    judge_mode_group = parser.add_mutually_exclusive_group()
-    judge_mode_group.add_argument(
-        "--positive-only",
-        dest="positive_only",
-        action="store_true",
-        default=True,
-        help="Ask the judge to return only direct positive matches. Enabled by default.",
-    )
-    judge_mode_group.add_argument(
-        "--full-judgment",
-        dest="positive_only",
-        action="store_false",
-        help="Judge every candidate with a 0-3 relevance score.",
-    )
-    parser.add_argument("--judge-prompt-file", type=Path)
+    parser.add_argument("--judge-prompt-file", type=Path, default=DEFAULT_POSITIVE_JUDGE_PROMPT_PATH)
     parser.add_argument("--verify-prompt-file", type=Path, default=DEFAULT_VERIFY_PROMPT_PATH)
     parser.add_argument(
         "--final-ground-truth",
@@ -133,9 +114,6 @@ def build_ground_truth(argv: list[str] | None = None) -> None:
     config_options = {
         "sections": sections,
         "modes": tuple(args.modes),
-        "pool_top_k": args.pool_top_k,
-        "batch_size": args.batch_size,
-        "judge_candidates_per_call": args.judge_candidates_per_call,
         "llm_retries": args.llm_retries,
         "max_concurrency": args.max_concurrency,
         "max_itb_chunks": args.max_itb_chunks,
@@ -144,9 +122,6 @@ def build_ground_truth(argv: list[str] | None = None) -> None:
         "positive_only": args.positive_only,
         "resume": args.resume,
     }
-    judge_prompt_path = args.judge_prompt_file or (
-        DEFAULT_POSITIVE_JUDGE_PROMPT_PATH if args.positive_only else DEFAULT_JUDGE_PROMPT_PATH
-    )
 
     config = EvaluationConfig(model=required_env("AZURE_OPENAI_CHAT_DEPLOYMENT"), **config_options)
     service = GroundTruthService(
@@ -155,19 +130,18 @@ def build_ground_truth(argv: list[str] | None = None) -> None:
             api_version_env="AZURE_OPENAI_CHAT_API_VERSION",
             default_api_version="2024-12-01-preview",
         ),
-        judge_prompt=load_prompt(judge_prompt_path),
-        verify_prompt=load_prompt(args.verify_prompt_file) if args.verify else "",
+        judge_prompt=load_prompt(args.judge_prompt_file),
+        verify_prompt=load_prompt(args.verify_prompt_file),
     )
     pools = service.build_pool(args.extract_dir, args.matching_dir)
     judgments, verifications = service.judge(
         pools=pools,
-        resume_state_path=args.output_dir / f"{stem}_ground_truth_resume_state.json" if args.resume else None,
+        resume_state_path=args.output_dir / f"{stem}_ground_truth_resume_state.csv" if args.resume else None,
     )
-    if args.verify:
-        final_path = args.final_ground_truth or args.output_dir / f"{stem}_ground_truth_final.csv"
-        positive_rows = build_verified_positive_ground_truth_rows(judgments, verifications)
-        count = merge_positive_ground_truth(final_path, positive_rows)
-        print(f"Saved {count} final positive ground-truth rows: {final_path}")
+    final_path = args.final_ground_truth or args.output_dir / f"{stem}_ground_truth_final.csv"
+    positive_rows = build_verified_positive_ground_truth_rows(judgments, verifications)
+    count = merge_positive_ground_truth(final_path, positive_rows)
+    print(f"Saved {count} final positive ground-truth rows: {final_path}")
 
 
 def merge_positive_ground_truth(final_path: Path, rows: list[dict]) -> int:
@@ -175,68 +149,56 @@ def merge_positive_ground_truth(final_path: Path, rows: list[dict]) -> int:
     return write_merged_positive_ground_truth_rows(final_path, rows)
 
 
-def audit_ground_truth(argv: list[str] | None = None) -> None:
-    """Audit final ITB-to-MDL matching ground truth with an LLM."""
-    parser = argparse.ArgumentParser(description="Audit final ITB-to-MDL matching ground truth.")
-    parser.add_argument("--sections", nargs="+")
-    parser.add_argument("--ground-truth", type=Path, default=DEFAULT_FINAL_GROUND_TRUTH_PATH)
-    parser.add_argument("--extract-dir", type=Path, default=DEFAULT_EXTRACT_DIR)
-    parser.add_argument("--output", type=Path, default=DEFAULT_AUDIT_OUTPUT_PATH)
-    parser.add_argument(
-        "--audited-ground-truth",
-        type=Path,
-        default=None,
-        help="Write audit_status=ok rows to this CSV. Defaults to overwriting --ground-truth.",
+def build_acc_ground_truth(argv: list[str] | None = None) -> None:
+    """Build ACC experiment ground truth from filtered ITB chunks and ACC MDL catalog."""
+    parser = argparse.ArgumentParser(
+        description="Build ACC ITB-to-MDL ground truth from filtered ACC experiment CSV outputs."
     )
+    parser.add_argument("--mdl-catalog", type=Path, default=DEFAULT_ACC_MDL_CATALOG_PATH)
+    parser.add_argument("--itb-filter-dir", type=Path, default=DEFAULT_ACC_ITB_FILTER_DIR)
+    parser.add_argument("--output-dir", type=Path, default=DEFAULT_ACC_GROUND_TRUTH_DIR)
+    parser.add_argument("--scope", action="append", dest="scopes", help="ITB filter scope folder name to process.")
+    parser.add_argument("--select-prompt-file", type=Path, default=DEFAULT_ACC_SELECT_PROMPT_PATH)
+    parser.add_argument("--verify-prompt-file", type=Path, default=DEFAULT_ACC_VERIFY_PROMPT_PATH)
+    parser.add_argument("--model", default=os.getenv("AZURE_OPENAI_CHAT_DEPLOYMENT"))
+    parser.add_argument("--llm-retries", type=int, default=int(os.getenv("ACC_GT_LLM_RETRIES", "2")))
     parser.add_argument(
-        "--suspicious-output",
-        type=Path,
-        default=DEFAULT_SUSPICIOUS_OUTPUT_PATH,
-        help="Write audit_status=suspicious rows to a separate review CSV.",
-    )
-    parser.add_argument("--batch-size", type=int, default=int(os.getenv("ITB_EVAL_AUDIT_BATCH_SIZE", "5")))
-    parser.add_argument("--llm-retries", type=int, default=int(os.getenv("ITB_EVAL_LLM_RETRIES", "2")))
-    parser.add_argument("--max-concurrency", type=int, default=int(os.getenv("ITB_EVAL_MAX_CONCURRENCY", "1")))
-    parser.add_argument(
-        "--max-rows",
+        "--mdl-batch-size",
         type=int,
-        default=int(os.getenv("ITB_EVAL_AUDIT_MAX_ROWS", "0")),
-        help="Limit the number of ground-truth rows for quick audit runs. Use 0 to process all rows.",
+        default=int(os.getenv("ACC_GT_MDL_BATCH_SIZE", "20")),
+        help="Number of ACC MDL candidates to send per selector LLM call.",
     )
-    parser.add_argument("--node-label", default=os.getenv("MDL_NEO4J_NODE_LABEL", "TestMDLDocument"))
-    parser.add_argument("--audit-prompt-file", type=Path, default=DEFAULT_AUDIT_PROMPT_PATH)
+    parser.add_argument(
+        "--max-itb-chunks",
+        type=int,
+        default=int(os.getenv("ACC_GT_MAX_ITB_CHUNKS", "0")),
+        help="Limit ITB chunks for a quick test run. Use 0 to process all chunks.",
+    )
     args = parser.parse_args(argv)
 
-    sections = tuple(args.sections) if args.sections else _discover_sections(args.extract_dir)
-    if not sections:
-        parser.error(f"No ITB extract files found in {args.extract_dir}")
-
-    config = AuditConfig(
-        model=required_env("AZURE_OPENAI_CHAT_DEPLOYMENT"),
-        sections=sections,
-        batch_size=args.batch_size,
+    config = ACCGroundTruthConfig(
+        model=args.model or required_env("AZURE_OPENAI_CHAT_DEPLOYMENT"),
         llm_retries=args.llm_retries,
-        max_concurrency=args.max_concurrency,
-        max_rows=args.max_rows,
-        node_label=args.node_label,
+        max_itb_chunks=args.max_itb_chunks,
+        mdl_batch_size=args.mdl_batch_size,
     )
-    with Neo4jConnection() as conn:
-        service = GroundTruthAuditService(
-            config=config,
-            client=build_azure_openai_client(
-                api_version_env="AZURE_OPENAI_CHAT_API_VERSION",
-                default_api_version="2024-12-01-preview",
-            ),
-            repository=MDLGroundTruthRepository(conn, config.node_label),
-            audit_prompt=load_prompt(args.audit_prompt_file),
-        )
-        service.audit_to_file(
-            ground_truth_path=args.ground_truth,
-            extract_dir=args.extract_dir,
-            output_path=args.output,
-            audited_ground_truth_path=args.audited_ground_truth or args.ground_truth,
-            suspicious_path=args.suspicious_output,
-        )
+    service = ACCGroundTruthService(
+        config=config,
+        client=build_azure_openai_client(
+            api_version_env="AZURE_OPENAI_CHAT_API_VERSION",
+            default_api_version="2024-12-01-preview",
+            timeout=1200.0,
+        ),
+        select_prompt=load_prompt(args.select_prompt_file),
+        verify_prompt=load_prompt(args.verify_prompt_file),
+    )
+    count = service.build(
+        mdl_catalog_path=args.mdl_catalog,
+        itb_filter_dir=args.itb_filter_dir,
+        output_dir=args.output_dir,
+        scopes=args.scopes,
+    )
+    print(f"Saved {count} ACC ground-truth rows: {args.output_dir / 'acc_itb_mdl_ground_truth.csv'}")
 
 
 if __name__ == "__main__":

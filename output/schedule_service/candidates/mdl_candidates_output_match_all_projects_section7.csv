@@ -1,0 +1,96 @@
+﻿Source File,Document No,Title,Equipment,Building,System,Deliverable,Note,match_score,itb_sources
+itb_candidates,DOC_571,ST STG Foundation- Directires for civil work,Steam Turbine Steam Turbine & Generator,,,,,0.8660,R&N_ITB:p104(score=0.87) | R&N_ITB:p105(score=0.86) | R&N_ITB:p107(score=0.86)
+itb_candidates,DOC_572,ST STG Foundation- Design criteria and Calculation,Steam Turbine,,,CALCULATION,,0.8529,R&N_ITB:p105(score=0.85)
+itb_candidates,MRT-VL00-P2MAA-220010,DIRECTIVES FOR CIVIL WORK FOR INSTALLATION (BLOCK #2),Steam Turbine,,,,,0.8469,R&N_ITB:p104(score=0.85)
+itb_candidates,MRT-VL00-P3MAA-220010,"DIRECTIVES FOR CIVIL WORK FOR INSTALLATION (BLOCK #3,4)",Steam Turbine,,,,,0.8450,R&N_ITB:p104(score=0.84)
+itb_candidates,DOC_1390,HRSG BUILDING EQUIPMENT FOUNDATION & SLAB OUTLINE PLAN,HRSG BUILDING,,,PLAN,,0.8427,R&N_ITB:p105(score=0.84)
+itb_candidates,DOC_1876,LIGHTNING PROTECTION LAYOUT DRAWING MAINTENANCE WORKSHOP AND STORE BUILDING,,MAINTENANCE WORKSHOP AND STORE BUILDING,LIGHTNING PROTECTION,LAYOUT DRAWING,,0.8427,"R&N_ITB:p117, 118(score=0.84)"
+itb_candidates,T14211-7300-CV-TR-0003,"ST, GT STEP-UP TRANSFORMER FOUNDATION PILE ARRANGEMENT","Steam Turbine, GT STEP-UP TRANSFORMER",,,ARRANGEMENT,,0.8387,R&N_ITB:p104(score=0.84)
+itb_candidates,T16182-VE04-P0UHA-171801,CALCULATION OF HRSG FOUNDATION PILING,Heat Recovery Steam Generator,,,CALCULATION,,0.8380,R&N_ITB:p107(score=0.84)
+itb_candidates,T16182-VL00-P0MPA-220001,STG FOUNDATION - SHAPE UNIT P6,Steam Turbine & Generator,,,,,0.8351,R&N_ITB:p104(score=0.84) | R&N_ITB:p105(score=0.83)
+itb_candidates,T14211-7311-01-ME-B33-001,GTG Foundation General Layout,Gas Turbine Generator,,,LAYOUT,,0.8342,R&N_ITB:p105(score=0.83)
+itb_candidates,T14211-7343-CV-CON-0003,HRSG Feed Water Pump Foundation Equipment Plan & Section,Heat Recovery Steam Generator,,,PLAN & SECTION,,0.8341,R&N_ITB:p105(score=0.83)
+itb_candidates,DOC_2267,HVAC Design Criteria,,,"Heating, Ventilating and Air - Conditioning System",Design Criteria,,0.8338,"R&N_ITB:p119, 120(score=0.83) | R&N_ITB:p120(score=0.83) | R&N_ITB:p120(score=0.83)"
+itb_candidates,DOC_922,HVAC SYSTEM DESIGN CRITERIA,HVAC,,,DESIGN CRITERIA,,0.8310,"R&N_ITB:p119, 120(score=0.83) | R&N_ITB:p120(score=0.82)"
+itb_candidates,T14211-7343-CV-CON-0004,HRSG Feed Water Pump Foundation Pile Location Plan & Section,Heat Recovery Steam Generator,,,PLAN & SECTION,,0.8302,R&N_ITB:p105(score=0.83)
+itb_candidates,DOC_1540,MAINTENANCE WORKSHOP AND STORE BUILDING MAIN SECTION,MAINTENANCE WORKSHOP AND STORE BUILDING,,,SECTION,,0.8301,R&N_ITB:p123(score=0.83)
+itb_candidates,T14211-7343-CV-CON-0006,HRSG Feed Water Pump Foundation Detail,Heat Recovery Steam Generator,,,DETAIL,,0.8298,R&N_ITB:p105(score=0.83)
+itb_candidates,CCP-W-B114-02-ME-B33-0036,Footprint Main Loads,HRSG_Foundation,,,,,0.8283,R&N_ITB:p107(score=0.83)
+itb_candidates,DOC_634,HVAC Design Criteria-,,,"Heating, Ventilating and Air - Conditioning System",Design Criteria-,,0.8279,R&N_ITB:p120(score=0.83)
+itb_candidates,DOC_1188,CHEMICAL DOSING SKID FOUNDATION FOR HRSG (CCPP PLANT AREA) PLAN AND SECTION,Heat Recovery Steam Generator,,,PLAN AND SECTION,,0.8266,R&N_ITB:p105(score=0.83)
+itb_candidates,T14211-7349-EL-375-0031,LIGHTNING PROTECTION LAYOUT FOR CENTRAL CONTROL BUILDING,,CENTRAL CONTROL BUILDING,LIGHTNING PROTECTION,LAYOUT,,0.8247,"R&N_ITB:p117, 118(score=0.82)"
+itb_candidates,DOC_1936,LIGHTING & SMALL POWER LAYOUT DRAWING MAINTENANCE WORKSHOP AND STORE BUILDING,,MAINTENANCE WORKSHOP AND STORE BUILDING,Lighting & Small Power System,LAYOUT DRAWING,,0.8246,R&N_ITB:p117(score=0.82)
+itb_candidates,T16182-XW01-P0SAA-133301,DESIGN CRITERIA FOR HVAC SYSTEM,,,"Heating, Ventilating and Air - Conditioning System",DESIGN CRITERIA,,0.8245,"R&N_ITB:p119, 120(score=0.82) | R&N_ITB:p120(score=0.81)"
+itb_candidates,GRT-YE07-P0PAC-156415,Lightning Protection Layout,Intake Electrical Building,,,LAYOUT,,0.8240,"R&N_ITB:p117, 118(score=0.82)"
+itb_candidates,DOC_1962,LIGHTING & SMALL POWER LAYOUT DRAWING CONTROL & ELECTRICAL BUILDING,,CONTROL & ELECTRICAL BUILDING,Lighting & Small Power System,LAYOUT DRAWING,,0.8226,R&N_ITB:p117(score=0.82)
+itb_candidates,DOC_2137,General Arrangement of Steam Turbine Building Operating Floor Plan,Steam Turbine,,,GENERAL ARRANGEMENT,,0.8217,R&N_ITB:p104(score=0.82)
+itb_candidates,DOC_1953,LIGHTING & SMALL POWER LAYOUT DRAWING BESS ELECTRICAL & CONTROL BUILDING,,BESS ELECTRICAL & CONTROL BUILDING,Lighting & Small Power System,LAYOUT DRAWING,,0.8210,R&N_ITB:p117(score=0.82)
+itb_candidates,T16182-YQ01-P0ZEN-152311,SUPPORT BUILDING,,SUPPORT BUILDING,,LAYOUT DRAWING,,0.8204,R&N_ITB:p117(score=0.82)
+itb_candidates,MRT-CC02-P3UHA-170003,Pile Arrangement Drawing,HRSG Foundation,,,ARRANGEMENT DRAWING,,0.8199,R&N_ITB:p107(score=0.82)
+itb_candidates,DOC_1289,Cable Conduit Plan for HVAC I&C – Central Control Building,,Central Control Building,"Heating, Ventilating and Air - Conditioning System Instrumentation & Control",Plan,,0.8196,R&N_ITB:p122(score=0.82)
+itb_candidates,T16182-XB02-P0LB-122017,FOUNDATION LOAD TABLE FOR STEEL STRUCTURE AND STACK,Heat Recovery Steam Generator,,,TABLE,,0.8184,R&N_ITB:p107(score=0.82) | R&N_ITB:p112(score=0.80) | R&N_ITB:p112(score=0.80) | R&N_ITB:p112(score=0.81) | R&N_ITB:p112(score=0.81)
+itb_candidates,DOC_1993,ELECTRICAL ROOM LAYOUT DRAWING MAINTENANCE WORKSHOP AND STORE BUILDING,,MAINTENANCE WORKSHOP AND STORE BUILDING,,LAYOUT DRAWING,,0.8162,R&N_ITB:p123(score=0.82)
+itb_candidates,T16182-YE01-P0BAU-152609,SECURITY BUILDING,,SECURITY BUILDING,,LAYOUT DRAWING,,0.8153,"R&N_ITB:p117, 118(score=0.82)"
+itb_candidates,DOC_1544,MAINTENANCE WORKSHOP AND STORE BUILDING ARCHITECTURAL MISC. DETAIL,MAINTENANCE WORKSHOP AND STORE BUILDING,,,DETAIL,,0.8117,R&N_ITB:p123(score=0.81)
+itb_candidates,T14211-7349-EL-370-0001,CENTRAL CONTROL BUILDING,,CENTRAL CONTROL BUILDING,,LAYOUT DRAWING,,0.8114,"R&N_ITB:p122, 123(score=0.81) | R&N_ITB:p122, 123(score=0.81)"
+itb_candidates,DOC_2135,General Arrangement of Steam Turbine Building Ground Floor Plan,Steam Turbine,,,GENERAL ARRANGEMENT,,0.8109,R&N_ITB:p104(score=0.81)
+itb_candidates,DOC_1996,ELECTRICAL ROOM LAYOUT DRAWING CONTROL & ELECTRICAL BUILDING,,CONTROL & ELECTRICAL BUILDING,,LAYOUT DRAWING,,0.8104,"R&N_ITB:p122, 123(score=0.81)"
+itb_candidates,T16182-YE01-P0BAU-152606,ST BUILDING,,ST Building,,LAYOUT DRAWING,,0.8092,"R&N_ITB:p117, 118(score=0.81)"
+itb_candidates,T14211-7300-CV-RO-0002,Road and Paving Layout (1),,,,Layout,,0.8081,R&N_ITB:p107(score=0.81)
+itb_candidates,DOC_1556,MAINTENANCE WORKSHOP AND STORE BUILDING STRUCTURAL MISC. DETAIL,MAINTENANCE WORKSHOP AND STORE BUILDING,,,DETAIL,,0.8078,R&N_ITB:p123(score=0.81)
+itb_candidates,MRT-CA00-P0UMA-180013,Main Section,Steam Turbine Building,,,SECTION,,0.8075,R&N_ITB:p104(score=0.81)
+itb_candidates,T14211-7300-CV-RO-0003,Road and Paving Layout (2),,,,Layout,,0.8070,R&N_ITB:p107(score=0.81)
+itb_candidates,MRT-CA03-P0UMA-180046,Structural Misc. Detail,Steam Turbine Building,,,DETAIL,,0.8057,R&N_ITB:p104(score=0.81)
+itb_candidates,T14211-7348-AC-559-0003,Main Building- STEAM TURBINE AREA  Steel Detail,Steam Turbine,,,DETAIL,,0.8050,R&N_ITB:p104(score=0.81)
+itb_candidates,DOC_1402,CONTROL & ELECTRICAL BUILDING MAIN SECTION,CONTROL & ELECTRICAL BUILDING,,,SECTION,,0.8044,"R&N_ITB:p122, 123(score=0.80)"
+itb_candidates,T16182-CA06-P0UMA-180490,DESIGN CALCULATION FOR FOUNDATION,ST BUILDING,,,DESIGN CALCULATION,,0.8038,R&N_ITB:p101(score=0.80)
+itb_candidates,MRT-XB02-P3LB-122017,HRSG FOUNDATION LOAD TABLE FOR STEEL STRUCTURE AND STACK,Heat Recovery Steam Generator,,,TABLE,,0.8005,R&N_ITB:p112(score=0.80)
+itb_candidates,T16182-YQ01-P0ZEN-152307,FGS ELECTRICAL BUILDING,,Fuel Gas System ELECTRICAL BUILDING,,LAYOUT DRAWING,,0.7994,R&N_ITB:p117(score=0.80)
+itb_candidates,CCP-W-B113-03-ME-B33-0003,STG Foundation Design Criteria,Steam Turbine & Generator,,,DESIGN CRITERIA,,0.7964,R&N_ITB:p102(score=0.80)
+itb_candidates,T14211-7358-HV-621-0003,Workshop & Warehouse,,,,P&ID,,0.7964,R&N_ITB:p121(score=0.80)
+itb_candidates,DOC_1710,Embedded Elements,Steam Turbine & Generator,,,,,0.7955,R&N_ITB:p116(score=0.80) | R&N_ITB:p116(score=0.80) | R&N_ITB:p116(score=0.80)
+itb_candidates,GRT-CA07-P0ZEN-175127,Design Specification for Civil and Structural,Civil General,,,SPECIFICATION,,0.7944,R&N_ITB:p99(score=0.79) | R&N_ITB:p101(score=0.79) | R&N_ITB:p112(score=0.78)
+itb_candidates,T16182-CA07-P0ZEN-189000,DESIGN CRITERIA FOR CIVIL AND BUILDING STRUCTURES,,,,DESIGN CRITERIA,,0.7943,"R&N_ITB:p101(score=0.79) | R&N_ITB:p102(score=0.78) | R&N_ITB:p102, 103(score=0.75) | R&N_ITB:p103, 104(score=0.76) | R&N_ITB:p111(score=0.75)"
+itb_candidates,DOC_1289,CABLE ROUTE CIVIL WORKS (CCPP PLANT AREA) DETAIL,,,,DETAIL,,0.7939,"R&N_ITB:p97, 98(score=0.79)"
+itb_candidates,T14211-7311-01-ME-B33-005,GTG Foundation Design Requirements,Gas Turbine Generator,,,DESIGN REQUIREMENTS,,0.7937,R&N_ITB:p101(score=0.79) | R&N_ITB:p102(score=0.78)
+itb_candidates,T16182-CA00-P0UYC-182904,MAIN SECTION,ADMINISTRATION & SOCIAL BUILDING,,,SECTION,,0.7936,"R&N_ITB:p123, 124(score=0.79)"
+itb_candidates,DOC_1711,MAINTENANCE WORKSHOP AND STORE BUILDING PLUMBING ISO DRAWING,MAINTENANCE WORKSHOP AND STORE BUILDING,,,DRAWING,,0.7928,R&N_ITB:p123(score=0.79)
+itb_candidates,T16182-VK02-P0UGF-173107,FIREFIGHTING & POTABLE WATER PIPE CIVIL WORKS,,,,,,0.7915,R&N_ITB:p109(score=0.75) | R&N_ITB:p110(score=0.76) | R&N_ITB:p118(score=0.79) | R&N_ITB:p119(score=0.78)
+itb_candidates,DOC_1297,Site Preparation,,,,,,0.7910,"R&N_ITB:p98, 99(score=0.79)"
+itb_candidates,DOC_972,HVAC SYSTEM FIRE PROTECTION PUMP BUILDING DUCT & PIPING PLAN,HVAC,,,PLAN,,0.7884,R&N_ITB:p121(score=0.79)
+itb_candidates,DOC_1736,CONTROL & ELECTRICAL BUILDING PLUMBING PLAN,CONTROL & ELECTRICAL BUILDING,,,PLAN,,0.7879,"R&N_ITB:p122, 123(score=0.79)"
+itb_candidates,DOC_1513,S&A STANDARD DESIGN CRITERIA FOR BUILDINGS & STRUCTURES,S&A STANDARD,,,DESIGN CRITERIA,,0.7872,"R&N_ITB:p101(score=0.79) | R&N_ITB:p102(score=0.78) | R&N_ITB:p102, 103(score=0.75)"
+itb_candidates,T14211-7349-HV-623-0001,Central Control Building,,Central Control Building,,DRAWING,,0.7868,R&N_ITB:p122(score=0.79)
+itb_candidates,DOC_968,HVAC SYSTEM CONTROL & ELECTRICAL BUILDING DUCT & PIPING PLAN,HVAC,,,PLAN,,0.7865,R&N_ITB:p122(score=0.79)
+itb_candidates,T16182-XH02-P0SAF-134704,DUCT & REFRIGERANT PIPING PLAN OF HVAC SYSTEM FOR FIRE BRIGADE,,,"Heating, Ventilating and Air - Conditioning System",PLAN,,0.7856,R&N_ITB:p121(score=0.79)
+itb_candidates,T16182-YE00-P0ZEN-152709,EMBEDDED CONDUIT LAYOUT FOR ADMINISTRATION & SOCIAL BUILDING,,ADMINISTRATION & SOCIAL BUILDING,,LAYOUT,,0.7833,"R&N_ITB:p123, 124(score=0.78)"
+itb_candidates,T16182-XB02-P0UGF-173102,FIREFIGHTING & POTABLE WATER PIPE CIVIL WORKS LAYOUT,,,,LAYOUT,,0.7827,R&N_ITB:p107(score=0.75) | R&N_ITB:p109(score=0.76) | R&N_ITB:p118(score=0.78) | R&N_ITB:p119(score=0.77)
+itb_candidates,T14211-7347-CV-FF-0001,Fire Fighting Pipeline Civil Works General Data,,,Fire Fighting,Data,,0.7820,"R&N_ITB:p99(score=0.75) | R&N_ITB:p110, 111(score=0.78) | R&N_ITB:p111(score=0.77)"
+itb_candidates,T16182-XB02-P0UGF-173101,FIREFIGHTING & POTABLE WATER PIPE CIVIL WORKS OVERALL LAYOUT,,,,OVERALL LAYOUT,,0.7817,R&N_ITB:p99(score=0.78) | R&N_ITB:p109(score=0.76)
+itb_candidates,DOC_1287,CABLE ROUTE CIVIL WORKS (CCPP PLANT AREA) LAYOUT,,,,LAYOUT,,0.7813,"R&N_ITB:p97, 98(score=0.78) | R&N_ITB:p99(score=0.77) | R&N_ITB:p107(score=0.76)"
+itb_candidates,DOC_957,HVAC SYSTEM BESS ELECTRICAL & CONTROL BUILDING EQUIPMENT SCHEDULE,HVAC,,,SCHEDULE,,0.7804,"R&N_ITB:p118, 119(score=0.78)"
+itb_candidates,GRT-YD16-P0UCA-155408,Cable Tray and Power Wiring Layout,Control Building,,,LAYOUT,,0.7804,R&N_ITB:p122(score=0.78)
+itb_candidates,T16182-CA00-P0UYC-182906,WALL SECTION,ADMINISTRATION & SOCIAL BUILDING,,,SECTION,,0.7804,"R&N_ITB:p123, 124(score=0.78)"
+itb_candidates,T14211-7349-HV-621-0002,Central Control Building,,Central Control Building,,P&ID,,0.7785,R&N_ITB:p122(score=0.78)
+itb_candidates,T16182-XH02-P0SAG-134904,DUCT & REFRIGERANT PIPING PLAN OF HVAC SYSTEM FOR FIRE WATER PUMP HOUSE,,Fire Pump House,"Heating, Ventilating and Air - Conditioning System",PLAN,,0.7784,R&N_ITB:p121(score=0.78)
+itb_candidates,DOC_1273,FIRE FIGHTING CIVIL WORKS (CCPP PLANT AREA) DETAIL,,,Fire Fighting,DETAIL,,0.7782,"R&N_ITB:p97, 98(score=0.78) | R&N_ITB:p99(score=0.78)"
+itb_candidates,T16182-XW03-P0SAL-134003,EQUIPMENT SCHEDULE OF HVAC SYSEM FOR ADMIN & SOCIAL BUILDING,,ADMIN & SOCIAL BUILDING,"Heating, Ventilating and Air - Conditioning System",EQUIPMENT SCHEDULE,,0.7776,"R&N_ITB:p118, 119(score=0.78)"
+itb_candidates,T14211-7315-03-ME-B33-0005,STG Foundation Embedded Materials,Steam Turbine & Generator,,,,,0.7773,R&N_ITB:p116(score=0.78)
+itb_candidates,CCP-W-B113-03-ME-B33-0002,Embedded Elements,STG_Foundation,,,,,0.7767,R&N_ITB:p116(score=0.78)
+itb_candidates,T16182-XH02-P0SAC-133504,DUCT & REFRIGERANT PIPING PLAN OF HVAC SYSTEM FOR CENTRAL CONTROL BUILDING,,CENTRAL CONTROL BUILDING,"Heating, Ventilating and Air - Conditioning System",PLAN,,0.7762,"R&N_ITB:p118, 119(score=0.78)"
+itb_candidates,DOC_969,HVAC SYSTEM CONTROL & ELECTRICAL BUILDING EQUIPMENT SCHEDULE,HVAC,,,SCHEDULE,,0.7736,"R&N_ITB:p118, 119(score=0.77)"
+itb_candidates,T16182-YK09-P0SAA-133302,STANDARD DRAIWNG FOR HVAC SYSTEM,,,"Heating, Ventilating and Air - Conditioning System",STANDARD DRAIWNG,,0.7736,R&N_ITB:p121(score=0.77)
+itb_candidates,DOC_1271,FIRE FIGHTING CIVIL WORKS (CCPP PLANT AREA) LAYOUT,,,Fire Fighting,LAYOUT,,0.7732,"R&N_ITB:p97, 98(score=0.75) | R&N_ITB:p99(score=0.77)"
+itb_candidates,T16182-XH02-P0SAJ-133704,DUCT & REFRIGERANT PIPING PLAN OF HVAC SYSTEM FOR FGS ELECTRICAL BUILDING,,ELECTRICAL BUILDING,"Heating, Ventilating and Air - Conditioning System",PLAN,,0.7729,"R&N_ITB:p118, 119(score=0.77)"
+itb_candidates,DOC_2301,Basis of Design for Transmission Line Civil Work,,,,Basis of Design,,0.7663,R&N_ITB:p99(score=0.77) | R&N_ITB:p112(score=0.76)
+itb_candidates,DOC_1272,FIRE FIGHTING CIVIL WORKS (CCPP PLANT AREA) PLAN AND SECTION,,,Fire Fighting,PLAN AND SECTION,,0.7647,"R&N_ITB:p97, 98(score=0.75) | R&N_ITB:p99(score=0.76)"
+itb_candidates,T14211-7347-CV-FF-0004,Fire Fighting Pipeline Civil Works Structure Section & Detail,,,Fire Fighting,Section & Detail,,0.7639,"R&N_ITB:p110, 111(score=0.76) | R&N_ITB:p117(score=0.76)"
+itb_candidates,DOC_1632,ADMINISTRATION BUILDING MAIN SECTION,ADMINISTRATION BUILDING,,,SECTION,,0.7634,R&N_ITB:p122(score=0.76)
+itb_candidates,T14211-7347-CV-FF-0005,Fire Fighting Pipeline Civil Works Re-Bar Schedule & Bill of Material,,,Fire Fighting,Re-Bar Schedule & Bill of Material,,0.7625,"R&N_ITB:p110, 111(score=0.76) | R&N_ITB:p111(score=0.76)"
+itb_candidates,DOC_1630,ADMINISTRATION BUILDING SECOND FLOOR PLAN,ADMINISTRATION BUILDING,,,PLAN,,0.7610,R&N_ITB:p122(score=0.76)
+itb_candidates,T16182-CA00-P0UYC-182903,SIDE ELEVATION,ADMINISTRATION & SOCIAL BUILDING,,,ELEVATION,,0.7608,"R&N_ITB:p123, 124(score=0.76)"
+itb_candidates,DOC_1639,ADMINISTRATION BUILDING CEILING PLAN,ADMINISTRATION BUILDING,,,PLAN,,0.7572,R&N_ITB:p122(score=0.76)
+itb_candidates,T14211-7347-CV-FF-0003,Fire Fighting Pipeline Civil Works Overall Layout,,,Fire Fighting,Overall Layout,,0.7541,"R&N_ITB:p110, 111(score=0.75)"
+itb_candidates,DOC_1637,ADMINISTRATION BUILDING WALL SECTION,ADMINISTRATION BUILDING,,,SECTION,,0.7520,R&N_ITB:p122(score=0.75)
+itb_candidates,T14211-7347-CV-FF-0002,Fire Fighting Pipeline Civil Works Excavation Plan & Section,,,Fire Fighting,Excavation Plan & Section,,0.7506,"R&N_ITB:p110, 111(score=0.75)"
+itb_candidates,T16182-CA02-P0UYC-182957,BEAM & GIRDER REBAR DETAIL,ADMINISTRATION & SOCIAL BUILDING,,,DETAIL,,0.7505,"R&N_ITB:p123, 124(score=0.75)"

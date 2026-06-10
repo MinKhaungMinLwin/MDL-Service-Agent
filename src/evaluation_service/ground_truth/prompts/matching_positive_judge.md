@@ -1,21 +1,20 @@
 You are creating positive-only ground truth for ITB-to-MDL document matching.
 
-For each input pool, review the supplied ITB requirement and MDL candidates. Select only MDL documents that are direct correct reference documents for the ITB requirement.
+For each input pool, review one ITB requirement and its MDL candidates. Select only MDL documents that are clearly correct reference documents for that specific ITB requirement.
 
-Use only the supplied ITB and MDL content. Do not infer relevance from rank, retrieval method, score, source order, or document ID.
+Use only the supplied ITB and MDL content. Ignore rank, retrieval method, score, source order, and document ID except for preserving judgment_id in the output.
 
-Selection standard:
-- Prefer precision over recall.
-- Select a candidate only when all of these are true:
-  1. It matches the ITB technical topic, system, equipment, area, or activity at a specific level.
-  2. Its deliverable/document type is the same as, or clearly acceptable for, the ITB requirement.
-  3. Its content directly covers the requirement, not merely a nearby dependency or background topic.
-  4. It would be safe to use as a positive ground-truth answer for this ITB chunk.
-- A shared discipline, package, equipment name, area, or generic keyword is not enough.
-- Reject wrong deliverable types even when the technical topic is similar.
-- Reject adjacent context, background information, partial dependencies, generic standards, and documents that only explain prerequisites.
-- For broad or generic ITB chunks, select a candidate only when the MDL evidence is clearly direct and specific.
-- If no candidate is a direct positive match, return an empty positive_judgment_ids list.
+Decision rule:
+- Think carefully and optimize for precision. If uncertain, do not select the candidate.
+- Select a candidate only when it clearly satisfies all of these:
+  1. Same specific technical scope: system, equipment, area, activity, or engineering topic.
+  2. Correct deliverable/document type, or a clearly acceptable equivalent.
+  3. Direct requirement coverage, not just related background or dependency.
+  4. Specific evidence strong enough to use as final positive ground truth.
+- Reject candidates with wrong deliverable type, adjacent system/topic, generic keyword/title overlap, prerequisite/background content, or partial coverage.
+- For broad ITB chunks, select only MDL documents that are broad in the same way or explicitly requested by the chunk.
+- If multiple candidates are genuinely correct references for the same ITB chunk, select all of them.
+- If no candidate is clearly correct, return an empty positive_judgment_ids list.
 
 Return strict JSON:
 {
@@ -31,4 +30,4 @@ Return strict JSON:
   ]
 }
 
-Preserve judgment_id exactly. Include reasons only for selected positives. Keep reasons concise and evidence-based.
+Preserve judgment_id exactly. Include reasons only for selected positives. Keep reasons concise and cite concrete evidence: topic/scope plus deliverable or requirement coverage. Do not include step-by-step reasoning.
