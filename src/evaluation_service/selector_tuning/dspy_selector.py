@@ -228,7 +228,7 @@ def evaluate_selector_program(program: Any, examples: list[SelectorExample]) -> 
             candidate_json=example.candidate_json,
         )
         predicted_ids = _normalize_doc_ids(getattr(prediction, "selected_doc_ids", []), set(example.candidate_doc_ids))
-        precision, recall, f1 = _positive_precision_recall_f1(set(example.selected_doc_ids), set(predicted_ids))
+        precision, recall, f1 = _selector_precision_recall_f1(set(example.selected_doc_ids), set(predicted_ids))
         precision_scores.append(precision)
         recall_scores.append(recall)
         f1_scores.append(f1)
@@ -248,25 +248,21 @@ def split_selector_examples(
     dev_fraction: float = 0.2,
     seed: int = 7,
 ) -> tuple[list[SelectorExample], list[SelectorExample]]:
-    """Split positive examples into train/dev while preserving scope coverage."""
+    """Split selector examples into train/dev while preserving scope/no-match coverage."""
     if not 0 < dev_fraction < 1:
         raise ValueError("dev_fraction must be between 0 and 1")
     if len(examples) < 2:
         raise ValueError("Need at least 2 examples to split train/dev")
 
     rng = random.Random(seed)
-    positives = [example for example in examples if example.is_positive]
-    if len(positives) < 2:
-        raise ValueError("Need at least 2 positive examples to tune against F1")
-
-    grouped: dict[str, list[SelectorExample]] = {}
-    for example in positives:
-        grouped.setdefault(example.itb_scope, []).append(example)
+    grouped: dict[tuple[str, bool], list[SelectorExample]] = {}
+    for example in examples:
+        grouped.setdefault((example.itb_scope, example.is_positive), []).append(example)
 
     dev: list[SelectorExample] = []
     train: list[SelectorExample] = []
-    for scope in sorted(grouped):
-        group = list(grouped[scope])
+    for group_key in sorted(grouped):
+        group = list(grouped[group_key])
         rng.shuffle(group)
         dev_slice = _take_dev_slice(group, dev_fraction)
         dev_keys = {(example.itb_scope, example.chunk_id) for example in dev_slice}
@@ -274,19 +270,22 @@ def split_selector_examples(
         train.extend(example for example in group if (example.itb_scope, example.chunk_id) not in dev_keys)
 
     if not dev:
-        shuffled = list(positives)
+        shuffled = list(examples)
         rng.shuffle(shuffled)
         dev = [shuffled[0]]
         dev_keys = {(dev[0].itb_scope, dev[0].chunk_id)}
-        train = [example for example in positives if (example.itb_scope, example.chunk_id) not in dev_keys]
+        train = [example for example in examples if (example.itb_scope, example.chunk_id) not in dev_keys]
 
     if not train or not dev:
         raise ValueError("Train/dev split produced an empty partition; adjust data or dev_fraction")
     logger.info(
-        "Split selector examples into {} train / {} dev examples across {} scope(s)",
+        "Split selector examples into {} train / {} dev examples across {} scope(s) "
+        "with {} positive / {} no-match total examples",
         len(train),
         len(dev),
         len({example.itb_scope for example in examples}),
+        sum(example.is_positive for example in examples),
+        sum(not example.is_positive for example in examples),
     )
     return train, dev
 
@@ -453,7 +452,7 @@ def _selector_gepa_metric(
     candidate_ids = {str(doc_id).strip() for doc_id in getattr(example, "candidate_doc_ids", []) if str(doc_id).strip()}
     truth_ids = {str(doc_id).strip() for doc_id in getattr(example, "selected_doc_ids", []) if str(doc_id).strip()}
     predicted_ids = set(_normalize_doc_ids(getattr(prediction, "selected_doc_ids", []), candidate_ids))
-    precision, recall, f1 = _positive_precision_recall_f1(truth_ids, predicted_ids)
+    precision, recall, f1 = _selector_precision_recall_f1(truth_ids, predicted_ids)
     feedback = _build_gepa_feedback(
         example=example,
         truth_ids=truth_ids,
@@ -479,9 +478,11 @@ def _normalize_doc_ids(selected_doc_ids: Any, candidate_ids: set[str]) -> list[s
     return normalized
 
 
-def _positive_precision_recall_f1(truth_ids: set[str], predicted_ids: set[str]) -> tuple[float, float, float]:
+def _selector_precision_recall_f1(truth_ids: set[str], predicted_ids: set[str]) -> tuple[float, float, float]:
     if not truth_ids:
-        raise ValueError("Positive-only metric received a no-match example")
+        if not predicted_ids:
+            return 1.0, 1.0, 1.0
+        return 0.0, 0.0, 0.0
     if not predicted_ids:
         return 1.0, 0.0, 0.0
     hit_count = len(truth_ids & predicted_ids)
@@ -526,7 +527,19 @@ def _build_gepa_feedback(
         f"Target predictor: {pred_name or 'selector'}."
     )
     if not truth_ids:
-        return header + " No positive ground truth is available for this tuning example."
+        if not predicted_ids:
+            return (
+                header
+                + " This is a no-match example and the selector correctly returned an empty list. "
+                + "Keep rejecting vague ACC mentions, plant-level context, and adjacent-system spillover."
+            )
+        return (
+            header
+            + " This is a no-match example, so the selector should have returned an empty list. "
+            + "It was too broad and should reject vague ACC mentions, plant-level context, and adjacent-system spillover. "
+            + "Unexpected docs: "
+            + _describe_doc_ids(unexpected_ids, candidate_map)
+        )
     if not predicted_ids:
         return (
             header

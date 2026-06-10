@@ -180,6 +180,21 @@ def select_final(argv: list[str] | None = None) -> None:
         help="Limit records for token/cost test runs. Use 0 to process all records.",
     )
     args = parser.parse_args(argv)
+    resolved_model = args.model or required_env("AZURE_OPENAI_CHAT_DEPLOYMENT")
+
+    logger.info(
+        "Starting ACC final selector with backend={}, model={}, matching_dir={}, output_dir={}, top_k={}, "
+        "candidate_batch_size={}, llm_retries={}, max_concurrency={}, max_records={}",
+        args.selector_backend,
+        resolved_model,
+        args.matching_dir,
+        args.output_dir,
+        args.top_k,
+        args.candidate_batch_size,
+        args.llm_retries,
+        args.max_concurrency,
+        args.max_records,
+    )
 
     prompt = load_prompt(args.prompt_file)
     predictor = None
@@ -188,13 +203,13 @@ def select_final(argv: list[str] | None = None) -> None:
             parser.error("--dspy-program is required when --selector-backend dspy")
         predictor = DSPySelectorPredictor(
             program_path=args.dspy_program,
-            model=args.model or required_env("AZURE_OPENAI_CHAT_DEPLOYMENT"),
+            model=resolved_model,
             expected_instruction=prompt,
         )
 
     service = ACCFinalSelectorService(
         config=ACCFinalSelectorConfig(
-            model=args.model or required_env("AZURE_OPENAI_CHAT_DEPLOYMENT"),
+            model=resolved_model,
             top_k=args.top_k,
             candidate_batch_size=args.candidate_batch_size,
             llm_retries=args.llm_retries,
@@ -260,6 +275,11 @@ def tune_selector(argv: list[str] | None = None) -> None:
         type=float,
         default=float(os.getenv("ACC_SELECTOR_TUNER_DEV_FRACTION", "0.2")),
     )
+    parser.add_argument(
+        "--no-dev-split",
+        action="store_true",
+        help="Use the full example set for both tuning and reported metrics instead of splitting train/dev.",
+    )
     parser.add_argument("--seed", type=int, default=int(os.getenv("ACC_SELECTOR_TUNER_SEED", "7")))
     parser.add_argument(
         "--verbose-dspy",
@@ -281,21 +301,31 @@ def tune_selector(argv: list[str] | None = None) -> None:
         ground_truth_path=args.ground_truth,
         top_k=args.top_k,
         scope=args.scope,
-        positive_only=True,
+        positive_only=False,
     )
     logger.info(
-        "Prepared {} positive selector example(s) for tuning{}",
+        "Prepared {} selector example(s) for tuning{} ({} positive, {} no-match)",
         len(examples),
         f" in scope {args.scope}" if args.scope else "",
+        sum(example.is_positive for example in examples),
+        sum(not example.is_positive for example in examples),
     )
-    train_examples, dev_examples = split_selector_examples(
-        examples,
-        dev_fraction=args.dev_fraction,
-        seed=args.seed,
-    )
+    if args.no_dev_split:
+        train_examples = list(examples)
+        dev_examples = list(examples)
+        logger.info(
+            "Using full-data tuning mode with {} shared train/dev example(s); reported metrics are full-data metrics",
+            len(examples),
+        )
+    else:
+        train_examples, dev_examples = split_selector_examples(
+            examples,
+            dev_fraction=args.dev_fraction,
+            seed=args.seed,
+        )
     logger.info(
         "GEPA budget configuration: auto={}, max_metric_calls={}, max_full_evals={}, "
-        "reflection_minibatch_size={}, num_threads={}, seed={}, verbose_dspy={}, "
+        "reflection_minibatch_size={}, num_threads={}, seed={}, verbose_dspy={}, no_dev_split={}, "
         "task_model={}, reflection_model={}",
         args.auto,
         args.max_metric_calls,
@@ -304,6 +334,7 @@ def tune_selector(argv: list[str] | None = None) -> None:
         args.num_threads,
         args.seed,
         args.verbose_dspy,
+        args.no_dev_split,
         args.model or required_env("AZURE_OPENAI_CHAT_DEPLOYMENT"),
         args.reflection_model or args.model or required_env("AZURE_OPENAI_CHAT_DEPLOYMENT"),
     )
@@ -327,7 +358,7 @@ def tune_selector(argv: list[str] | None = None) -> None:
     logger.info("Saved GEPA selector program to {}", args.output_dir / DEFAULT_PROGRAM_FILENAME)
     print(f"Saved DSPy selector program: {args.output_dir / DEFAULT_PROGRAM_FILENAME}")
     print(
-        "Dev metrics - "
+        f"{'Full-data metrics' if args.no_dev_split else 'Dev metrics'} - "
         f"precision={result['dev_metrics']['avg_precision']:.4f}, "
         f"recall={result['dev_metrics']['avg_recall']:.4f}, "
         f"f1={result['dev_metrics']['avg_f1']:.4f}"

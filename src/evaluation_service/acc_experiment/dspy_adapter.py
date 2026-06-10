@@ -18,7 +18,7 @@ def build_acc_selector_examples(
     ground_truth_path: Path,
     top_k: int,
     scope: str = "",
-    positive_only: bool = True,
+    positive_only: bool = False,
 ) -> list[SelectorExample]:
     """Build selector supervision examples from ACC matching outputs and ground truth."""
     qrels = _load_positive_qrels(ground_truth_path)
