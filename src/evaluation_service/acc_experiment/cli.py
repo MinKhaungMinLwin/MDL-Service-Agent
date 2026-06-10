@@ -16,7 +16,10 @@ from common.embedding_client import AzureEmbeddingService
 from common.neo4j_client import Neo4jConnection
 from common.openai_client import build_azure_openai_client
 from common.prompts import load_prompt
-from evaluation_service.acc_experiment.document_level import build_document_level_outputs
+from evaluation_service.acc_experiment.document_level import (
+    build_document_level_catalog,
+    evaluate_document_level_outputs,
+)
 from evaluation_service.acc_experiment.dspy_adapter import build_acc_selector_examples
 from evaluation_service.acc_experiment.evaluation import evaluate_acc_experiment
 from evaluation_service.acc_experiment.final_selector import (
@@ -146,13 +149,6 @@ def select_final(argv: list[str] | None = None) -> None:
     parser.add_argument("--matching-dir", type=Path, default=DEFAULT_MATCHING_DIR)
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_SELECTION_DIR)
     parser.add_argument("--prompt-file", type=Path, default=DEFAULT_FINAL_SELECTOR_PROMPT_PATH)
-    parser.add_argument("--ground-truth", type=Path, default=DEFAULT_GROUND_TRUTH_PATH)
-    parser.add_argument(
-        "--evaluation-output-dir",
-        type=Path,
-        default=None,
-        help="Optional base directory for automatic per-project evaluation after LLM selection.",
-    )
     parser.add_argument(
         "--selector-backend",
         choices=["prompt", "dspy"],
@@ -234,24 +230,6 @@ def select_final(argv: list[str] | None = None) -> None:
     count = service.select(args.matching_dir, args.output_dir)
     selection_path = args.output_dir / "acc_llm_final_selection.csv"
     print(f"Saved {count} ACC final selected rows: {selection_path}")
-
-    evaluation_output_dir = args.evaluation_output_dir or (
-        args.output_dir.parent / f"evaluation_{args.output_dir.name}"
-    )
-    for scope in DEFAULT_SCOPE_SOURCE_FILES:
-        scope_output_dir = evaluation_output_dir / scope
-        evaluate_acc_experiment(
-            ground_truth_path=args.ground_truth,
-            matching_dir=args.matching_dir,
-            output_dir=scope_output_dir,
-            llm_selection_path=selection_path,
-            retrieval_k=300,
-            cross_encoder_k=args.top_k,
-            llm_k=0,
-            scope=scope,
-        )
-        logger.info("Saved automatic ACC selector evaluation for {}: {}", scope, scope_output_dir)
-    print(f"Saved automatic ACC selector evaluation reports: {evaluation_output_dir}")
 
 
 def tune_selector(argv: list[str] | None = None) -> None:
@@ -425,52 +403,71 @@ def evaluate_matching(argv: list[str] | None = None) -> None:
 
 
 def aggregate_final(argv: list[str] | None = None) -> None:
-    """Aggregate chunk-level final selection into ITB project-level MDL catalog and metrics."""
+    """Aggregate chunk-level final selection into ITB project-level MDL catalog."""
     load_env_file()
     parser = argparse.ArgumentParser(description="Aggregate ACC final selections to ITB project-level MDL outputs.")
     parser.add_argument("--selection", type=Path, default=DEFAULT_SELECTION_DIR / "acc_llm_final_selection.csv")
-    parser.add_argument("--ground-truth", type=Path, default=DEFAULT_GROUND_TRUTH_PATH)
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_BASE_DIR / "document_level")
     parser.add_argument(
         "--scope",
         default="",
-        help="Aggregate/evaluate only one ITB scope, e.g. Fadhili_ITB, R_N_ITB, or Turkistan_ITB.",
+        help="Aggregate only one ITB scope, e.g. Fadhili_ITB, R_N_ITB, or Turkistan_ITB.",
     )
     args = parser.parse_args(argv)
     if args.scope:
-        build_document_level_outputs(
+        build_document_level_catalog(
             selection_path=args.selection,
-            ground_truth_path=args.ground_truth,
             output_dir=args.output_dir,
             scope=args.scope,
         )
         print(f"Saved ACC document-level outputs: {args.output_dir}")
         return
 
-    build_document_level_outputs(
+    build_document_level_catalog(
         selection_path=args.selection,
-        ground_truth_path=args.ground_truth,
         output_dir=args.output_dir,
-        write_catalog=True,
-        write_summary=False,
     )
+    print("Saved ACC document-level outputs:")
+    print(f"- {args.output_dir / 'acc_document_level.csv'}")
+
+
+def evaluate_project_level(argv: list[str] | None = None) -> None:
+    """Evaluate ITB project-level outputs with rule-based and LLM judge metrics."""
+    load_env_file()
+    parser = argparse.ArgumentParser(description="Evaluate ACC ITB project-level outputs.")
+    parser.add_argument("--selection", type=Path, default=DEFAULT_SELECTION_DIR / "acc_llm_final_selection.csv")
+    parser.add_argument("--ground-truth", type=Path, default=DEFAULT_GROUND_TRUTH_PATH)
+    parser.add_argument("--output-dir", type=Path, default=DEFAULT_BASE_DIR / "project_level_evaluation")
+    parser.add_argument(
+        "--scope",
+        default="",
+        help="Evaluate only one ITB scope, e.g. Fadhili_ITB, R_N_ITB, or Turkistan_ITB.",
+    )
+    args = parser.parse_args(argv)
+
+    if args.scope:
+        evaluate_document_level_outputs(
+            selection_path=args.selection,
+            ground_truth_path=args.ground_truth,
+            output_dir=args.output_dir,
+            scope=args.scope,
+        )
+        print(f"Saved ACC ITB project-level evaluation reports: {args.output_dir}")
+        return
 
     output_dirs = []
     for scope in DEFAULT_SCOPE_SOURCE_FILES:
         scope_output_dir = args.output_dir / scope
-        build_document_level_outputs(
+        evaluate_document_level_outputs(
             selection_path=args.selection,
             ground_truth_path=args.ground_truth,
             output_dir=scope_output_dir,
             scope=scope,
-            write_catalog=False,
-            write_summary=True,
         )
         output_dirs.append(scope_output_dir)
-    print("Saved ACC document-level outputs:")
-    print(f"- {args.output_dir / 'acc_document_level.csv'}")
+    print("Saved ACC ITB project-level evaluation reports:")
     for path in output_dirs:
-        print(f"- {path / 'summary.csv'}")
+        print(f"- {path}")
 
 
 def _write_acc_positive_temp_csv(input_path: Path) -> Path:

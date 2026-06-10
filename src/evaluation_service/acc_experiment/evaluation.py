@@ -8,7 +8,14 @@ from pathlib import Path
 from statistics import mean
 from typing import Any
 
+from loguru import logger
+
 from evaluation_service.acc_experiment.final_selector import load_matching_records
+from evaluation_service.acc_experiment.llm_judge import (
+    build_llm_judge_client,
+    judge_chunk_level_payload,
+    judge_model_name,
+)
 from evaluation_service.matching_evaluation.metrics import evaluate_cross_encoder, evaluate_retrieval
 
 SUMMARY_BASE_FIELDNAMES = [
@@ -17,6 +24,22 @@ SUMMARY_BASE_FIELDNAMES = [
     "positive_queries",
     "avg_precision",
     "avg_f1",
+]
+
+CHUNK_LEVEL_LLM_JUDGE_DETAIL_FIELDNAMES = [
+    "Project Name",
+    "ITB Scope",
+    "Chunk ID",
+    "Section",
+    "No Match Query",
+    "Selected Count",
+    "Candidate Count",
+    "Selected Doc IDs",
+    "Coverage Score",
+    "Purity Score",
+    "Readiness Score",
+    "Final Score",
+    "Confidence",
 ]
 
 Qrels = dict[str, dict[str, int]]
@@ -80,10 +103,25 @@ def evaluate_acc_experiment(
             _evaluate_selected_set(query_id, qrels.get(query_id, {}), llm_rankings.get(query_id, []), query_info)
             for query_id in sorted(set(query_info) | set(qrels) | set(llm_rankings))
         ]
-        summary_rows.append({"stage": llm_stage, **_summarize_selected_set(llm_rows)})
+        llm_summary = {"stage": llm_stage, **_summarize_selected_set(llm_rows)}
+        chunk_judge_rows, chunk_judge_summary = _evaluate_chunk_level_judge(
+            matching_dir=matching_dir,
+            llm_selection_path=llm_selection_path,
+            query_info=query_info,
+            candidate_limit=cross_encoder_k,
+            scope=scope,
+        )
+        llm_summary.update(chunk_judge_summary)
+        summary_rows.append(llm_summary)
 
     output_dir.mkdir(parents=True, exist_ok=True)
     _write_csv(output_dir / "summary.csv", _fieldnames(SUMMARY_BASE_FIELDNAMES, summary_rows), summary_rows)
+    if llm_selection_path:
+        _write_csv(
+            output_dir / "llm_judge_details.csv",
+            CHUNK_LEVEL_LLM_JUDGE_DETAIL_FIELDNAMES,
+            chunk_judge_rows,
+        )
 
 
 def _load_positive_qrels(path: Path) -> Qrels:
@@ -106,6 +144,10 @@ def _load_query_info(judgment_path: Path, qrels: Qrels) -> dict[str, dict[str, s
                 "ITB Scope": _clean(row.get("ITB Scope")),
                 "Chunk ID": _clean(row.get("Chunk ID")),
                 "No Match Query": str(_clean(row.get("No Match")).casefold() == "true"),
+                "Section": _clean(row.get("Section")),
+                "Hierarchy Context": _clean(row.get("Hierarchy Context")),
+                "Keywords": _clean(row.get("Keywords")),
+                "Chunk Text": _clean(row.get("Chunk Text")),
             }
     for query_id in qrels:
         scope, chunk_id = _split_query_id(query_id)
@@ -202,6 +244,78 @@ def _summarize_selected_set(rows: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def _evaluate_chunk_level_judge(
+    matching_dir: Path,
+    llm_selection_path: Path,
+    query_info: dict[str, dict[str, str]],
+    candidate_limit: int,
+    scope: str = "",
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    model = judge_model_name()
+    if not model:
+        return [], _empty_judge_summary()
+    try:
+        client = build_llm_judge_client()
+        candidates_by_query = _load_matching_candidates(matching_dir, candidate_limit, scope)
+        selected_docs_by_query = _load_llm_selection_docs(llm_selection_path, scope)
+        rows = []
+        for query_id in sorted(set(query_info) | set(selected_docs_by_query)):
+            if scope and _split_query_id(query_id)[0] != _canonical_scope(scope):
+                continue
+            info = query_info.get(query_id, {})
+            selected_docs = selected_docs_by_query.get(query_id, [])
+            candidate_docs = candidates_by_query.get(query_id, [])
+            payload = {
+                "project_name": info.get("Project Name", ""),
+                "itb_scope": info.get("ITB Scope", ""),
+                "chunk_id": info.get("Chunk ID", ""),
+                "chunk_context": {
+                    "section": info.get("Section", ""),
+                    "hierarchy_context": info.get("Hierarchy Context", ""),
+                    "keywords": info.get("Keywords", ""),
+                    "chunk_text": info.get("Chunk Text", ""),
+                },
+                "selected_documents": selected_docs,
+                "candidate_documents": candidate_docs,
+            }
+            scores = judge_chunk_level_payload(client, model, payload)
+            rows.append(
+                {
+                    "Project Name": info.get("Project Name", ""),
+                    "ITB Scope": info.get("ITB Scope", ""),
+                    "Chunk ID": info.get("Chunk ID", ""),
+                    "Section": info.get("Section", ""),
+                    "No Match Query": info.get("No Match Query", ""),
+                    "Selected Count": len(selected_docs),
+                    "Candidate Count": len(candidate_docs),
+                    "Selected Doc IDs": "|".join(doc["doc_id"] for doc in selected_docs),
+                    "Coverage Score": scores["coverage_score"],
+                    "Purity Score": scores["purity_score"],
+                    "Readiness Score": scores["readiness_score"],
+                    "Final Score": scores["final_score"],
+                    "Confidence": scores["confidence"],
+                }
+            )
+        return rows, {
+            "avg_llm_coverage_score": _mean_number(row["Coverage Score"] for row in rows),
+            "avg_llm_purity_score": _mean_number(row["Purity Score"] for row in rows),
+            "avg_llm_readiness_score": _mean_number(row["Readiness Score"] for row in rows),
+            "avg_llm_judge_score": _mean_number(row["Final Score"] for row in rows),
+        }
+    except Exception:
+        logger.exception("Chunk-level LLM judge summary failed")
+        return [], _empty_judge_summary()
+
+
+def _empty_judge_summary() -> dict[str, Any]:
+    return {
+        "avg_llm_coverage_score": "",
+        "avg_llm_purity_score": "",
+        "avg_llm_readiness_score": "",
+        "avg_llm_judge_score": "",
+    }
+
+
 def _drop_hit_rate_metrics(row: dict[str, Any]) -> dict[str, Any]:
     return {key: value for key, value in row.items() if not key.startswith("hit_rate")}
 
@@ -224,6 +338,57 @@ def _clip_rankings(rankings: Rankings, limit: int) -> Rankings:
     if limit <= 0:
         return rankings
     return {key: value[:limit] for key, value in rankings.items()}
+
+
+def _load_matching_candidates(matching_dir: Path, candidate_limit: int, scope: str = "") -> dict[str, list[dict[str, str]]]:
+    records = load_matching_records(matching_dir, candidate_limit)
+    candidates = {}
+    for record in records:
+        query_id = _query_id(record["itb_scope"], record["chunk_id"])
+        if not query_id:
+            continue
+        if scope and _split_query_id(query_id)[0] != _canonical_scope(scope):
+            continue
+        candidates[query_id] = [
+            {
+                "rank": candidate["rank"],
+                "doc_id": candidate["doc_id"],
+                "document_no": candidate["document_no"],
+                "title": candidate["title"],
+                "equipment": candidate["equipment"],
+                "system": candidate["system"],
+                "deliverable": candidate["deliverable"],
+            }
+            for candidate in record["candidates"]
+        ]
+    return candidates
+
+
+def _load_llm_selection_docs(path: Path, scope: str = "") -> dict[str, list[dict[str, str]]]:
+    docs_by_query: dict[str, list[dict[str, str]]] = {}
+    for row in _read_csv(path):
+        query_id = _query_id(row.get("ITB Scope"), row.get("Chunk ID"))
+        doc_id = _clean(row.get("MDL Doc ID"))
+        if not query_id:
+            continue
+        if scope and _split_query_id(query_id)[0] != _canonical_scope(scope):
+            continue
+        docs_by_query.setdefault(query_id, [])
+        if not doc_id:
+            continue
+        if any(existing["doc_id"] == doc_id for existing in docs_by_query[query_id]):
+            continue
+        docs_by_query[query_id].append(
+            {
+                "doc_id": doc_id,
+                "document_no": _clean(row.get("Document No")),
+                "title": _clean(row.get("Title")),
+                "equipment": _clean(row.get("Equipment")),
+                "system": _clean(row.get("System")),
+                "deliverable": _clean(row.get("Deliverable")),
+            }
+        )
+    return docs_by_query
 
 
 def _f1(precision: float | None, recall: float | None) -> float | None:

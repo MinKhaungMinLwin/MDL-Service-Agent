@@ -8,6 +8,14 @@ from pathlib import Path
 from statistics import mean
 from typing import Any
 
+from loguru import logger
+
+from evaluation_service.acc_experiment.llm_judge import (
+    build_llm_judge_client,
+    judge_model_name,
+    judge_project_level_payload,
+)
+
 DOCUMENT_LEVEL_FIELDNAMES = [
     "ITB Scope",
     "MDL Doc ID",
@@ -26,18 +34,49 @@ DOCUMENT_LEVEL_SUMMARY_FIELDNAMES = [
     "avg_precision",
     "avg_f1",
     "avg_recall",
+    "avg_llm_coverage_score",
+    "avg_llm_purity_score",
+    "avg_llm_readiness_score",
+    "avg_llm_judge_score",
+]
+
+PROJECT_LEVEL_LLM_JUDGE_DETAIL_FIELDNAMES = [
+    "Project Name",
+    "ITB Scope",
+    "Chunk Count",
+    "Merged Document Count",
+    "Coverage Score",
+    "Purity Score",
+    "Readiness Score",
+    "Final Score",
+    "Confidence",
 ]
 
 
-def build_document_level_outputs(
+def build_document_level_catalog(
+    selection_path: Path,
+    output_dir: Path,
+    scope: str = "",
+) -> None:
+    """Write one final ITB project-level MDL catalog."""
+    predictions = _load_predictions(selection_path)
+    if scope:
+        canonical_scope = _canonical_scope(scope)
+        predictions = {key: value for key, value in predictions.items() if key == canonical_scope}
+
+    catalog_rows = _build_catalog_rows(predictions)
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    _write_csv(output_dir / "acc_document_level.csv", DOCUMENT_LEVEL_FIELDNAMES, catalog_rows)
+
+
+def evaluate_document_level_outputs(
     selection_path: Path,
     ground_truth_path: Path,
     output_dir: Path,
     scope: str = "",
-    write_catalog: bool = True,
-    write_summary: bool = True,
 ) -> None:
-    """Write one final ITB project-level MDL catalog with project-level metrics."""
+    """Evaluate ITB project-level outputs and write summary plus LLM judge details."""
     predictions = _load_predictions(selection_path)
     truth = _load_ground_truth(ground_truth_path)
     if scope:
@@ -45,15 +84,15 @@ def build_document_level_outputs(
         predictions = {key: value for key, value in predictions.items() if key == canonical_scope}
         truth = {key: value for key, value in truth.items() if key == canonical_scope}
 
-    catalog_rows = _build_catalog_rows(predictions)
     eval_rows = _evaluate_document_level(predictions, truth)
-    summary_rows = [{"stage": "itb_project_level", **_summarize_document_level(eval_rows)}]
+    summary_row = {"stage": "itb_project_level", **_summarize_document_level(eval_rows)}
+    judge_rows, judge_summary = _evaluate_project_level_judge(predictions, ground_truth_path, scope)
+    summary_row.update(judge_summary)
+    summary_rows = [summary_row]
 
     output_dir.mkdir(parents=True, exist_ok=True)
-    if write_catalog:
-        _write_csv(output_dir / "acc_document_level.csv", DOCUMENT_LEVEL_FIELDNAMES, catalog_rows)
-    if write_summary:
-        _write_csv(output_dir / "summary.csv", DOCUMENT_LEVEL_SUMMARY_FIELDNAMES, summary_rows)
+    _write_csv(output_dir / "summary.csv", DOCUMENT_LEVEL_SUMMARY_FIELDNAMES, summary_rows)
+    _write_csv(output_dir / "llm_judge_details.csv", PROJECT_LEVEL_LLM_JUDGE_DETAIL_FIELDNAMES, judge_rows)
 
 
 def _load_predictions(path: Path) -> dict[str, dict[str, dict[str, Any]]]:
@@ -154,6 +193,105 @@ def _summarize_document_level(rows: list[dict[str, Any]]) -> dict[str, Any]:
         "avg_precision": _mean_number(row["Precision"] for row in positive_rows),
         "avg_f1": _mean_number(row["F1"] for row in positive_rows),
     }
+
+
+def _evaluate_project_level_judge(
+    predictions: dict[str, dict[str, dict[str, Any]]],
+    ground_truth_path: Path,
+    scope: str = "",
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    model = judge_model_name()
+    if not model:
+        return [], _empty_judge_summary()
+    try:
+        client = build_llm_judge_client()
+        chunk_summaries = _load_scope_chunks(ground_truth_path)
+        rows = []
+        all_scopes = sorted(set(predictions) | set(chunk_summaries), key=_project_sort_key)
+        for current_scope in all_scopes:
+            if scope and current_scope != _canonical_scope(scope):
+                continue
+            supporting_chunks = chunk_summaries.get(current_scope, [])
+            merged_documents = _project_documents(predictions.get(current_scope, {}))
+            payload = {
+                "project_name": _project_name_from_scope(current_scope),
+                "itb_scope": current_scope,
+                "supporting_chunks": supporting_chunks,
+                "merged_selected_documents": merged_documents,
+            }
+            scores = judge_project_level_payload(client, model, payload)
+            rows.append(
+                {
+                    "Project Name": _project_name_from_scope(current_scope),
+                    "ITB Scope": current_scope,
+                    "Chunk Count": len(supporting_chunks),
+                    "Merged Document Count": len(merged_documents),
+                    "Coverage Score": scores["coverage_score"],
+                    "Purity Score": scores["purity_score"],
+                    "Readiness Score": scores["readiness_score"],
+                    "Final Score": scores["final_score"],
+                    "Confidence": scores["confidence"],
+                }
+            )
+        return rows, {
+            "avg_llm_coverage_score": _mean_number(row["Coverage Score"] for row in rows),
+            "avg_llm_purity_score": _mean_number(row["Purity Score"] for row in rows),
+            "avg_llm_readiness_score": _mean_number(row["Readiness Score"] for row in rows),
+            "avg_llm_judge_score": _mean_number(row["Final Score"] for row in rows),
+        }
+    except Exception:
+        logger.exception("Project-level LLM judge summary failed")
+        return [], _empty_judge_summary()
+
+
+def _empty_judge_summary() -> dict[str, Any]:
+    return {
+        "avg_llm_coverage_score": "",
+        "avg_llm_purity_score": "",
+        "avg_llm_readiness_score": "",
+        "avg_llm_judge_score": "",
+    }
+
+
+def _load_scope_chunks(path: Path) -> dict[str, list[dict[str, str]]]:
+    chunks: dict[str, list[dict[str, str]]] = defaultdict(list)
+    seen = set()
+    for row in _read_csv(path):
+        scope = _canonical_scope(_clean(row.get("ITB Scope")))
+        chunk_id = _clean(row.get("Chunk ID"))
+        if not scope or not chunk_id:
+            continue
+        key = (scope, chunk_id)
+        if key in seen:
+            continue
+        seen.add(key)
+        chunks[scope].append(
+            {
+                "chunk_id": chunk_id,
+                "section": _clean(row.get("Section")),
+                "hierarchy_context": _clean(row.get("Hierarchy Context")),
+                "keywords": _clean(row.get("Keywords")),
+                "chunk_text": _clean(row.get("Chunk Text")),
+            }
+        )
+    return {scope: values for scope, values in chunks.items()}
+
+
+def _project_documents(docs: dict[str, dict[str, Any]]) -> list[dict[str, str]]:
+    rows = []
+    for doc in docs.values():
+        rows.append(
+            {
+                "doc_id": _clean(doc.get("MDL Doc ID")),
+                "document_no": _clean(doc.get("Document No")),
+                "title": _clean(doc.get("Title")),
+                "equipment": _clean(doc.get("Equipment")),
+                "system": _clean(doc.get("System")),
+                "deliverable": _clean(doc.get("Deliverable")),
+                "evidence_chunk_ids": "|".join(doc.get("_chunk_ids", [])),
+            }
+        )
+    return sorted(rows, key=lambda row: (_clean(row.get("document_no")), _clean(row.get("doc_id"))))
 
 
 def _read_csv(path: Path) -> list[dict[str, str]]:

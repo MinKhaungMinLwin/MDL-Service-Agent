@@ -48,6 +48,7 @@ acc-select-final = "evaluation_service.acc_experiment.cli:select_final"
 acc-tune-selector = "evaluation_service.acc_experiment.cli:tune_selector"
 acc-evaluate-matching = "evaluation_service.acc_experiment.cli:evaluate_matching"
 acc-aggregate-final = "evaluation_service.acc_experiment.cli:aggregate_final"
+acc-evaluate-project-level = "evaluation_service.acc_experiment.cli:evaluate_project_level"
 itb-eval-matching = "evaluation_service.matching_evaluation.cli:evaluate"
 schedule-eval = "evaluation_service.schedule_evaluation.cli:evaluate"
 
