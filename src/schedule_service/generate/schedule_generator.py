@@ -192,17 +192,20 @@ def _format_schedule_row(
     rule_quality_fields = ctx.rule_quality.output_fields() if ctx.rule_quality else {}
     activity_quality_fields = ctx.activity_quality.output_fields() if ctx.activity_quality else {}
 
-    # Compute FA/FC date ranges
+    # Compute FA/FC date ranges only when rule/activity quality passes the generation gate.
     dr = DateRange()
     date_range_status = "no_rule"
+    date_range_block_reasons: list[str] = []
     if rule and sub_type == "SKIP":
         date_range_status = "skip"
     elif rule:
-        anchor = resolve_anchor_date(activity.start_date, activity.finish_date, rule, shift_days)
-        ntp_floor = TEMPLATE_NTP + timedelta(days=shift_days) if shift_days else None
-        dr = compute_date_range(vt_parsed, anchor, sub_type, rule.priority, ntp_floor=ntp_floor)
-        date_range_status = _date_range_status(anchor, dr)
-    schedule_quality = _schedule_quality(row, ctx, dr, date_range_status)
+        date_range_status, date_range_block_reasons = _date_range_gate(ctx.rule_quality, ctx.activity_quality)
+        if date_range_status == "generated":
+            anchor = resolve_anchor_date(activity.start_date, activity.finish_date, rule, shift_days)
+            ntp_floor = TEMPLATE_NTP + timedelta(days=shift_days) if shift_days else None
+            dr = compute_date_range(vt_parsed, anchor, sub_type, rule.priority, ntp_floor=ntp_floor)
+            date_range_status = _date_range_status(anchor, dr)
+    schedule_quality = _schedule_quality(row, ctx, dr, date_range_status, date_range_block_reasons)
 
     return {
         "source_file": row.get("Source File", ""),
@@ -248,8 +251,10 @@ def _schedule_quality(
     ctx: MatchContext,
     dr: DateRange,
     date_range_status: str,
+    date_range_block_reasons: list[str] | None = None,
 ) -> dict[str, Any]:
     """Compute end-to-end schedule confidence from candidate, rule, activity, and date quality."""
+    date_range_block_reasons = date_range_block_reasons or []
     if date_range_status == "skip":
         return {"status": "skip", "confidence": 0.0, "reasons": "date_status=skip"}
     if date_range_status == "no_rule":
@@ -257,6 +262,12 @@ def _schedule_quality(
         if ctx.rule_quality and ctx.rule_quality.guard_status == "rejected":
             reason = f"rule_guard_rejected:{ctx.rule_quality.guard_reason}"
         return {"status": "blocked_no_rule", "confidence": 0.0, "reasons": reason}
+    if date_range_status in {"blocked_rule", "blocked_activity", "blocked_rule_activity"}:
+        return {
+            "status": date_range_status,
+            "confidence": 0.0,
+            "reasons": ";".join(date_range_block_reasons),
+        }
     if date_range_status != "generated":
         return {"status": "blocked_missing_date", "confidence": 0.0, "reasons": f"date_status={date_range_status}"}
 
@@ -296,6 +307,70 @@ def _schedule_quality(
         "confidence": confidence,
         "reasons": ";".join(reasons),
     }
+
+
+def _date_range_gate(
+    rule_quality: RuleMatchQuality | None,
+    activity_quality: ActivityMatchQuality | None,
+) -> tuple[str, list[str]]:
+    """Return a gating status for date generation based on rule/activity quality."""
+    rule_block_reasons = _rule_block_reasons(rule_quality)
+    activity_block_reasons = _activity_block_reasons(activity_quality)
+    if rule_block_reasons and activity_block_reasons:
+        return "blocked_rule_activity", [*rule_block_reasons, *activity_block_reasons]
+    if rule_block_reasons:
+        return "blocked_rule", rule_block_reasons
+    if activity_block_reasons:
+        return "blocked_activity", activity_block_reasons
+    return "generated", []
+
+
+def _rule_block_reasons(quality: RuleMatchQuality | None) -> list[str]:
+    """Return reasons that make a rule too unreliable for date generation."""
+    if quality is None:
+        return []
+    reasons = []
+    if quality.guard_status == "rejected":
+        reasons.append(f"rule_guard_rejected:{quality.guard_reason}")
+    if quality.family_status == "mismatch":
+        reasons.append("rule_family_mismatch")
+    if getattr(quality, "subtype_status", "") == "mismatch":
+        reasons.append("rule_subtype_mismatch")
+    if quality.scope_status == "mismatch":
+        reasons.append("rule_scope_mismatch")
+    if quality.final_score < 0.5:
+        reasons.append("rule_score_below_gate")
+    if quality.scope_status in {"rule_generic", "query_unscoped", "no_rule"} and quality.final_score < 0.7:
+        reasons.append(f"rule_scope_ambiguous:{quality.scope_status}")
+    if (
+        quality.family_status in {"compatible", "unknown", "missing_rule_family", "missing_query_family"}
+        and quality.final_score < 0.7
+    ):
+        reasons.append(f"rule_family_uncertain:{quality.family_status}")
+    return reasons
+
+
+def _activity_block_reasons(quality: ActivityMatchQuality | None) -> list[str]:
+    """Return reasons that make an activity too unreliable for date generation."""
+    if quality is None:
+        return []
+    reasons = []
+    if quality.phase_status == "mismatch":
+        reasons.append("activity_phase_mismatch")
+    if quality.scope_status == "mismatch":
+        reasons.append("activity_scope_mismatch")
+    if getattr(quality, "scope_source", "") == "rule" and quality.scope_status != "match":
+        reasons.append("activity_rule_scope_unmatched")
+    if quality.rrf_score < 0.02:
+        reasons.append("activity_rrf_below_gate")
+    if quality.generic_activity and quality.adjusted_score < 0.015:
+        reasons.append("activity_generic_low_confidence")
+    if (
+        quality.query_phase in {"system_design", "design_drawing", "design_criteria", "civil_design"}
+        and quality.activity_phase == "procurement"
+    ):
+        reasons.append("activity_phase_procurement_conflict")
+    return reasons
 
 
 def _has_rule_ambiguity_reasons(reasons: list[str]) -> bool:

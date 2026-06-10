@@ -94,6 +94,17 @@ _GENERIC_ACTIVITY_NAMES = {
     "DESIGN CRITERIA",
 }
 
+_PHASE_BUCKETS: dict[str, tuple[str, ...]] = {
+    "design_criteria": ("design_criteria", "system_design", "civil_design"),
+    "design_drawing": ("system_design", "civil_design"),
+    "system_design": ("system_design",),
+    "civil_design": ("civil_design",),
+    "procurement": ("procurement",),
+    "commissioning": ("commissioning",),
+    "manual": ("delivery", "procurement", "installation"),
+    "delivery": ("delivery", "procurement"),
+}
+
 
 @dataclass(frozen=True)
 class ActivityMatchQuality:
@@ -233,11 +244,18 @@ def _match_activities_semantic(
     # Deduplicate BM25 scoring: score each unique query once
     query_bm25_scores = {q: bm25.score(q) for q in unique_queries}
 
+    activity_phase_cache = [
+        _activity_phase(" ".join([activity.activity_name_clean, activity.activity_name, activity.wbs_path]))
+        for activity in activities
+    ]
+
     results: list[ScheduleActivity] = []
     qualities: list[ActivityMatchQuality] = []
     for row, rule, query in zip(rows, rules, activity_queries, strict=True):
+        query_phase = _query_phase(row, rule)
         bm25_scores = query_bm25_scores[query]
         semantic_scores = all_semantic_scores[query_to_idx[query]].tolist()
+        allowed_indexes = _phase_bucket_indexes(query_phase, activity_phase_cache)
         candidates = rrf_candidates(
             activities=activities,
             bm25_scores=bm25_scores,
@@ -245,6 +263,7 @@ def _match_activities_semantic(
             retrieve_k=50,
             top_k=_RERANK_TOP_K,
             has_semantic=True,
+            allowed_indexes=allowed_indexes,
         )
         candidate, quality = _select_activity_candidate(row, rule, query, candidates)
         results.append(candidate.activity)
@@ -267,6 +286,7 @@ def rrf_candidates(
     top_k: int,
     has_semantic: bool,
     rrf_k: int = _RRF_K,
+    allowed_indexes: set[int] | None = None,
 ) -> list[Candidate]:
     """Merge keyword and semantic ranks with reciprocal rank fusion."""
     bm25_order = rank_desc(bm25_scores)
@@ -274,9 +294,23 @@ def rrf_candidates(
     semantic_order = rank_desc(semantic_scores) if has_semantic else []
     semantic_ranks = {index: rank for rank, index in enumerate(semantic_order, start=1)}
 
+    if allowed_indexes is not None:
+        bm25_order = [index for index in bm25_order if index in allowed_indexes]
+        semantic_order = [index for index in semantic_order if index in allowed_indexes]
+
     candidate_indexes = set(bm25_order[:retrieve_k])
     if has_semantic:
         candidate_indexes.update(semantic_order[:retrieve_k])
+
+    if not candidate_indexes and allowed_indexes is not None:
+        # Fall back to the unfiltered shortlist if the phase bucket is empty.
+        bm25_order = rank_desc(bm25_scores)
+        semantic_order = rank_desc(semantic_scores) if has_semantic else []
+        bm25_ranks = {index: rank for rank, index in enumerate(bm25_order, start=1)}
+        semantic_ranks = {index: rank for rank, index in enumerate(semantic_order, start=1)}
+        candidate_indexes = set(bm25_order[:retrieve_k])
+        if has_semantic:
+            candidate_indexes.update(semantic_order[:retrieve_k])
 
     candidates: list[Candidate] = []
     for index in candidate_indexes:
@@ -379,15 +413,24 @@ def _query_phase(row: dict[str, str], rule: ValidationRule | None) -> str:
     deliverable = normalize_deliverable(
         refine_deliverable_with_title(row.get("Deliverable", "").strip(), title)
     ).upper()
+    scope_text = " ".join([row.get("Equipment", ""), row.get("System", ""), row.get("Building", "")]).upper()
     text = f"{deliverable} {title}"
     if "DESIGN CRITERIA" in text:
         return "design_criteria"
     if any(term in text for term in ("P&ID", "P&I", "SYSTEM DESCRIPTION", "CONFIGURATION", "LOGIC")):
         return "system_design"
+    if any(term in text for term in ("HAZARDOUS AREA CLASSIFICATION", "CLASSIFICATION")):
+        return "system_design"
     if any(term in text for term in ("TECHNICAL SPECIFICATION", "SPECIFICATION", "DATA SHEET", "DATASHEET", "CURVE")):
         return "procurement"
     if any(term in text for term in ("FOUNDATION", "DESIGN REPORT", "CALCULATION")):
         return "civil_design"
+    if study_or_report_phase := _study_report_phase(text, scope_text):
+        return study_or_report_phase
+    if any(term in text for term in ("SITE PLAN", "PLOT PLAN")):
+        return "civil_design"
+    if drawing_phase := _design_drawing_phase(text, scope_text):
+        return drawing_phase
     if any(term in text for term in ("COMMISSIONING", "TEST")):
         return "commissioning"
     if any(term in text for term in ("MANUAL", "O&M", "OPERATION & MAINTENANCE", "OPERATION AND MAINTENANCE")):
@@ -401,6 +444,102 @@ def _query_phase(row: dict[str, str], rule: ValidationRule | None) -> str:
         if boosted:
             return boosted
     return ""
+
+
+def _study_report_phase(text: str, scope_text: str) -> str:
+    """Infer phase for classification/study/report rows before rule keyword boost."""
+    engineering_terms = (
+        "HAZOP",
+        "SIL",
+        "OPERABILITY",
+        "HARMONIC",
+        "SHORT CIRCUIT",
+        "LOAD FLOW",
+        "PROTECTION RELAY",
+        "PHILOSOPHY",
+        "ANALYSIS",
+        "CFD",
+        "PERFORMANCE",
+        "PROCESS",
+        "SYSTEM",
+    )
+    civil_terms = (
+        "FOUNDATION",
+        "FDN",
+        "STRUCTURE",
+        "BUILDING",
+        "SHELTER",
+        "PIPE RACK",
+        "PLOT PLAN",
+        "SITE PLAN",
+        "ARCHITECTURAL",
+        "CIVIL",
+    )
+    if not any(term in text for term in ("STUDY", "REPORT", "CLASSIFICATION")):
+        return ""
+    if any(term in text or term in scope_text for term in civil_terms):
+        return "civil_design"
+    if any(term in text or term in scope_text for term in engineering_terms):
+        return "system_design"
+    return ""
+
+
+def _design_drawing_phase(text: str, scope_text: str) -> str:
+    """Infer whether a drawing-like document belongs to system or civil design."""
+    if not any(term in text for term in ("LAYOUT", "ARRANGEMENT", "OUTLINE", "DRAWING", "DIAGRAM")):
+        return ""
+
+    civil_terms = (
+        "FOUNDATION",
+        "FDN",
+        "STRUCTURE",
+        "BUILDING",
+        "SHELTER",
+        "PIPE RACK",
+        "PLOT PLAN",
+        "SITE PLAN",
+        "ELEVATION",
+        "SECTION",
+        "REBAR",
+        "EMBEDDED",
+        "ARCHITECTURAL",
+        "CIVIL",
+    )
+    system_terms = (
+        "P&ID",
+        "P&I",
+        "FLOW DIAGRAM",
+        "CONTROL LOOP",
+        "CONTROL LOGIC",
+        "WIRING",
+        "ELEMENTARY",
+        "SINGLE LINE",
+        "ISOMETRIC",
+        "I/O",
+        "OUTLINE DRAWING",
+        "GENERAL ARRANGEMENT DRAWING FOR",
+        "ARRANGEMENT DRAWING FOR",
+    )
+    if any(term in text or term in scope_text for term in civil_terms):
+        return "civil_design"
+    if any(term in text or term in scope_text for term in system_terms):
+        return "system_design"
+    if "GENERAL ARRANGEMENT" in text and scope_text.strip():
+        return "system_design"
+    return ""
+
+
+def _phase_bucket_indexes(query_phase: str, activity_phases: list[str]) -> set[int] | None:
+    """Return activity indexes allowed for a query phase, or None for no filter."""
+    allowed_phases = set(_PHASE_BUCKETS.get(query_phase, ()))
+    if not allowed_phases:
+        return None
+    allowed_indexes = {
+        index for index, activity_phase in enumerate(activity_phases)
+        if activity_phase in allowed_phases
+    }
+    # Keep unknowns only as a fallback via rrf_candidates; do not include them here.
+    return allowed_indexes or None
 
 
 def _activity_keyword_phase(activity_keywords: list[str]) -> str:
