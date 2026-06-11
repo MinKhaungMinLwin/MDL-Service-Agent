@@ -3,11 +3,8 @@
 from __future__ import annotations
 
 import argparse
-import csv
 import os
-import tempfile
 from pathlib import Path
-from typing import Any
 
 from loguru import logger
 
@@ -48,6 +45,8 @@ DEFAULT_SELECTION_DIR = DEFAULT_BASE_DIR / "llm_final_selection"
 DEFAULT_EVALUATION_DIR = DEFAULT_BASE_DIR / "evaluation"
 DEFAULT_GROUND_TRUTH_PATH = DEFAULT_BASE_DIR / "ground_truth" / "acc_itb_mdl_ground_truth.csv"
 DEFAULT_SELECTION_PATH = DEFAULT_SELECTION_DIR / "acc_llm_final_selection.csv"
+DEFAULT_DOCUMENT_LEVEL_DIR = DEFAULT_BASE_DIR / "document_level"
+DEFAULT_DOCUMENT_LEVEL_PATH = DEFAULT_DOCUMENT_LEVEL_DIR / "acc_document_level.csv"
 DEFAULT_CROSS_ENCODER_MODEL = "cross-encoder/ms-marco-MiniLM-L6-v2"
 DEFAULT_SCOPE_SOURCE_FILES = {
     "Fadhili_ITB": "Fadhili_MDL.xlsx",
@@ -134,11 +133,7 @@ def match(argv: list[str] | None = None) -> None:
                     embedding_service=embedding_service,
                 )
                 service.setup()
-                filtered_input_path = _write_acc_positive_temp_csv(input_path)
-                try:
-                    service.match_file(filtered_input_path, output_path)
-                finally:
-                    filtered_input_path.unlink(missing_ok=True)
+                service.match_file(input_path, output_path)
                 print(f"Saved {mode} ACC matching for {scope}: {output_path}")
 
 
@@ -148,6 +143,25 @@ def select_final(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description="Run ACC LLM final selector from the final Top-K matching candidates.")
     parser.add_argument("--matching-dir", type=Path, default=DEFAULT_MATCHING_DIR)
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_SELECTION_DIR)
+    parser.add_argument("--ground-truth", type=Path, default=DEFAULT_GROUND_TRUTH_PATH)
+    parser.add_argument(
+        "--evaluation-output-dir",
+        type=Path,
+        default=DEFAULT_BASE_DIR / "evaluation_llm_final_selector",
+        help="Directory for automatic chunk-level evaluation after final selection.",
+    )
+    parser.add_argument(
+        "--retrieval-k",
+        type=int,
+        default=int(os.getenv("ACC_EVAL_RETRIEVAL_K", "300")),
+        help="Retrieval cutoff label/value to use in automatic chunk-level evaluation.",
+    )
+    parser.add_argument(
+        "--rrf-k",
+        type=int,
+        default=int(os.getenv("ACC_EVAL_RRF_K", os.getenv("ACC_FINAL_SELECTOR_TOP_K", "20"))),
+        help="RRF/final-candidate cutoff label/value to use in automatic chunk-level evaluation.",
+    )
     parser.add_argument("--prompt-file", type=Path, default=DEFAULT_FINAL_SELECTOR_PROMPT_PATH)
     parser.add_argument(
         "--selector-backend",
@@ -182,12 +196,17 @@ def select_final(argv: list[str] | None = None) -> None:
         default=int(os.getenv("ACC_FINAL_SELECTOR_MAX_RECORDS", "0")),
         help="Limit records for token/cost test runs. Use 0 to process all records.",
     )
+    parser.add_argument(
+        "--no-evaluate",
+        action="store_true",
+        help="Skip automatic chunk-level evaluation after final selection.",
+    )
     args = parser.parse_args(argv)
     resolved_model = args.model or required_env("AZURE_OPENAI_CHAT_DEPLOYMENT")
 
     logger.info(
         "Starting ACC final selector with backend={}, model={}, matching_dir={}, output_dir={}, top_k={}, "
-        "candidate_batch_size={}, llm_retries={}, max_concurrency={}, max_records={}",
+        "candidate_batch_size={}, llm_retries={}, max_concurrency={}, max_records={}, retrieval_k={}, rrf_k={}",
         args.selector_backend,
         resolved_model,
         args.matching_dir,
@@ -197,6 +216,8 @@ def select_final(argv: list[str] | None = None) -> None:
         args.llm_retries,
         args.max_concurrency,
         args.max_records,
+        args.retrieval_k,
+        args.rrf_k,
     )
 
     prompt = load_prompt(args.prompt_file)
@@ -230,6 +251,36 @@ def select_final(argv: list[str] | None = None) -> None:
     count = service.select(args.matching_dir, args.output_dir)
     selection_path = args.output_dir / "acc_llm_final_selection.csv"
     print(f"Saved {count} ACC final selected rows: {selection_path}")
+
+    if args.no_evaluate:
+        return
+
+    evaluation_paths = []
+    scopes = [
+        scope
+        for scope in DEFAULT_SCOPE_SOURCE_FILES
+        if (args.matching_dir / scope / "hybrid" / "output_match_itb_acc_chunks.csv").exists()
+    ]
+
+    for scope in scopes:
+        scope_output_dir = args.evaluation_output_dir / scope
+        evaluate_acc_experiment(
+            ground_truth_path=args.ground_truth,
+            matching_dir=args.matching_dir,
+            output_dir=scope_output_dir,
+            llm_selection_path=selection_path,
+            retrieval_k=args.retrieval_k,
+            cross_encoder_k=args.rrf_k,
+            llm_k=args.top_k,
+            scope=scope,
+            enable_llm_judge=False,
+        )
+        evaluation_paths.append(scope_output_dir)
+
+    if evaluation_paths:
+        print("Saved ACC chunk-level evaluation reports:")
+        for path in evaluation_paths:
+            print(f"- {path}")
 
 
 def tune_selector(argv: list[str] | None = None) -> None:
@@ -382,6 +433,11 @@ def evaluate_matching(argv: list[str] | None = None) -> None:
     parser.add_argument("--cross-encoder-k", type=int, default=20)
     parser.add_argument("--llm-k", type=int, default=0)
     parser.add_argument(
+        "--enable-llm-judge",
+        action="store_true",
+        help="Also run LLM-as-a-judge scoring for ITB chunk-level evaluation.",
+    )
+    parser.add_argument(
         "--scope",
         default="",
         help="Evaluate only one ITB scope, e.g. Fadhili_ITB, R_N_ITB, or Turkistan_ITB.",
@@ -398,6 +454,7 @@ def evaluate_matching(argv: list[str] | None = None) -> None:
         cross_encoder_k=args.cross_encoder_k,
         llm_k=args.llm_k,
         scope=args.scope,
+        enable_llm_judge=args.enable_llm_judge,
     )
     print(f"Saved ACC matching evaluation reports: {args.output_dir}")
 
@@ -408,6 +465,23 @@ def aggregate_final(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description="Aggregate ACC final selections to ITB project-level MDL outputs.")
     parser.add_argument("--selection", type=Path, default=DEFAULT_SELECTION_DIR / "acc_llm_final_selection.csv")
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_BASE_DIR / "document_level")
+    parser.add_argument("--ground-truth", type=Path, default=DEFAULT_GROUND_TRUTH_PATH)
+    parser.add_argument(
+        "--evaluation-output-dir",
+        type=Path,
+        default=DEFAULT_BASE_DIR / "project_level_evaluation",
+        help="Directory for automatic ITB project-level evaluation after aggregation.",
+    )
+    parser.add_argument(
+        "--enable-llm-judge",
+        action="store_true",
+        help="Also run LLM-as-a-judge scoring for automatic ITB project-level evaluation.",
+    )
+    parser.add_argument(
+        "--no-evaluate",
+        action="store_true",
+        help="Skip automatic ITB project-level evaluation after aggregation.",
+    )
     parser.add_argument(
         "--scope",
         default="",
@@ -415,29 +489,55 @@ def aggregate_final(argv: list[str] | None = None) -> None:
     )
     args = parser.parse_args(argv)
     if args.scope:
-        build_document_level_catalog(
+        document_level_path = build_document_level_catalog(
             selection_path=args.selection,
             output_dir=args.output_dir,
             scope=args.scope,
         )
         print(f"Saved ACC document-level outputs: {args.output_dir}")
+        if args.no_evaluate:
+            return
+        evaluate_document_level_outputs(
+            document_level_path=document_level_path,
+            ground_truth_path=args.ground_truth,
+            output_dir=args.evaluation_output_dir,
+            scope=args.scope,
+            enable_llm_judge=args.enable_llm_judge,
+        )
+        print(f"Saved ACC ITB project-level evaluation reports: {args.evaluation_output_dir}")
         return
 
-    build_document_level_catalog(
+    document_level_path = build_document_level_catalog(
         selection_path=args.selection,
         output_dir=args.output_dir,
     )
     print("Saved ACC document-level outputs:")
-    print(f"- {args.output_dir / 'acc_document_level.csv'}")
+    print(f"- {document_level_path}")
+
+    if args.no_evaluate:
+        return
+
+    evaluate_document_level_outputs(
+        document_level_path=document_level_path,
+        ground_truth_path=args.ground_truth,
+        output_dir=args.evaluation_output_dir,
+        enable_llm_judge=args.enable_llm_judge,
+    )
+    print(f"Saved ACC ITB project-level evaluation reports: {args.evaluation_output_dir}")
 
 
 def evaluate_project_level(argv: list[str] | None = None) -> None:
-    """Evaluate ITB project-level outputs with rule-based and LLM judge metrics."""
+    """Evaluate ITB project-level outputs with rule-based metrics and optional LLM judge metrics."""
     load_env_file()
     parser = argparse.ArgumentParser(description="Evaluate ACC ITB project-level outputs.")
-    parser.add_argument("--selection", type=Path, default=DEFAULT_SELECTION_DIR / "acc_llm_final_selection.csv")
+    parser.add_argument("--document-level", type=Path, default=DEFAULT_DOCUMENT_LEVEL_PATH)
     parser.add_argument("--ground-truth", type=Path, default=DEFAULT_GROUND_TRUTH_PATH)
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_BASE_DIR / "project_level_evaluation")
+    parser.add_argument(
+        "--enable-llm-judge",
+        action="store_true",
+        help="Also run LLM-as-a-judge scoring for ITB project-level evaluation.",
+    )
     parser.add_argument(
         "--scope",
         default="",
@@ -447,45 +547,22 @@ def evaluate_project_level(argv: list[str] | None = None) -> None:
 
     if args.scope:
         evaluate_document_level_outputs(
-            selection_path=args.selection,
+            document_level_path=args.document_level,
             ground_truth_path=args.ground_truth,
             output_dir=args.output_dir,
             scope=args.scope,
+            enable_llm_judge=args.enable_llm_judge,
         )
         print(f"Saved ACC ITB project-level evaluation reports: {args.output_dir}")
         return
 
-    output_dirs = []
-    for scope in DEFAULT_SCOPE_SOURCE_FILES:
-        scope_output_dir = args.output_dir / scope
-        evaluate_document_level_outputs(
-            selection_path=args.selection,
-            ground_truth_path=args.ground_truth,
-            output_dir=scope_output_dir,
-            scope=scope,
-        )
-        output_dirs.append(scope_output_dir)
-    print("Saved ACC ITB project-level evaluation reports:")
-    for path in output_dirs:
-        print(f"- {path}")
-
-
-def _write_acc_positive_temp_csv(input_path: Path) -> Path:
-    with open(input_path, newline="", encoding="utf-8-sig") as file:
-        reader = csv.DictReader(file)
-        fieldnames = list(reader.fieldnames or [])
-        rows = [row for row in reader if _is_true(row.get("Is ACC Related"))]
-    with tempfile.NamedTemporaryFile("w", newline="", encoding="utf-8-sig", suffix=".csv", delete=False) as temp_file:
-        writer = csv.DictWriter(temp_file, fieldnames=fieldnames, extrasaction="ignore")
-        writer.writeheader()
-        writer.writerows(rows)
-        return Path(temp_file.name)
-
-
-def _is_true(value: Any) -> bool:
-    if isinstance(value, bool):
-        return value
-    return str(value).strip().casefold() in {"true", "yes", "y", "1"}
+    evaluate_document_level_outputs(
+        document_level_path=args.document_level,
+        ground_truth_path=args.ground_truth,
+        output_dir=args.output_dir,
+        enable_llm_judge=args.enable_llm_judge,
+    )
+    print(f"Saved ACC ITB project-level evaluation reports: {args.output_dir}")
 
 
 if __name__ == "__main__":

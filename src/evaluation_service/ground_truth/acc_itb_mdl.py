@@ -42,7 +42,7 @@ GROUND_TRUTH_FIELDNAMES = [
     "Verified MDL Doc IDs",
     "Rejected MDL Doc IDs",
     "Invalid MDL Doc IDs",
-    "No Match",
+    "No ACC Ground Truth",
     "Selector Reason",
     "Verifier Reason",
     "Label Status",
@@ -244,7 +244,7 @@ class ACCGroundTruthService:
             "Verified MDL Doc IDs": "|".join(verified_ids),
             "Rejected MDL Doc IDs": "|".join(rejected_ids),
             "Invalid MDL Doc IDs": "|".join(invalid_ids),
-            "No Match": str(not verified_ids),
+            "No ACC Ground Truth": str(not verified_ids),
             "Selector Reason": _join_selection_reasons(selections),
             "Verifier Reason": _join_verifier_reasons(verification_by_id, verified_ids, rejected_ids),
         }
@@ -335,7 +335,7 @@ def _build_ground_truth_rows(
         "Verified MDL Doc IDs": _clean(judgment.get("Verified MDL Doc IDs")),
         "Rejected MDL Doc IDs": _clean(judgment.get("Rejected MDL Doc IDs")),
         "Invalid MDL Doc IDs": _clean(judgment.get("Invalid MDL Doc IDs")),
-        "No Match": _clean(judgment.get("No Match")),
+        "No ACC Ground Truth": _clean(judgment.get("No ACC Ground Truth")),
         "Selector Reason": _clean(judgment.get("Selector Reason")),
         "Verifier Reason": _clean(judgment.get("Verifier Reason")),
     }

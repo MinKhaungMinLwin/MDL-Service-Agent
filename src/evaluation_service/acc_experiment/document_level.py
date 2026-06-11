@@ -29,15 +29,22 @@ DOCUMENT_LEVEL_FIELDNAMES = [
 
 DOCUMENT_LEVEL_SUMMARY_FIELDNAMES = [
     "stage",
-    "scopes",
-    "positive_scopes",
-    "avg_precision",
-    "avg_f1",
-    "avg_recall",
-    "avg_llm_coverage_score",
-    "avg_llm_purity_score",
-    "avg_llm_readiness_score",
-    "avg_llm_judge_score",
+    "Project Name",
+    "ITB Scope",
+    "Ground Truth Count",
+    "Predicted Count",
+    "Hit Count",
+    "Recall",
+    "Precision",
+    "F1",
+]
+
+DOCUMENT_LEVEL_LLM_JUDGE_SUMMARY_FIELDNAMES = [
+    "Coverage Score",
+    "Purity Score",
+    "Readiness Score",
+    "Final Score",
+    "Confidence",
 ]
 
 PROJECT_LEVEL_LLM_JUDGE_DETAIL_FIELDNAMES = [
@@ -57,7 +64,7 @@ def build_document_level_catalog(
     selection_path: Path,
     output_dir: Path,
     scope: str = "",
-) -> None:
+) -> Path:
     """Write one final ITB project-level MDL catalog."""
     predictions = _load_predictions(selection_path)
     if scope:
@@ -67,32 +74,52 @@ def build_document_level_catalog(
     catalog_rows = _build_catalog_rows(predictions)
 
     output_dir.mkdir(parents=True, exist_ok=True)
-    _write_csv(output_dir / "acc_document_level.csv", DOCUMENT_LEVEL_FIELDNAMES, catalog_rows)
+    output_path = output_dir / "acc_document_level.csv"
+    _write_csv(output_path, DOCUMENT_LEVEL_FIELDNAMES, catalog_rows)
+    return output_path
 
 
 def evaluate_document_level_outputs(
-    selection_path: Path,
+    document_level_path: Path,
     ground_truth_path: Path,
     output_dir: Path,
     scope: str = "",
+    enable_llm_judge: bool = False,
 ) -> None:
-    """Evaluate ITB project-level outputs and write summary plus LLM judge details."""
-    predictions = _load_predictions(selection_path)
+    """Evaluate ITB project-level outputs and write one summary file plus optional LLM judge details."""
+    predictions = _load_document_level_predictions(document_level_path)
     truth = _load_ground_truth(ground_truth_path)
     if scope:
         canonical_scope = _canonical_scope(scope)
         predictions = {key: value for key, value in predictions.items() if key == canonical_scope}
         truth = {key: value for key, value in truth.items() if key == canonical_scope}
 
-    eval_rows = _evaluate_document_level(predictions, truth)
-    summary_row = {"stage": "itb_project_level", **_summarize_document_level(eval_rows)}
-    judge_rows, judge_summary = _evaluate_project_level_judge(predictions, ground_truth_path, scope)
-    summary_row.update(judge_summary)
-    summary_rows = [summary_row]
+    summary_rows = _evaluate_document_level(predictions, truth)
+    for row in summary_rows:
+        row["stage"] = "itb_project_level"
+    judge_rows: list[dict[str, Any]] = []
+    if enable_llm_judge:
+        judge_rows, _judge_summary = _evaluate_project_level_judge(predictions, ground_truth_path, scope)
+        judge_by_scope = {row["ITB Scope"]: row for row in judge_rows}
+        for row in summary_rows:
+            judge_row = judge_by_scope.get(_clean(row.get("ITB Scope")), {})
+            row.update(
+                {
+                    "Coverage Score": judge_row.get("Coverage Score", ""),
+                    "Purity Score": judge_row.get("Purity Score", ""),
+                    "Readiness Score": judge_row.get("Readiness Score", ""),
+                    "Final Score": judge_row.get("Final Score", ""),
+                    "Confidence": judge_row.get("Confidence", ""),
+                }
+            )
 
     output_dir.mkdir(parents=True, exist_ok=True)
-    _write_csv(output_dir / "summary.csv", DOCUMENT_LEVEL_SUMMARY_FIELDNAMES, summary_rows)
-    _write_csv(output_dir / "llm_judge_details.csv", PROJECT_LEVEL_LLM_JUDGE_DETAIL_FIELDNAMES, judge_rows)
+    summary_fieldnames = DOCUMENT_LEVEL_SUMMARY_FIELDNAMES.copy()
+    if enable_llm_judge:
+        summary_fieldnames.extend(DOCUMENT_LEVEL_LLM_JUDGE_SUMMARY_FIELDNAMES)
+    _write_csv(output_dir / "summary.csv", summary_fieldnames, summary_rows)
+    if enable_llm_judge:
+        _write_csv(output_dir / "llm_judge_details.csv", PROJECT_LEVEL_LLM_JUDGE_DETAIL_FIELDNAMES, judge_rows)
 
 
 def _load_predictions(path: Path) -> dict[str, dict[str, dict[str, Any]]]:
@@ -127,6 +154,26 @@ def _load_ground_truth(path: Path) -> dict[str, set[str]]:
         if scope and doc_id:
             truth[scope].add(doc_id)
     return dict(truth)
+
+
+def _load_document_level_predictions(path: Path) -> dict[str, dict[str, dict[str, Any]]]:
+    predictions: dict[str, dict[str, dict[str, Any]]] = defaultdict(dict)
+    for row in _read_csv(path):
+        scope = _canonical_scope(_clean(row.get("ITB Scope")))
+        doc_id = _clean(row.get("MDL Doc ID"))
+        if not scope or not doc_id:
+            continue
+        predictions[scope][doc_id] = {
+            "ITB Scope": scope,
+            "MDL Doc ID": doc_id,
+            "Document No": _clean(row.get("Document No")),
+            "Title": _clean(row.get("Title")),
+            "Equipment": _clean(row.get("Equipment")),
+            "System": _clean(row.get("System")),
+            "Deliverable": _clean(row.get("Deliverable")),
+            "_chunk_ids": _split_doc_ids(row.get("Evidence Chunk IDs")),
+        }
+    return {scope: dict(docs) for scope, docs in predictions.items()}
 
 
 def _build_catalog_rows(predictions: dict[str, dict[str, dict[str, Any]]]) -> list[dict[str, Any]]:
@@ -182,17 +229,6 @@ def _evaluate_document_level(
             }
         )
     return rows
-
-
-def _summarize_document_level(rows: list[dict[str, Any]]) -> dict[str, Any]:
-    positive_rows = [row for row in rows if int(row["Ground Truth Count"]) > 0]
-    return {
-        "scopes": len(rows),
-        "positive_scopes": len(positive_rows),
-        "avg_recall": _mean_number(row["Recall"] for row in positive_rows),
-        "avg_precision": _mean_number(row["Precision"] for row in positive_rows),
-        "avg_f1": _mean_number(row["F1"] for row in positive_rows),
-    }
 
 
 def _evaluate_project_level_judge(
@@ -311,6 +347,17 @@ def _write_csv(path: Path, fieldnames: list[str], rows: list[dict[str, Any]]) ->
 def _append_unique(values: list[str], value: str) -> None:
     if value and value not in values:
         values.append(value)
+
+
+def _split_doc_ids(value: Any) -> list[str]:
+    seen = set()
+    doc_ids = []
+    for doc_id in str(value or "").split("|"):
+        doc_id = doc_id.strip()
+        if doc_id and doc_id not in seen:
+            seen.add(doc_id)
+            doc_ids.append(doc_id)
+    return doc_ids
 
 
 def _f1(precision: float | None, recall: float | None) -> float | None:
