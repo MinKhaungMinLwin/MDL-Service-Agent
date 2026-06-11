@@ -74,6 +74,17 @@ def compute_date_range(
         result.fc_latest = _offset(fc_center, _FC_DEFAULT_WINDOW_DAYS // 2)
         result.fc_recommended = fc_center
 
+    # FC-only rules with FA submission type: derive FA window from FC.
+    # The VT formula constrains when FC must be submitted (before an activity starts).
+    # FA precedes FC by the standard review gap, so FA is back-calculated from FC.
+    if result.fc_recommended is not None and result.fa_recommended is None and sub_type == "FA":
+        fa_center = _offset(result.fc_recommended, -_FC_DEFAULT_AFTER_FA_DAYS)
+        fa_window = _FC_DEFAULT_WINDOW_DAYS // 2
+        result.fa_earliest = _offset(fa_center, -fa_window)
+        result.fa_latest = _offset(fa_center, fa_window)
+        result.fa_recommended = fa_center
+        result.notes = "FA derived from FC constraint (FC-only VT rule)"
+
     result.confidence = {1: 0.9, 2: 0.6, 3: 0.3}.get(priority, 0.2)
 
     # Enforce minimum FA→FC gap: guards chained VT formulas with identical windows
