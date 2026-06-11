@@ -415,7 +415,14 @@ def _select_activity_candidate_for_mode(
     if structured_candidates:
         s_cand, s_qual = _select_activity_candidate(row, rule, query, structured_candidates)
         t_cand, t_qual = _select_activity_candidate(row, rule, query, text_candidates)
-        if s_qual.adjusted_score >= t_qual.adjusted_score * 1.05:
+        # Don't prefer a structured result that would be blocked by the procurement-conflict
+        # gate (design-phase doc mapped to a P.O activity via rule phase upgrade). In that
+        # case, the text candidate — which filters by phase bucket — is the correct pick.
+        s_procurement_conflict = (
+            s_qual.query_phase in {"system_design", "design_drawing", "design_criteria", "civil_design"}
+            and s_qual.activity_phase == "procurement"
+        )
+        if not s_procurement_conflict and s_qual.adjusted_score >= t_qual.adjusted_score * 1.05:
             return s_cand, replace(
                 s_qual,
                 resolver_mode="structured" if resolver_mode == "structured" else "hybrid",
@@ -424,9 +431,13 @@ def _select_activity_candidate_for_mode(
                 structured_allowed_phases="|".join(meta["allowed_phases"]),
                 structured_cell_size=len(structured_candidates),
             )
-        # Structured found a cell but text is better — use text, record why structured lost.
+        reason = (
+            "structured_blocked_procurement_conflict"
+            if s_procurement_conflict
+            else "structured_cell_found_text_preferred"
+        )
         candidate, quality = t_cand, t_qual
-        meta = {**meta, "reason": "structured_cell_found_text_preferred"}
+        meta = {**meta, "reason": reason}
     else:
         candidate, quality = _select_activity_candidate(row, rule, query, text_candidates)
 
@@ -817,6 +828,19 @@ def _activity_phase(text: str) -> str:
     return ""
 
 
+_COMPATIBLE_PHASE_PAIRS: frozenset[tuple[str, str]] = frozenset({
+    ("design_drawing", "system_design"),
+    ("design_drawing", "civil_design"),
+    ("manual", "delivery"),
+    ("manual", "procurement"),
+    # O&M manuals are submitted after installation is complete.
+    ("manual", "installation"),
+    # Design criteria documents inform both system and civil design activities.
+    ("design_criteria", "system_design"),
+    ("design_criteria", "civil_design"),
+})
+
+
 def _phase_status(query_phase: str, activity_phase: str, rule: ValidationRule | None = None) -> str:
     if not query_phase:
         return "query_unknown"
@@ -824,16 +848,15 @@ def _phase_status(query_phase: str, activity_phase: str, rule: ValidationRule | 
         return "activity_unknown"
     if query_phase == activity_phase:
         return "match"
+    # A rule's activity_keywords can confirm the activity phase (upgrade to match),
+    # but must NOT override the compatible-pair check — doing so was causing
+    # design_drawing→civil_design and design_drawing→system_design to be reported as
+    # "mismatch" whenever a rule happened to have P.O/delivery keywords, blocking
+    # 155 rows that are actually valid matches.
     rule_phase = _activity_keyword_phase(rule.activity_keywords) if rule else ""
-    if rule_phase:
-        return "match" if rule_phase == activity_phase else "mismatch"
-    compatible = {
-        ("design_drawing", "system_design"),
-        ("design_drawing", "civil_design"),
-        ("manual", "delivery"),
-        ("manual", "procurement"),
-    }
-    return "compatible" if (query_phase, activity_phase) in compatible else "mismatch"
+    if rule_phase == activity_phase:
+        return "match"
+    return "compatible" if (query_phase, activity_phase) in _COMPATIBLE_PHASE_PAIRS else "mismatch"
 
 
 def _scope_keys(text: str) -> list[str]:
