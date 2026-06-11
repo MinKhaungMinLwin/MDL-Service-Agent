@@ -370,11 +370,14 @@ def _rule_block_reasons(quality: RuleMatchQuality | None) -> list[str]:
         reasons.append("rule_scope_mismatch")
     if quality.final_score < 0.5:
         reasons.append("rule_score_below_gate")
-    if quality.scope_status in {"rule_generic", "query_unscoped", "no_rule"} and quality.final_score < 0.7:
+    # Scope-ambiguous rules (generic or unscoped) are allowed when score >= 0.5 and family
+    # matches — output is labelled needs_review via _has_rule_ambiguity_reasons rather than
+    # blocked entirely.  Hard gate remains at < 0.5 to reject genuinely weak matches.
+    if quality.scope_status in {"rule_generic", "query_unscoped", "no_rule"} and quality.final_score < 0.5:
         reasons.append(f"rule_scope_ambiguous:{quality.scope_status}")
     if (
         quality.family_status in {"compatible", "unknown", "missing_rule_family", "missing_query_family"}
-        and quality.final_score < 0.7
+        and quality.final_score < 0.5
     ):
         reasons.append(f"rule_family_uncertain:{quality.family_status}")
     return reasons
@@ -391,9 +394,12 @@ def _activity_block_reasons(quality: ActivityMatchQuality | None) -> list[str]:
         reasons.append("activity_scope_mismatch")
     if getattr(quality, "scope_source", "") == "rule" and quality.scope_status != "match":
         reasons.append("activity_rule_scope_unmatched")
-    if quality.rrf_score < 0.02:
+    # Activity gates: lowered from 0.02/0.015 to 0.01/0.005 so that moderately-matched
+    # activities produce a draft date (needs_review) rather than a hard block.  Quality
+    # scoring already applies confidence penalties for these cases.
+    if quality.rrf_score < 0.01:
         reasons.append("activity_rrf_below_gate")
-    if quality.generic_activity and quality.adjusted_score < 0.015:
+    if quality.generic_activity and quality.adjusted_score < 0.005:
         reasons.append("activity_generic_low_confidence")
     if (
         quality.query_phase in {"system_design", "design_drawing", "design_criteria", "civil_design"}
