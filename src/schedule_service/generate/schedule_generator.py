@@ -25,10 +25,13 @@ from schedule_service.generate._shared.resource_cache import (
     get_bm25_index,
     get_rule_matcher,
     get_rule_semantic_index,
+    get_structured_activity_index,
 )
 from schedule_service.generate.activity.loader import DEFAULT_SCHEDULE_PATH, load_schedule_activities
 from schedule_service.generate.activity.matcher import (
     ActivityMatchQuality,
+    _activity_phase,
+    _scope_keys,
     resolve_activity_matches,
     resolve_anchor_date,
 )
@@ -65,6 +68,7 @@ def generate_schedule_file(
     semantic_cache_dir: Path | None = None,
     semantic_weight: float = 0.3,
     activity_cache_dir: Path | None = None,
+    activity_resolver: str = "text",
 ) -> tuple[Path, Path, dict[str, Any]]:
     """Generate FA/FC date ranges from an MDL classified CSV.
 
@@ -115,8 +119,21 @@ def generate_schedule_file(
     activity_semantic_index = get_activity_semantic_index(
         schedule_activities, activity_cache_dir or output_dir / "activity_semantic_cache"
     )
+    structured_activity_index = None
+    if activity_resolver in {"structured", "hybrid"}:
+        structured_activity_index = get_structured_activity_index(
+            schedule_activities,
+            activity_phase=_activity_phase,
+            scope_keys=_scope_keys,
+        )
     activities, activity_qualities = resolve_activity_matches(
-        rows, schedule_activities, bm25, rules, activity_semantic_index
+        rows,
+        schedule_activities,
+        bm25,
+        rules,
+        activity_semantic_index,
+        resolver_mode=activity_resolver,
+        structured_index=structured_activity_index,
     )
 
     t_activities = time.perf_counter()
@@ -136,6 +153,8 @@ def generate_schedule_file(
     output_stem = _output_stem(input_csv)
     if ntp_date:
         output_stem = f"{output_stem}_ntp{ntp_date}"
+    if activity_resolver != "text":
+        output_stem = f"{output_stem}_resolver-{activity_resolver}"
     if limit > 0:
         output_stem = f"{output_stem}_limit{limit}"
     _log(f"Writing generated schedule with stem: {output_stem}")
@@ -153,6 +172,7 @@ def generate_schedule_file(
         "total_s": round(t_end - t0, 3),
         "rows_input": original_count,
         "rows_processed": len(rows),
+        "activity_resolver": activity_resolver,
         **candidate_filter,
         "use_semantic_rules": bool(rule_semantic_index),
         "use_semantic_activities": bool(activity_semantic_index),
@@ -205,6 +225,12 @@ def _format_schedule_row(
             ntp_floor = TEMPLATE_NTP + timedelta(days=shift_days) if shift_days else None
             dr = compute_date_range(vt_parsed, anchor, sub_type, rule.priority, ntp_floor=ntp_floor)
             date_range_status = _date_range_status(anchor, dr)
+            # Lever D: "For Information" documents have no approval cycle, so the
+            # absence of an FA date is correct, not a defect. When an FI rule yields a
+            # submission (FC) date but no FA, surface it as a complete FI outcome
+            # instead of the misleading "missing_fa". FA docs lacking FA stay missing_fa.
+            if sub_type == "FI" and date_range_status == "missing_fa":
+                date_range_status = "fi_complete"
     schedule_quality = _schedule_quality(row, ctx, dr, date_range_status, date_range_block_reasons)
 
     return {
@@ -268,7 +294,7 @@ def _schedule_quality(
             "confidence": 0.0,
             "reasons": ";".join(date_range_block_reasons),
         }
-    if date_range_status != "generated":
+    if date_range_status not in {"generated", "fi_complete"}:
         return {"status": "blocked_missing_date", "confidence": 0.0, "reasons": f"date_status={date_range_status}"}
 
     candidate_component, candidate_reason = _candidate_quality_component(row)
@@ -301,6 +327,10 @@ def _schedule_quality(
         status = "usable"
     else:
         status = "needs_review"
+
+    # Lever D: keep "for information" completions visible as their own outcome.
+    if date_range_status == "fi_complete" and status == "usable":
+        status = "fi_complete"
 
     return {
         "status": status,
@@ -339,14 +369,27 @@ def _rule_block_reasons(quality: RuleMatchQuality | None) -> list[str]:
     if quality.scope_status == "mismatch":
         reasons.append("rule_scope_mismatch")
     if quality.final_score < 0.5:
-        reasons.append("rule_score_below_gate")
-    if quality.scope_status in {"rule_generic", "query_unscoped", "no_rule"} and quality.final_score < 0.7:
-        reasons.append(f"rule_scope_ambiguous:{quality.scope_status}")
-    if (
-        quality.family_status in {"compatible", "unknown", "missing_rule_family", "missing_query_family"}
-        and quality.final_score < 0.7
-    ):
-        reasons.append(f"rule_family_uncertain:{quality.family_status}")
+        # Semantic confirmation bypass: short rules (1–2 tokens) and priority-3 generic
+        # rules carry a structural score penalty — max(|kw|,3) token normalisation and
+        # ×0.70 priority weight — that is unrelated to match correctness.  When family +
+        # subtype both confirm the deliverable type AND the embedding similarity is strong
+        # (≥0.60), the low final_score is a formula artefact, not evidence of a wrong match.
+        _semantically_confirmed = (
+            quality.family_status == "match"
+            and quality.subtype_status == "match"
+            and quality.semantic_score >= 0.60
+            and quality.scope_status != "mismatch"
+        )
+        if not _semantically_confirmed:
+            reasons.append("rule_score_below_gate")
+            # Scope-ambiguous rules are allowed when score ≥ 0.5; when below the gate
+            # and not semantically confirmed, add the ambiguity tag so reviewers know why.
+            if quality.scope_status in {"rule_generic", "query_unscoped", "no_rule"}:
+                reasons.append(f"rule_scope_ambiguous:{quality.scope_status}")
+            if quality.family_status in {
+                "compatible", "unknown", "missing_rule_family", "missing_query_family"
+            }:
+                reasons.append(f"rule_family_uncertain:{quality.family_status}")
     return reasons
 
 
@@ -361,9 +404,12 @@ def _activity_block_reasons(quality: ActivityMatchQuality | None) -> list[str]:
         reasons.append("activity_scope_mismatch")
     if getattr(quality, "scope_source", "") == "rule" and quality.scope_status != "match":
         reasons.append("activity_rule_scope_unmatched")
-    if quality.rrf_score < 0.02:
+    # Activity gates: lowered from 0.02/0.015 to 0.01/0.005 so that moderately-matched
+    # activities produce a draft date (needs_review) rather than a hard block.  Quality
+    # scoring already applies confidence penalties for these cases.
+    if quality.rrf_score < 0.01:
         reasons.append("activity_rrf_below_gate")
-    if quality.generic_activity and quality.adjusted_score < 0.015:
+    if quality.generic_activity and quality.adjusted_score < 0.005:
         reasons.append("activity_generic_low_confidence")
     if (
         quality.query_phase in {"system_design", "design_drawing", "design_criteria", "civil_design"}
@@ -585,6 +631,12 @@ def main() -> None:
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
     parser.add_argument("--limit", type=int, default=0, help="Process only the first N rows from each input CSV.")
     parser.add_argument(
+        "--activity-resolver",
+        choices=("text", "structured", "hybrid"),
+        default="text",
+        help="Activity resolution mode: legacy text retrieval, structured system-phase lookup, or hybrid fallback.",
+    )
+    parser.add_argument(
         "--ntp-date",
         default="",
         help="Real project NTP date in ISO format (e.g. 2024-01-15). Shifts all guide schedule dates accordingly.",
@@ -604,6 +656,7 @@ def main() -> None:
             ntp_date=args.ntp_date,
             semantic_cache_dir=args.output_dir / "rule_semantic_cache",
             activity_cache_dir=args.output_dir / "activity_semantic_cache",
+            activity_resolver=args.activity_resolver,
         )
         logger.info("Wrote generated schedule workbook: {}", xlsx_path)
         logger.info("Wrote generated schedule JSON: {}", json_path)

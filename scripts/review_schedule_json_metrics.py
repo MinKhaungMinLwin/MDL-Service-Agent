@@ -47,6 +47,7 @@ import pandas as pd
 # -----------------------------
 STATUS_ORDER = [
     "generated",
+    "fi_complete",
     "needs_review",
     "missing_fa",
     "blocked_missing_date",
@@ -254,6 +255,8 @@ def build_usability_bucket(df: pd.DataFrame) -> pd.DataFrame:
     for ds, qs in zip(status, quality):
         if ds == "generated":
             buckets.append("Usable/generated date range")
+        elif ds == "fi_complete":
+            buckets.append("FI complete (for information, no FA)")
         elif ds == "skip" or qs == "skip":
             buckets.append("SKIP / not required")
         elif ds in {"missing_fa", "blocked_missing_date"} or qs == "blocked_missing_date":

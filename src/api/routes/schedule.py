@@ -26,6 +26,16 @@ ScheduleLimit = Annotated[
         description="Maximum number of input rows to process. Use 0 to process all rows.",
     ),
 ]
+ActivityResolver = Annotated[
+    str,
+    Query(
+        pattern="^(text|structured|hybrid)$",
+        description=(
+            "Activity resolution mode: legacy text retrieval, "
+            "structured system-phase lookup, or hybrid fallback."
+        ),
+    ),
+]
 
 
 
@@ -69,6 +79,7 @@ def schedule_generate(
             examples=["data/schedule_service/raw/mock_validation_rule.csv"],
         ),
     ] = "",
+    activity_resolver: ActivityResolver = "text",
     limit: ScheduleLimit = 0,
 ) -> dict[str, object]:
     """Generate FA/FC schedule date ranges from an MDL classified CSV."""
@@ -92,6 +103,7 @@ def schedule_generate(
         ntp_date=ntp_date,
         semantic_cache_dir=CACHE_DIR / "rule_semantic_cache",
         activity_cache_dir=CACHE_DIR / "activity_semantic_cache",
+        activity_resolver=activity_resolver,
     )
     return _file_response("generated_schedule", input_path, xlsx_path, json_path, timing)
 
