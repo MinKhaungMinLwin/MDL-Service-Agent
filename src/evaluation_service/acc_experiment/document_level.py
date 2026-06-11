@@ -21,9 +21,6 @@ DOCUMENT_LEVEL_FIELDNAMES = [
     "MDL Doc ID",
     "Document No",
     "Title",
-    "Equipment",
-    "System",
-    "Deliverable",
     "Evidence Chunk IDs",
 ]
 
@@ -136,13 +133,12 @@ def _load_predictions(path: Path) -> dict[str, dict[str, dict[str, Any]]]:
                 "MDL Doc ID": doc_id,
                 "Document No": _clean(row.get("Document No")),
                 "Title": _clean(row.get("Title")),
-                "Equipment": _clean(row.get("Equipment")),
-                "System": _clean(row.get("System")),
-                "Deliverable": _clean(row.get("Deliverable")),
                 "_chunk_ids": [],
+                "_best_rank": None,
             },
         )
         _append_unique(doc["_chunk_ids"], _clean(row.get("Chunk ID")))
+        doc["_best_rank"] = _best_rank(doc.get("_best_rank"), row.get("Rank"))
     return {scope: dict(docs) for scope, docs in predictions.items()}
 
 
@@ -168,9 +164,6 @@ def _load_document_level_predictions(path: Path) -> dict[str, dict[str, dict[str
             "MDL Doc ID": doc_id,
             "Document No": _clean(row.get("Document No")),
             "Title": _clean(row.get("Title")),
-            "Equipment": _clean(row.get("Equipment")),
-            "System": _clean(row.get("System")),
-            "Deliverable": _clean(row.get("Deliverable")),
             "_chunk_ids": _split_doc_ids(row.get("Evidence Chunk IDs")),
         }
     return {scope: dict(docs) for scope, docs in predictions.items()}
@@ -179,20 +172,12 @@ def _load_document_level_predictions(path: Path) -> dict[str, dict[str, dict[str
 def _build_catalog_rows(predictions: dict[str, dict[str, dict[str, Any]]]) -> list[dict[str, Any]]:
     rows = []
     for docs in predictions.values():
-        for doc in docs.values():
+        for doc in sorted(docs.values(), key=_document_sort_key):
             rows.append(
                 {key: doc.get(key, "") for key in DOCUMENT_LEVEL_FIELDNAMES if key != "Evidence Chunk IDs"}
                 | {"Evidence Chunk IDs": "|".join(doc["_chunk_ids"])}
             )
-    return sorted(
-        rows,
-        key=lambda row: (
-            _project_sort_key(row.get("ITB Scope")),
-            _clean(row.get("Document No")),
-            _clean(row.get("Title")),
-            _clean(row.get("MDL Doc ID")),
-        ),
-    )
+    return rows
 
 
 def _evaluate_document_level(
@@ -315,7 +300,7 @@ def _load_scope_chunks(path: Path) -> dict[str, list[dict[str, str]]]:
 
 def _project_documents(docs: dict[str, dict[str, Any]]) -> list[dict[str, str]]:
     rows = []
-    for doc in docs.values():
+    for doc in sorted(docs.values(), key=_document_sort_key):
         rows.append(
             {
                 "doc_id": _clean(doc.get("MDL Doc ID")),
@@ -347,6 +332,40 @@ def _write_csv(path: Path, fieldnames: list[str], rows: list[dict[str, Any]]) ->
 def _append_unique(values: list[str], value: str) -> None:
     if value and value not in values:
         values.append(value)
+
+
+def _best_rank(current: Any, candidate: Any) -> int | None:
+    current_rank = _parse_rank(current)
+    candidate_rank = _parse_rank(candidate)
+    if current_rank is None:
+        return candidate_rank
+    if candidate_rank is None:
+        return current_rank
+    return min(current_rank, candidate_rank)
+
+
+def _parse_rank(value: Any) -> int | None:
+    text = _clean(value)
+    if not text:
+        return None
+    try:
+        return int(text)
+    except ValueError:
+        return None
+
+
+def _document_sort_key(doc: dict[str, Any]) -> tuple[tuple[int, str], int, int, str, str, str]:
+    evidence_count = len(doc.get("_chunk_ids", []))
+    best_rank = doc.get("_best_rank")
+    best_rank_value = best_rank if isinstance(best_rank, int) and best_rank > 0 else 10**9
+    return (
+        _project_sort_key(doc.get("ITB Scope")),
+        -evidence_count,
+        best_rank_value,
+        _clean(doc.get("Document No")),
+        _clean(doc.get("Title")),
+        _clean(doc.get("MDL Doc ID")),
+    )
 
 
 def _split_doc_ids(value: Any) -> list[str]:

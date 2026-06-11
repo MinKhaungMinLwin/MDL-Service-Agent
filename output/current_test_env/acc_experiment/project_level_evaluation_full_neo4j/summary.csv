@@ -1,0 +1,4 @@
+﻿stage,Project Name,ITB Scope,Ground Truth Count,Predicted Count,Hit Count,Recall,Precision,F1
+itb_project_level,Fadhili,Fadhili_ITB,25,74,20,0.8,0.2702702702702703,0.404040404040404
+itb_project_level,R&N,R_N_ITB,53,125,22,0.41509433962264153,0.176,0.24719101123595502
+itb_project_level,Turkistan,Turkistan_ITB,0,1,0,,0.0,

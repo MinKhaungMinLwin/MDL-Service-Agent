@@ -19,26 +19,16 @@ PROMPTS_DIR = Path(__file__).resolve().parent / "prompts"
 DEFAULT_FINAL_SELECTOR_PROMPT_PATH = PROMPTS_DIR / "acc_final_selector.md"
 
 SELECTION_FIELDNAMES = [
-    "Project Name",
     "ITB Scope",
-    "Document",
     "Chunk ID",
     "Page",
     "Candidate Batch Index",
     "Candidate Batch Count",
     "Candidate Rank Start",
     "Candidate Rank End",
-    "Candidate Count",
-    "Top K Doc IDs",
     "Selected MDL Doc IDs",
-    "LLM Returned Empty",
-    "Usage Row",
-    "Prompt Tokens",
-    "Completion Tokens",
-    "Total Tokens",
     "MDL Doc ID",
     "Rank",
-    "Source File",
     "Document No",
     "Title",
     "Equipment",
@@ -47,6 +37,7 @@ SELECTION_FIELDNAMES = [
     "Study/Survey",
     "Others",
     "Deliverable",
+    "Text Content",
 ]
 
 
@@ -55,7 +46,6 @@ class ACCFinalSelectorConfig:
     """Runtime settings for ACC LLM final selection."""
 
     model: str
-    top_k: int = 20
     candidate_batch_size: int = 20
     llm_retries: int = 2
     max_concurrency: int = 1
@@ -65,8 +55,6 @@ class ACCFinalSelectorConfig:
     def __post_init__(self) -> None:
         if not self.model:
             raise ValueError("model is required")
-        if self.top_k <= 0:
-            raise ValueError("top_k must be positive")
         if self.candidate_batch_size <= 0:
             raise ValueError("candidate_batch_size must be positive")
         if self.llm_retries < 0:
@@ -113,7 +101,7 @@ class ACCFinalSelectorService:
 
     def select(self, matching_dir: Path, output_dir: Path) -> int:
         """Run final LLM selection for all matching CSV files under a matching directory."""
-        records = load_matching_records(matching_dir, self.config.top_k)
+        records = load_matching_records(matching_dir)
         if self.config.max_records > 0:
             records = records[: self.config.max_records]
         if not records:
@@ -132,7 +120,6 @@ class ACCFinalSelectorService:
             if _clean(row.get("ITB Scope"))
             and _clean(row.get("Chunk ID"))
             and _clean(row.get("Candidate Batch Index"))
-            and _is_true(row.get("Usage Row"))
         }
 
         tasks = self._build_tasks(records, completed_batches)
@@ -146,7 +133,8 @@ class ACCFinalSelectorService:
         for task, output_rows in self._run_tasks(tasks):
             selection_rows.extend(output_rows)
             completed_batches.add((task.record["itb_scope"], task.record["chunk_id"], str(task.batch_index)))
-            _write_csv(selection_path, SELECTION_FIELDNAMES, _dedupe_selection_rows(selection_rows))
+            selection_rows = _dedupe_selection_rows(selection_rows)
+            _write_csv(selection_path, SELECTION_FIELDNAMES, selection_rows)
             self.sleep(self.config.batch_delay_seconds)
 
         selection_rows = _dedupe_selection_rows(selection_rows)
@@ -255,14 +243,14 @@ class ACCFinalSelectorService:
         )
 
 
-def load_matching_records(matching_dir: Path, top_k: int) -> list[dict[str, Any]]:
+def load_matching_records(matching_dir: Path, candidate_limit: int = 0) -> list[dict[str, Any]]:
     """Load matching CSV rows with cross-encoder candidate details."""
     records = []
     for path in sorted(matching_dir.rglob("*.csv")):
         if not path.name.startswith("output_match_"):
             continue
         for row in _read_csv(path):
-            candidates = _candidate_rows(row, top_k)
+            candidates = _candidate_rows(row, candidate_limit)
             if not candidates:
                 continue
             itb_scope = _clean(row.get("Document")) or _infer_scope_from_path(path)
@@ -289,7 +277,7 @@ def _select_record(client: Any, model: str, prompt: str, record: dict[str, Any])
         "project_name": record["project_name"],
         "itb_scope": record["itb_scope"],
         "itb_chunk": record["itb"],
-        "top_k_mdl_candidates": [_build_candidate_payload(candidate) for candidate in record["candidates"]],
+        "mdl_candidates": [_build_candidate_payload(candidate) for candidate in record["candidates"]],
     }
     response = client.chat.completions.create(
         model=model,
@@ -332,31 +320,21 @@ def _resolve_selection(
     selected_ids = _unique_clean_list(result.get("selected_doc_ids"))
     usage = result.get("_usage") if isinstance(result.get("_usage"), dict) else {}
     base_row = {
-        "Project Name": record["project_name"],
         "ITB Scope": record["itb_scope"],
-        "Document": record["document"],
         "Chunk ID": record["chunk_id"],
         "Page": record["page"],
         "Candidate Batch Index": str(batch_index),
         "Candidate Batch Count": str(batch_count),
         "Candidate Rank Start": rank_start,
         "Candidate Rank End": rank_end,
-        "Candidate Count": len(candidates),
-        "Top K Doc IDs": "|".join(candidate["doc_id"] for candidate in candidates),
         "Selected MDL Doc IDs": "|".join(selected_ids),
-        "LLM Returned Empty": str(not selected_ids),
-        "Prompt Tokens": _clean(usage.get("prompt_tokens")),
-        "Completion Tokens": _clean(usage.get("completion_tokens")),
-        "Total Tokens": _clean(usage.get("total_tokens")),
     }
     if not selected_ids:
         return [
             {
                 **base_row,
-                "Usage Row": "True",
                 "MDL Doc ID": "",
                 "Rank": "",
-                "Source File": "",
                 "Document No": "",
                 "Title": "",
                 "Equipment": "",
@@ -365,6 +343,7 @@ def _resolve_selection(
                 "Study/Survey": "",
                 "Others": "",
                 "Deliverable": "",
+                "Text Content": "",
             }
         ]
 
@@ -374,13 +353,8 @@ def _resolve_selection(
         rows.append(
             {
                 **base_row,
-                "Usage Row": "True" if not rows else "False",
-                "Prompt Tokens": base_row["Prompt Tokens"] if not rows else "",
-                "Completion Tokens": base_row["Completion Tokens"] if not rows else "",
-                "Total Tokens": base_row["Total Tokens"] if not rows else "",
                 "MDL Doc ID": doc_id,
                 "Rank": candidate["rank"],
-                "Source File": candidate["source_file"],
                 "Document No": candidate["document_no"],
                 "Title": candidate["title"],
                 "Equipment": candidate["equipment"],
@@ -389,6 +363,7 @@ def _resolve_selection(
                 "Study/Survey": candidate["study_survey"],
                 "Others": candidate["others"],
                 "Deliverable": candidate["deliverable"],
+                "Text Content": candidate["text_content"],
             }
         )
     return rows
@@ -410,9 +385,18 @@ def _usage_dict(usage: Any) -> dict[str, Any]:
     }
 
 
-def _candidate_rows(row: dict[str, Any], top_k: int) -> list[dict[str, str]]:
+def _candidate_rows(row: dict[str, Any], candidate_limit: int) -> list[dict[str, str]]:
     candidates = []
-    for index in range(1, top_k + 1):
+    candidate_indexes = sorted(
+        {
+            int(prefix.removeprefix("Matched_Doc_").removesuffix("_Doc_ID"))
+            for prefix in row.keys()
+            if prefix.startswith("Matched_Doc_") and prefix.endswith("_Doc_ID")
+        }
+    )
+    if candidate_limit > 0:
+        candidate_indexes = candidate_indexes[:candidate_limit]
+    for index in candidate_indexes:
         prefix = f"Matched_Doc_{index}"
         doc_id = _clean(row.get(f"{prefix}_Doc_ID"))
         if not doc_id:
