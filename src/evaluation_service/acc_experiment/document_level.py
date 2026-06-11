@@ -21,9 +21,6 @@ DOCUMENT_LEVEL_FIELDNAMES = [
     "MDL Doc ID",
     "Document No",
     "Title",
-    "Equipment",
-    "System",
-    "Deliverable",
     "Evidence Chunk IDs",
 ]
 
@@ -136,9 +133,6 @@ def _load_predictions(path: Path) -> dict[str, dict[str, dict[str, Any]]]:
                 "MDL Doc ID": doc_id,
                 "Document No": _clean(row.get("Document No")),
                 "Title": _clean(row.get("Title")),
-                "Equipment": _clean(row.get("Equipment")),
-                "System": _clean(row.get("System")),
-                "Deliverable": _clean(row.get("Deliverable")),
                 "_chunk_ids": [],
                 "_best_rank": None,
             },
@@ -170,9 +164,6 @@ def _load_document_level_predictions(path: Path) -> dict[str, dict[str, dict[str
             "MDL Doc ID": doc_id,
             "Document No": _clean(row.get("Document No")),
             "Title": _clean(row.get("Title")),
-            "Equipment": _clean(row.get("Equipment")),
-            "System": _clean(row.get("System")),
-            "Deliverable": _clean(row.get("Deliverable")),
             "_chunk_ids": _split_doc_ids(row.get("Evidence Chunk IDs")),
         }
     return {scope: dict(docs) for scope, docs in predictions.items()}

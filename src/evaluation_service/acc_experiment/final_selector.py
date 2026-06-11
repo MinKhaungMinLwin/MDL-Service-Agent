@@ -19,26 +19,16 @@ PROMPTS_DIR = Path(__file__).resolve().parent / "prompts"
 DEFAULT_FINAL_SELECTOR_PROMPT_PATH = PROMPTS_DIR / "acc_final_selector.md"
 
 SELECTION_FIELDNAMES = [
-    "Project Name",
     "ITB Scope",
-    "Document",
     "Chunk ID",
     "Page",
     "Candidate Batch Index",
     "Candidate Batch Count",
     "Candidate Rank Start",
     "Candidate Rank End",
-    "Candidate Count",
-    "Top K Doc IDs",
     "Selected MDL Doc IDs",
-    "LLM Returned Empty",
-    "Usage Row",
-    "Prompt Tokens",
-    "Completion Tokens",
-    "Total Tokens",
     "MDL Doc ID",
     "Rank",
-    "Source File",
     "Document No",
     "Title",
     "Equipment",
@@ -47,6 +37,7 @@ SELECTION_FIELDNAMES = [
     "Study/Survey",
     "Others",
     "Deliverable",
+    "Text Content",
 ]
 
 
@@ -129,7 +120,6 @@ class ACCFinalSelectorService:
             if _clean(row.get("ITB Scope"))
             and _clean(row.get("Chunk ID"))
             and _clean(row.get("Candidate Batch Index"))
-            and _is_true(row.get("Usage Row"))
         }
 
         tasks = self._build_tasks(records, completed_batches)
@@ -143,7 +133,8 @@ class ACCFinalSelectorService:
         for task, output_rows in self._run_tasks(tasks):
             selection_rows.extend(output_rows)
             completed_batches.add((task.record["itb_scope"], task.record["chunk_id"], str(task.batch_index)))
-            _write_csv(selection_path, SELECTION_FIELDNAMES, _dedupe_selection_rows(selection_rows))
+            selection_rows = _dedupe_selection_rows(selection_rows)
+            _write_csv(selection_path, SELECTION_FIELDNAMES, selection_rows)
             self.sleep(self.config.batch_delay_seconds)
 
         selection_rows = _dedupe_selection_rows(selection_rows)
@@ -329,31 +320,21 @@ def _resolve_selection(
     selected_ids = _unique_clean_list(result.get("selected_doc_ids"))
     usage = result.get("_usage") if isinstance(result.get("_usage"), dict) else {}
     base_row = {
-        "Project Name": record["project_name"],
         "ITB Scope": record["itb_scope"],
-        "Document": record["document"],
         "Chunk ID": record["chunk_id"],
         "Page": record["page"],
         "Candidate Batch Index": str(batch_index),
         "Candidate Batch Count": str(batch_count),
         "Candidate Rank Start": rank_start,
         "Candidate Rank End": rank_end,
-        "Candidate Count": len(candidates),
-        "Top K Doc IDs": "|".join(candidate["doc_id"] for candidate in candidates),
         "Selected MDL Doc IDs": "|".join(selected_ids),
-        "LLM Returned Empty": str(not selected_ids),
-        "Prompt Tokens": _clean(usage.get("prompt_tokens")),
-        "Completion Tokens": _clean(usage.get("completion_tokens")),
-        "Total Tokens": _clean(usage.get("total_tokens")),
     }
     if not selected_ids:
         return [
             {
                 **base_row,
-                "Usage Row": "True",
                 "MDL Doc ID": "",
                 "Rank": "",
-                "Source File": "",
                 "Document No": "",
                 "Title": "",
                 "Equipment": "",
@@ -362,6 +343,7 @@ def _resolve_selection(
                 "Study/Survey": "",
                 "Others": "",
                 "Deliverable": "",
+                "Text Content": "",
             }
         ]
 
@@ -371,13 +353,8 @@ def _resolve_selection(
         rows.append(
             {
                 **base_row,
-                "Usage Row": "True" if not rows else "False",
-                "Prompt Tokens": base_row["Prompt Tokens"] if not rows else "",
-                "Completion Tokens": base_row["Completion Tokens"] if not rows else "",
-                "Total Tokens": base_row["Total Tokens"] if not rows else "",
                 "MDL Doc ID": doc_id,
                 "Rank": candidate["rank"],
-                "Source File": candidate["source_file"],
                 "Document No": candidate["document_no"],
                 "Title": candidate["title"],
                 "Equipment": candidate["equipment"],
@@ -386,6 +363,7 @@ def _resolve_selection(
                 "Study/Survey": candidate["study_survey"],
                 "Others": candidate["others"],
                 "Deliverable": candidate["deliverable"],
+                "Text Content": candidate["text_content"],
             }
         )
     return rows
