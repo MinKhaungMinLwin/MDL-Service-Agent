@@ -369,17 +369,27 @@ def _rule_block_reasons(quality: RuleMatchQuality | None) -> list[str]:
     if quality.scope_status == "mismatch":
         reasons.append("rule_scope_mismatch")
     if quality.final_score < 0.5:
-        reasons.append("rule_score_below_gate")
-    # Scope-ambiguous rules (generic or unscoped) are allowed when score >= 0.5 and family
-    # matches — output is labelled needs_review via _has_rule_ambiguity_reasons rather than
-    # blocked entirely.  Hard gate remains at < 0.5 to reject genuinely weak matches.
-    if quality.scope_status in {"rule_generic", "query_unscoped", "no_rule"} and quality.final_score < 0.5:
-        reasons.append(f"rule_scope_ambiguous:{quality.scope_status}")
-    if (
-        quality.family_status in {"compatible", "unknown", "missing_rule_family", "missing_query_family"}
-        and quality.final_score < 0.5
-    ):
-        reasons.append(f"rule_family_uncertain:{quality.family_status}")
+        # Semantic confirmation bypass: short rules (1–2 tokens) and priority-3 generic
+        # rules carry a structural score penalty — max(|kw|,3) token normalisation and
+        # ×0.70 priority weight — that is unrelated to match correctness.  When family +
+        # subtype both confirm the deliverable type AND the embedding similarity is strong
+        # (≥0.60), the low final_score is a formula artefact, not evidence of a wrong match.
+        _semantically_confirmed = (
+            quality.family_status == "match"
+            and quality.subtype_status == "match"
+            and quality.semantic_score >= 0.60
+            and quality.scope_status != "mismatch"
+        )
+        if not _semantically_confirmed:
+            reasons.append("rule_score_below_gate")
+            # Scope-ambiguous rules are allowed when score ≥ 0.5; when below the gate
+            # and not semantically confirmed, add the ambiguity tag so reviewers know why.
+            if quality.scope_status in {"rule_generic", "query_unscoped", "no_rule"}:
+                reasons.append(f"rule_scope_ambiguous:{quality.scope_status}")
+            if quality.family_status in {
+                "compatible", "unknown", "missing_rule_family", "missing_query_family"
+            }:
+                reasons.append(f"rule_family_uncertain:{quality.family_status}")
     return reasons
 
 
