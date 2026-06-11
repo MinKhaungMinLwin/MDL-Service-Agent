@@ -11,6 +11,7 @@ import pandas as pd
 
 from common.text_normalizer import expand_abbreviation_terms
 from matching_service.cli import _files_to_process, _json_files_to_process, _scoped_output_dir
+from matching_service.intent import build_requirement_intent
 from matching_service.models import MatchingConfig
 from matching_service.query import (
     build_cross_encoder_query,
@@ -28,7 +29,7 @@ from matching_service.ranking import (
 from matching_service.repository import MDLSearchRepository
 from matching_service.retrieval import DepthRetriever
 from matching_service.service import MatchingService
-from schedule_service.candidate_extractor import _parse_matched_doc
+from schedule_service.candidate.candidate_extractor import _parse_matched_doc
 
 
 class MatchingServiceTest(unittest.TestCase):
@@ -68,6 +69,23 @@ class MatchingServiceTest(unittest.TestCase):
         self.assertTrue(query.startswith("Chunk Text:\nContractor shall submit fresh air intake layout."))
         self.assertIn("Depth:\nBuilding Services > HVAC", query)
         self.assertIn("Keywords:\nFresh Air Intake", query)
+
+    def test_requirement_intent_extracts_structured_signals(self) -> None:
+        intent = build_requirement_intent(
+            {
+                "Chunk Text": (
+                    "Contractor shall submit technical specifications and performance correction curves "
+                    "for the Air Cooled Condenser."
+                )
+            },
+            ["Plant Performance"],
+            ["ACC", "Technical Specifications"],
+        )
+
+        self.assertIn("Air Cooled Condenser", intent.equipment)
+        self.assertIn("Technical Specification", intent.deliverables)
+        self.assertIn("Performance Correction Curve", intent.deliverables)
+        self.assertIn("submit", intent.actions)
 
     def test_retrieval_modes_search_with_depth_and_keyword_queries(self) -> None:
         repository = _RetrievalRepository()
@@ -206,11 +224,11 @@ class MatchingServiceTest(unittest.TestCase):
             files,
             [
                 (
-                    Path("output/current_test_env/itb_extract/output_itb_section6_focused.csv"),
+                    Path("output/current_test_env/itb_extract/itb_extraction_section6.csv"),
                     Path("output/current_test_env/matching/hybrid/output_match_all_projects_section6.csv"),
                 ),
                 (
-                    Path("output/current_test_env/itb_extract/output_itb_section7_focused.csv"),
+                    Path("output/current_test_env/itb_extract/itb_extraction_section7.csv"),
                     Path("output/current_test_env/matching/hybrid/output_match_all_projects_section7.csv"),
                 ),
             ],
@@ -280,8 +298,10 @@ class MatchingServiceTest(unittest.TestCase):
         )
         self.assertIn("Matched_Doc_20", csv_output.columns)
         self.assertNotIn("Matched_Doc_21", csv_output.columns)
+        self.assertIn("Requirement_Intent_Deliverables", csv_output.columns)
         self.assertIn("[Sample] 1 - Doc 1", csv_output.loc[0, "Matched_Doc_1"])
         self.assertEqual(json_output[0]["retrieval_candidate_count"], 100)
+        self.assertIn("requirement_intent", json_output[0])
         self.assertEqual(json_output[0]["cross_encoder_candidate_count"], 100)
         self.assertEqual(len(json_output[0]["retrieval_candidates"]), 100)
         self.assertEqual(
@@ -313,6 +333,33 @@ class MatchingServiceTest(unittest.TestCase):
         self.assertEqual(len(json_output[0]["candidates"]), 20)
         self.assertEqual(json_output[0]["candidates"][0]["text_content"], "Full text for doc 1")
 
+    def test_service_skips_non_mdl_retrieval_candidates(self) -> None:
+        reranker = _RecordingReranker()
+        service = MatchingService(
+            repository=_BulkRepository(),
+            cross_encoder_reranker=reranker,
+            config=MatchingConfig(retrieval_mode="keyword", cross_encoder_query_mode="structured"),
+        )
+
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "input.csv"
+            output = Path(directory) / "output.csv"
+            pd.DataFrame(
+                [
+                    {**_source_row(), "Chunk ID": "keep", "Is MDL Retrieval Candidate": "True"},
+                    {**_source_row(), "Chunk ID": "skip", "Is MDL Retrieval Candidate": "False"},
+                ]
+            ).to_csv(source, index=False)
+
+            service.match_file(source, output)
+
+            csv_output = pd.read_csv(output)
+            json_output = json.loads(output.with_suffix(".json").read_text(encoding="utf-8"))
+
+        self.assertEqual(len(reranker.calls), 1)
+        self.assertEqual(csv_output.loc[0, "Chunk ID"], "keep")
+        self.assertEqual(json_output[0]["chunk_id"], "keep")
+
     def test_service_can_rerank_existing_structured_output(self) -> None:
         reranker = _RecordingReranker()
         service = MatchingService(
@@ -340,7 +387,6 @@ class MatchingServiceTest(unittest.TestCase):
             "cross_encoder_query": "Chunk Text:\nFull ITB requirement text.",
             "cross_encoder_candidate_count": 2,
             "keywords": "Fresh Air Intake",
-            "search_query": "ignored",
             "retrieval_candidates": [
                 {
                     "rank": 1,
@@ -630,7 +676,8 @@ def _source_row() -> dict[str, str]:
         "2nd Depth": "HVAC",
         "3rd Depth": "Fresh Air Intake",
         "Keywords": "Fresh Air Intake",
-        "Search Query": "ignored",
+        "Is MDL Retrieval Candidate": "True",
+        "Skip Reason": "",
         "Chunk Text": "ignored",
     }
 

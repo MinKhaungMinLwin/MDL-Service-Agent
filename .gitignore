@@ -34,5 +34,8 @@ src/chunker_service/
 neo4j_export/
 neo4j_export.7z
 
+src/schedule_service/tests
+src/evaluation_service/schedule_eval
+
 backup/
 .omc/

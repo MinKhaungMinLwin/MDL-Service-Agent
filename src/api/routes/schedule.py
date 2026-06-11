@@ -8,7 +8,7 @@ from typing import Annotated
 from fastapi import APIRouter, HTTPException, Query
 from loguru import logger
 
-from schedule_service.candidate.candidate_extractor import extract_candidates
+from schedule_service.candidate.candidate_extractor import DEFAULT_SCORE_THRESHOLD, DEFAULT_TOP_N, extract_candidates
 from schedule_service.generate._shared.resource_cache import get_schedule_activities
 from schedule_service.generate.activity.loader import DEFAULT_SCHEDULE_PATH
 from schedule_service.generate.schedule_generator import generate_schedule_file
@@ -121,15 +121,15 @@ def schedule_candidates(
         Query(
             description=(
                 "Minimum score to include a matched document. "
-                "New hybrid/semantic format uses Semantic score (0–1); recommended 0.75. "
+                "New hybrid/semantic format uses Semantic score (0–1); default 0.70 favors recall. "
                 "Old format uses 최종점수 (can exceed 1); recommended 0.85."
             ),
         ),
-    ] = 0.75,
+    ] = DEFAULT_SCORE_THRESHOLD,
     top_n: Annotated[
         int,
         Query(gt=0, le=100, description="Number of Matched_Doc_N columns to consider per row."),
-    ] = 5,
+    ] = DEFAULT_TOP_N,
     classify_with_llm: Annotated[
         bool,
         Query(

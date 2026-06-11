@@ -6,7 +6,7 @@ Automates MDL (Master Document List) generation for CCPP EPC projects.
 Given an ITB (client requirements PDF) and historical MDL references,
 produces FA/FC submission dates for each technical document.
 
-**Detailed docs:** `docs/architecture.md` (full pipeline + diagrams), `docs/codebase.md` (file map + module details), `docs/schedule_service.md` (validation-rule / activity / date-engine internals), and `docs/workflows.md` (offline-prep CLI commands).
+**Detailed docs:** `docs/architecture.md` (full pipeline + diagrams) and `docs/workflows.md` (CLI commands).
 
 ---
 
