@@ -413,17 +413,23 @@ def _select_activity_candidate_for_mode(
         domain_mappings=domain_mappings,
     )
     if structured_candidates:
-        candidate, quality = _select_activity_candidate(row, rule, query, structured_candidates)
-        return candidate, replace(
-            quality,
-            resolver_mode="structured",
-            resolution_reason="structured_cell_match",
-            structured_scope="|".join(meta["effective_scope"]),
-            structured_allowed_phases="|".join(meta["allowed_phases"]),
-            structured_cell_size=len(structured_candidates),
-        )
+        s_cand, s_qual = _select_activity_candidate(row, rule, query, structured_candidates)
+        t_cand, t_qual = _select_activity_candidate(row, rule, query, text_candidates)
+        if s_qual.adjusted_score >= t_qual.adjusted_score * 1.05:
+            return s_cand, replace(
+                s_qual,
+                resolver_mode="structured" if resolver_mode == "structured" else "hybrid",
+                resolution_reason="structured_preferred",
+                structured_scope="|".join(meta["effective_scope"]),
+                structured_allowed_phases="|".join(meta["allowed_phases"]),
+                structured_cell_size=len(structured_candidates),
+            )
+        # Structured found a cell but text is better — use text, record why structured lost.
+        candidate, quality = t_cand, t_qual
+        meta = {**meta, "reason": "structured_cell_found_text_preferred"}
+    else:
+        candidate, quality = _select_activity_candidate(row, rule, query, text_candidates)
 
-    candidate, quality = _select_activity_candidate(row, rule, query, text_candidates)
     if resolver_mode == "hybrid":
         return candidate, replace(
             quality,
@@ -497,12 +503,19 @@ def _candidates_from_indexes(
     *,
     top_k: int = _RERANK_TOP_K,
 ) -> list[Candidate]:
-    bm25_ranks = {index: rank for rank, index in enumerate(rank_desc(bm25_scores), start=1)}
-    semantic_ranks = {index: rank for rank, index in enumerate(rank_desc(semantic_scores), start=1)}
+    # Use within-cell ranks (not global ranks) so that activities in the correct
+    # (system, phase) cell are not penalised for having a low global rank.
+    # An activity at global rank 200 but cell rank 1 would score rrf≈0.004 globally
+    # (failing the 0.02 gate) yet rrf≈0.033 locally — correctly passing the gate.
+    # bm25_score / semantic_score remain global similarity values for transparency.
+    local_bm25_order = sorted(indexes, key=lambda i: bm25_scores[i], reverse=True)
+    local_bm25_ranks = {idx: rank for rank, idx in enumerate(local_bm25_order, start=1)}
+    local_semantic_order = sorted(indexes, key=lambda i: semantic_scores[i], reverse=True)
+    local_semantic_ranks = {idx: rank for rank, idx in enumerate(local_semantic_order, start=1)}
     candidates: list[Candidate] = []
     for index in indexes:
-        bm25_rank = bm25_ranks.get(index)
-        semantic_rank = semantic_ranks.get(index)
+        bm25_rank = local_bm25_ranks.get(index)
+        semantic_rank = local_semantic_ranks.get(index)
         rrf_score = 0.0
         if bm25_rank is not None:
             rrf_score += 1.0 / (_RRF_K + bm25_rank)
