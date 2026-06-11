@@ -38,7 +38,7 @@ CHUNK_LEVEL_LLM_JUDGE_DETAIL_FIELDNAMES = [
     "ITB Scope",
     "Chunk ID",
     "Section",
-    "No Match Query",
+    "No ACC Ground Truth Query",
     "Selected Count",
     "Candidate Count",
     "Selected Doc IDs",
@@ -156,7 +156,9 @@ def _load_query_info(judgment_path: Path, qrels: Qrels) -> dict[str, dict[str, s
                 "Project Name": _clean(row.get("Project Name")),
                 "ITB Scope": _clean(row.get("ITB Scope")),
                 "Chunk ID": _clean(row.get("Chunk ID")),
-                "No Match Query": str(_clean(row.get("No Match")).casefold() == "true"),
+                "No ACC Ground Truth Query": str(
+                    _clean(row.get("No ACC Ground Truth", row.get("No Match"))).casefold() == "true"
+                ),
                 "Section": _clean(row.get("Section")),
                 "Hierarchy Context": _clean(row.get("Hierarchy Context")),
                 "Keywords": _clean(row.get("Keywords")),
@@ -170,7 +172,7 @@ def _load_query_info(judgment_path: Path, qrels: Qrels) -> dict[str, dict[str, s
                 "Project Name": _project_name_from_scope(scope),
                 "ITB Scope": scope,
                 "Chunk ID": chunk_id,
-                "No Match Query": "False",
+                "No ACC Ground Truth Query": "False",
             },
         )
     return info
@@ -238,7 +240,7 @@ def _evaluate_selected_set(
         "Hit Count": hit_count,
         "Precision": "" if precision is None else precision,
         "F1": "" if f1 is None else f1,
-        "No Match Query": str(no_match_query),
+        "No ACC Ground Truth Query": str(no_match_query),
         "Ground Truth Doc IDs": "|".join(sorted(truth_set)),
         "Predicted Doc IDs": "|".join(predicted),
         "Missing Ground Truth Doc IDs": "|".join(missing),
@@ -298,7 +300,7 @@ def _evaluate_chunk_level_judge(
                     "ITB Scope": info.get("ITB Scope", ""),
                     "Chunk ID": info.get("Chunk ID", ""),
                     "Section": info.get("Section", ""),
-                    "No Match Query": info.get("No Match Query", ""),
+                    "No ACC Ground Truth Query": info.get("No ACC Ground Truth Query", ""),
                     "Selected Count": len(selected_docs),
                     "Candidate Count": len(candidate_docs),
                     "Selected Doc IDs": "|".join(doc["doc_id"] for doc in selected_docs),

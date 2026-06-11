@@ -3,11 +3,8 @@
 from __future__ import annotations
 
 import argparse
-import csv
 import os
-import tempfile
 from pathlib import Path
-from typing import Any
 
 from loguru import logger
 
@@ -48,6 +45,8 @@ DEFAULT_SELECTION_DIR = DEFAULT_BASE_DIR / "llm_final_selection"
 DEFAULT_EVALUATION_DIR = DEFAULT_BASE_DIR / "evaluation"
 DEFAULT_GROUND_TRUTH_PATH = DEFAULT_BASE_DIR / "ground_truth" / "acc_itb_mdl_ground_truth.csv"
 DEFAULT_SELECTION_PATH = DEFAULT_SELECTION_DIR / "acc_llm_final_selection.csv"
+DEFAULT_DOCUMENT_LEVEL_DIR = DEFAULT_BASE_DIR / "document_level"
+DEFAULT_DOCUMENT_LEVEL_PATH = DEFAULT_DOCUMENT_LEVEL_DIR / "acc_document_level.csv"
 DEFAULT_CROSS_ENCODER_MODEL = "cross-encoder/ms-marco-MiniLM-L6-v2"
 DEFAULT_SCOPE_SOURCE_FILES = {
     "Fadhili_ITB": "Fadhili_MDL.xlsx",
@@ -134,11 +133,7 @@ def match(argv: list[str] | None = None) -> None:
                     embedding_service=embedding_service,
                 )
                 service.setup()
-                filtered_input_path = _write_acc_positive_temp_csv(input_path)
-                try:
-                    service.match_file(filtered_input_path, output_path)
-                finally:
-                    filtered_input_path.unlink(missing_ok=True)
+                service.match_file(input_path, output_path)
                 print(f"Saved {mode} ACC matching for {scope}: {output_path}")
 
 
@@ -494,7 +489,7 @@ def aggregate_final(argv: list[str] | None = None) -> None:
     )
     args = parser.parse_args(argv)
     if args.scope:
-        build_document_level_catalog(
+        document_level_path = build_document_level_catalog(
             selection_path=args.selection,
             output_dir=args.output_dir,
             scope=args.scope,
@@ -503,7 +498,7 @@ def aggregate_final(argv: list[str] | None = None) -> None:
         if args.no_evaluate:
             return
         evaluate_document_level_outputs(
-            selection_path=args.selection,
+            document_level_path=document_level_path,
             ground_truth_path=args.ground_truth,
             output_dir=args.evaluation_output_dir,
             scope=args.scope,
@@ -512,18 +507,18 @@ def aggregate_final(argv: list[str] | None = None) -> None:
         print(f"Saved ACC ITB project-level evaluation reports: {args.evaluation_output_dir}")
         return
 
-    build_document_level_catalog(
+    document_level_path = build_document_level_catalog(
         selection_path=args.selection,
         output_dir=args.output_dir,
     )
     print("Saved ACC document-level outputs:")
-    print(f"- {args.output_dir / 'acc_document_level.csv'}")
+    print(f"- {document_level_path}")
 
     if args.no_evaluate:
         return
 
     evaluate_document_level_outputs(
-        selection_path=args.selection,
+        document_level_path=document_level_path,
         ground_truth_path=args.ground_truth,
         output_dir=args.evaluation_output_dir,
         enable_llm_judge=args.enable_llm_judge,
@@ -535,7 +530,7 @@ def evaluate_project_level(argv: list[str] | None = None) -> None:
     """Evaluate ITB project-level outputs with rule-based metrics and optional LLM judge metrics."""
     load_env_file()
     parser = argparse.ArgumentParser(description="Evaluate ACC ITB project-level outputs.")
-    parser.add_argument("--selection", type=Path, default=DEFAULT_SELECTION_DIR / "acc_llm_final_selection.csv")
+    parser.add_argument("--document-level", type=Path, default=DEFAULT_DOCUMENT_LEVEL_PATH)
     parser.add_argument("--ground-truth", type=Path, default=DEFAULT_GROUND_TRUTH_PATH)
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_BASE_DIR / "project_level_evaluation")
     parser.add_argument(
@@ -552,7 +547,7 @@ def evaluate_project_level(argv: list[str] | None = None) -> None:
 
     if args.scope:
         evaluate_document_level_outputs(
-            selection_path=args.selection,
+            document_level_path=args.document_level,
             ground_truth_path=args.ground_truth,
             output_dir=args.output_dir,
             scope=args.scope,
@@ -562,30 +557,12 @@ def evaluate_project_level(argv: list[str] | None = None) -> None:
         return
 
     evaluate_document_level_outputs(
-        selection_path=args.selection,
+        document_level_path=args.document_level,
         ground_truth_path=args.ground_truth,
         output_dir=args.output_dir,
         enable_llm_judge=args.enable_llm_judge,
     )
     print(f"Saved ACC ITB project-level evaluation reports: {args.output_dir}")
-
-
-def _write_acc_positive_temp_csv(input_path: Path) -> Path:
-    with open(input_path, newline="", encoding="utf-8-sig") as file:
-        reader = csv.DictReader(file)
-        fieldnames = list(reader.fieldnames or [])
-        rows = [row for row in reader if _is_true(row.get("Is ACC Related"))]
-    with tempfile.NamedTemporaryFile("w", newline="", encoding="utf-8-sig", suffix=".csv", delete=False) as temp_file:
-        writer = csv.DictWriter(temp_file, fieldnames=fieldnames, extrasaction="ignore")
-        writer.writeheader()
-        writer.writerows(rows)
-        return Path(temp_file.name)
-
-
-def _is_true(value: Any) -> bool:
-    if isinstance(value, bool):
-        return value
-    return str(value).strip().casefold() in {"true", "yes", "y", "1"}
 
 
 if __name__ == "__main__":
