@@ -16,13 +16,12 @@ def build_acc_selector_examples(
     *,
     matching_dir: Path,
     ground_truth_path: Path,
-    top_k: int,
     scope: str = "",
     positive_only: bool = False,
 ) -> list[SelectorExample]:
     """Build selector supervision examples from ACC matching outputs and ground truth."""
     qrels = _load_positive_qrels(ground_truth_path)
-    records = load_matching_records(matching_dir, top_k)
+    records = load_matching_records(matching_dir)
     examples: list[SelectorExample] = []
 
     for record in records:

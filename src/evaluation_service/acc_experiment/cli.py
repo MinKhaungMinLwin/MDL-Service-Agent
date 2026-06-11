@@ -159,7 +159,7 @@ def select_final(argv: list[str] | None = None) -> None:
     parser.add_argument(
         "--rrf-k",
         type=int,
-        default=int(os.getenv("ACC_EVAL_RRF_K", os.getenv("ACC_FINAL_SELECTOR_TOP_K", "20"))),
+        default=int(os.getenv("ACC_EVAL_RRF_K", "20")),
         help="RRF/final-candidate cutoff label/value to use in automatic chunk-level evaluation.",
     )
     parser.add_argument("--prompt-file", type=Path, default=DEFAULT_FINAL_SELECTOR_PROMPT_PATH)
@@ -176,7 +176,6 @@ def select_final(argv: list[str] | None = None) -> None:
         help="Path to a compiled DSPy selector program JSON. Required when --selector-backend dspy.",
     )
     parser.add_argument("--model", default=os.getenv("AZURE_OPENAI_CHAT_DEPLOYMENT"))
-    parser.add_argument("--top-k", type=int, default=int(os.getenv("ACC_FINAL_SELECTOR_TOP_K", "20")))
     parser.add_argument(
         "--candidate-batch-size",
         type=int,
@@ -205,13 +204,12 @@ def select_final(argv: list[str] | None = None) -> None:
     resolved_model = args.model or required_env("AZURE_OPENAI_CHAT_DEPLOYMENT")
 
     logger.info(
-        "Starting ACC final selector with backend={}, model={}, matching_dir={}, output_dir={}, top_k={}, "
+        "Starting ACC final selector with backend={}, model={}, matching_dir={}, output_dir={}, "
         "candidate_batch_size={}, llm_retries={}, max_concurrency={}, max_records={}, retrieval_k={}, rrf_k={}",
         args.selector_backend,
         resolved_model,
         args.matching_dir,
         args.output_dir,
-        args.top_k,
         args.candidate_batch_size,
         args.llm_retries,
         args.max_concurrency,
@@ -234,7 +232,6 @@ def select_final(argv: list[str] | None = None) -> None:
     service = ACCFinalSelectorService(
         config=ACCFinalSelectorConfig(
             model=resolved_model,
-            top_k=args.top_k,
             candidate_batch_size=args.candidate_batch_size,
             llm_retries=args.llm_retries,
             max_concurrency=args.max_concurrency,
@@ -271,7 +268,7 @@ def select_final(argv: list[str] | None = None) -> None:
             llm_selection_path=selection_path,
             retrieval_k=args.retrieval_k,
             cross_encoder_k=args.rrf_k,
-            llm_k=args.top_k,
+            llm_k=args.rrf_k,
             scope=scope,
             enable_llm_judge=False,
         )
@@ -299,7 +296,6 @@ def tune_selector(argv: list[str] | None = None) -> None:
         default=os.getenv("ACC_SELECTOR_TUNER_REFLECTION_MODEL"),
         help="Optional stronger model for GEPA reflection. Defaults to the task model when omitted.",
     )
-    parser.add_argument("--top-k", type=int, default=int(os.getenv("ACC_FINAL_SELECTOR_TOP_K", "20")))
     parser.add_argument("--scope", default="", help="Optional scope filter, e.g. Fadhili_ITB or R_N_ITB.")
     budget_group = parser.add_mutually_exclusive_group()
     budget_group.add_argument(
@@ -354,7 +350,6 @@ def tune_selector(argv: list[str] | None = None) -> None:
     examples = build_acc_selector_examples(
         matching_dir=args.matching_dir,
         ground_truth_path=args.ground_truth,
-        top_k=args.top_k,
         scope=args.scope,
         positive_only=False,
     )
