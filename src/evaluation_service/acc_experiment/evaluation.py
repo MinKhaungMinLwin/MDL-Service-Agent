@@ -26,6 +26,13 @@ SUMMARY_BASE_FIELDNAMES = [
     "avg_f1",
 ]
 
+SUMMARY_LLM_JUDGE_FIELDNAMES = [
+    "avg_llm_coverage_score",
+    "avg_llm_purity_score",
+    "avg_llm_readiness_score",
+    "avg_llm_judge_score",
+]
+
 CHUNK_LEVEL_LLM_JUDGE_DETAIL_FIELDNAMES = [
     "Project Name",
     "ITB Scope",
@@ -55,6 +62,7 @@ def evaluate_acc_experiment(
     cross_encoder_k: int = 20,
     llm_k: int = 0,
     scope: str = "",
+    enable_llm_judge: bool = False,
 ) -> None:
     """Evaluate ACC artifacts using the shared retrieval/cross-encoder metrics."""
     qrels = _load_positive_qrels(ground_truth_path)
@@ -104,19 +112,24 @@ def evaluate_acc_experiment(
             for query_id in sorted(set(query_info) | set(qrels) | set(llm_rankings))
         ]
         llm_summary = {"stage": llm_stage, **_summarize_selected_set(llm_rows)}
-        chunk_judge_rows, chunk_judge_summary = _evaluate_chunk_level_judge(
-            matching_dir=matching_dir,
-            llm_selection_path=llm_selection_path,
-            query_info=query_info,
-            candidate_limit=cross_encoder_k,
-            scope=scope,
-        )
-        llm_summary.update(chunk_judge_summary)
+        chunk_judge_rows: list[dict[str, Any]] = []
+        if enable_llm_judge:
+            chunk_judge_rows, chunk_judge_summary = _evaluate_chunk_level_judge(
+                matching_dir=matching_dir,
+                llm_selection_path=llm_selection_path,
+                query_info=query_info,
+                candidate_limit=cross_encoder_k,
+                scope=scope,
+            )
+            llm_summary.update(chunk_judge_summary)
         summary_rows.append(llm_summary)
 
     output_dir.mkdir(parents=True, exist_ok=True)
-    _write_csv(output_dir / "summary.csv", _fieldnames(SUMMARY_BASE_FIELDNAMES, summary_rows), summary_rows)
-    if llm_selection_path:
+    summary_fieldnames = SUMMARY_BASE_FIELDNAMES.copy()
+    if enable_llm_judge:
+        summary_fieldnames.extend(SUMMARY_LLM_JUDGE_FIELDNAMES)
+    _write_csv(output_dir / "summary.csv", _fieldnames(summary_fieldnames, summary_rows), summary_rows)
+    if llm_selection_path and enable_llm_judge:
         _write_csv(
             output_dir / "llm_judge_details.csv",
             CHUNK_LEVEL_LLM_JUDGE_DETAIL_FIELDNAMES,
