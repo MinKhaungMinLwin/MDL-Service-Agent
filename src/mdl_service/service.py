@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import time
 from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any
 
@@ -23,13 +24,19 @@ class MDLClassificationService:
         self,
         classifier: MDLClassifier,
         batch_size: int = 20,
+        max_concurrency: int = 1,
         batch_delay_seconds: float = 1.0,
         sleep: Callable[[float], None] = time.sleep,
     ) -> None:
         if batch_size <= 0:
             raise ValueError("batch_size must be positive")
+        if max_concurrency <= 0:
+            raise ValueError("max_concurrency must be positive")
+        if batch_delay_seconds < 0:
+            raise ValueError("batch_delay_seconds cannot be negative")
         self.classifier = classifier
         self.batch_size = batch_size
+        self.max_concurrency = max_concurrency
         self.batch_delay_seconds = batch_delay_seconds
         self.sleep = sleep
 
@@ -37,16 +44,56 @@ class MDLClassificationService:
         """Classify all titles from one MDL workbook."""
         titles = extract_titles_from_excel(input_path)
         logger.info("Extracted {} MDL titles from {}", len(titles), input_path)
-        rows = []
-        for start in range(0, len(titles), self.batch_size):
-            batch = titles[start : start + self.batch_size]
-            results = self.classifier.classify_titles([item.title for item in batch])
-            rows.extend(item.to_csv_row(result) for item, result in zip(batch, results, strict=True))
-            if start + self.batch_size < len(titles):
+        batches = list(enumerate(_chunked(titles, self.batch_size), start=1))
+        if self.max_concurrency > 1 and batches:
+            logger.info(
+                "Classifying {} batch(es) with concurrency {}",
+                len(batches),
+                self.max_concurrency,
+            )
+        indexed_rows = []
+        for batch_index, batch_rows in self._run_batches(batches):
+            indexed_rows.append((batch_index, batch_rows))
+            logger.info("Completed MDL classification batch {}/{}", batch_index, len(batches))
+            if self.batch_delay_seconds and batch_index < len(batches):
                 self.sleep(self.batch_delay_seconds)
+        rows = [
+            row
+            for _, batch_rows in sorted(indexed_rows, key=lambda item: item[0])
+            for row in batch_rows
+        ]
         if rows:
             write_classified_csv(output_path, rows)
         return len(rows)
+
+    def _run_batches(self, batches: list[tuple[int, list[Any]]]):
+        if self.max_concurrency == 1:
+            for batch_index, batch in batches:
+                yield batch_index, self._run_batch(batch_index, len(batches), batch)
+            return
+        with ThreadPoolExecutor(max_workers=self.max_concurrency) as executor:
+            futures = {
+                executor.submit(self._run_batch, batch_index, len(batches), batch): batch_index
+                for batch_index, batch in batches
+            }
+            for future in as_completed(futures):
+                yield futures[future], future.result()
+
+    def _run_batch(
+        self,
+        batch_index: int,
+        batch_count: int,
+        batch: list[Any],
+    ) -> list[dict[str, str]]:
+        logger.info(
+            "Running MDL classification batch {}/{} ({} title{})",
+            batch_index,
+            batch_count,
+            len(batch),
+            "" if len(batch) == 1 else "s",
+        )
+        results = self.classifier.classify_titles([item.title for item in batch])
+        return [item.to_csv_row(result) for item, result in zip(batch, results, strict=True)]
 
 
 class MDLIngestService:
@@ -89,3 +136,7 @@ class MDLIngestService:
         if hasattr(self.embedding_service, "embed_texts"):
             return self.embedding_service.embed_texts(texts)
         return self.embedding_service.embed_batch(texts)
+
+
+def _chunked(items: list[Any], size: int) -> list[list[Any]]:
+    return [items[index : index + size] for index in range(0, len(items), size)]

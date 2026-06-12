@@ -39,6 +39,7 @@ def classify(argv: list[str] | None = None) -> None:
         default=Path(os.getenv("PROMPT_FILE", DEFAULT_CLASSIFICATION_PROMPT_PATH)),
     )
     parser.add_argument("--batch-size", type=int, default=20)
+    parser.add_argument("--max-concurrency", type=int, default=1)
     parser.add_argument("--batch-delay-seconds", type=float, default=1.0)
     args = parser.parse_args(argv)
 
@@ -54,6 +55,7 @@ def classify(argv: list[str] | None = None) -> None:
             system_prompt=load_system_prompt(args.prompt_file),
         ),
         batch_size=args.batch_size,
+        max_concurrency=args.max_concurrency,
         batch_delay_seconds=args.batch_delay_seconds,
     )
 
