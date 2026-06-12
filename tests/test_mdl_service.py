@@ -5,6 +5,7 @@ from __future__ import annotations
 import csv
 import json
 import tempfile
+import time
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
@@ -46,6 +47,34 @@ class MDLServiceTest(unittest.TestCase):
         self.assertEqual(row_count, 1)
         self.assertEqual(rows[0]["System"], "HVAC")
         self.assertEqual(rows[0]["Deliverable"], "GENERAL ARRANGEMENT")
+
+    def test_classify_file_preserves_row_order_with_concurrency(self) -> None:
+        classifier = _SlowFakeClassifier()
+        service = MDLClassificationService(
+            classifier,
+            batch_size=1,
+            max_concurrency=2,
+            batch_delay_seconds=0,
+            sleep=lambda _: None,
+        )
+
+        with tempfile.TemporaryDirectory() as directory:
+            input_path = Path(directory) / "Sample_MDL.xlsx"
+            output_path = Path(directory) / "Sample_MDL_classified.csv"
+            workbook = openpyxl.Workbook()
+            worksheet = workbook.active
+            worksheet.title = "Documents"
+            worksheet.append(["Document No.", "Document Description"])
+            worksheet.append(["DOC-1", "SLOW TITLE"])
+            worksheet.append(["DOC-2", "FAST TITLE"])
+            workbook.save(input_path)
+
+            row_count = service.classify_file(input_path, output_path)
+            with open(output_path, newline="", encoding="utf-8-sig") as file:
+                rows = list(csv.DictReader(file))
+
+        self.assertEqual(row_count, 2)
+        self.assertEqual([row["Title"] for row in rows], ["SLOW TITLE", "FAST TITLE"])
 
     def test_loads_normalized_ingest_records(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -233,6 +262,13 @@ class MDLServiceTest(unittest.TestCase):
 class _FakeClassifier:
     def classify_titles(self, titles: list[str]) -> list[ClassificationResult]:
         return [ClassificationResult(system="HVAC", deliverable="GENERAL ARRANGEMENT") for _ in titles]
+
+
+class _SlowFakeClassifier:
+    def classify_titles(self, titles: list[str]) -> list[ClassificationResult]:
+        if "SLOW" in titles[0]:
+            time.sleep(0.05)
+        return [ClassificationResult(system=title, deliverable="GENERAL ARRANGEMENT") for title in titles]
 
 
 class _RecordingConnection:
