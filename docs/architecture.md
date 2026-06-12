@@ -179,13 +179,21 @@ INPUT: *_MDL_classified.csv  OR  mdl_candidates_*.csv
   ┌──────────────────────────▼──────────────────────────────────────┐
   │  activity_query = Equipment + System + norm_del + Title         │
   │                   + phase boost (deliverable / rule keyword)    │
-  │  BM25 + semantic + RRF (always, mandatory) → top-1              │
+  │                                                                 │
+  │  Hybrid resolver (default):                                     │
+  │    1. Structured: derive (system,phase) cell → local BM25+      │
+  │       semantic+RRF within cell                                  │
+  │    2. Text: BM25+semantic+RRF over all 4039 activities          │
+  │    3. Use structured if adjusted_score ≥ text × 1.05,           │
+  │       else use text; procurement conflict → force text          │
+  │                                                                 │
+  │  → top-1 activity selected                                      │
   │  anchor_date = activity.start_date  (or finish_date if          │
   │                rule.activity_keywords ∩ {delivery, fob, ...})   │
   │  if ntp_date: anchor += (ntp_date − 2007-03-01)                 │
   └──────────────────────────┬──────────────────────────────────────┘
                              │
-  Step 3: Date range
+  Pass 3: Date range
   ┌──────────────────────────▼──────────────────────────────────────┐
   │  compute_date_range(vt_parsed, anchor, sub_type, priority)      │
   │                                                                 │
@@ -193,19 +201,27 @@ INPUT: *_MDL_classified.csv  OR  mdl_candidates_*.csv
   │  fa_latest      = anchor + fa_hi_days  (e.g. +126d)             │
   │  fa_recommended = midpoint                                      │
   │  fc_recommended = fa_recommended + 60d  (default)               │
+  │  FC-only rule + sub_type=FA → FA = fc_recommended − 60d ± 15d   │
   │  confidence     = 0.9 / 0.6 / 0.3  by priority                  │
   └──────────────────────────┬──────────────────────────────────────┘
                              │
 OUTPUT: generated_schedule_*.json
   { document_no, title, equipment, deliverable,
-    itb_sources,           ← traceability: which ITB chunks need this doc
-    submission_type,       ← FA / FI / SKIP
+    itb_sources,              ← traceability: which ITB chunks need this doc
+    submission_type,          ← FA / FI / SKIP
     matched_activity_id,
     matched_activity_name,
     fa_earliest, fa_recommended, fa_latest,
     fc_earliest, fc_recommended, fc_latest,
-    date_range_status,     ← generated / skip / no_rule / missing_date
-    date_range_confidence  ← 0.90 / 0.60 / 0.30
+    date_range_status,        ← generated / fi_complete / skip / no_rule /
+                                 missing_date / blocked_rule / blocked_activity /
+                                 blocked_rule_activity
+    schedule_quality_status,  ← needs_review / blocked_rule / blocked_activity /
+                                 blocked_rule_activity / blocked_no_rule / skip
+    schedule_quality_reasons, ← list of quality flags
+    schedule_confidence,      ← composite confidence score
+    activity_match_resolver_mode,      ← text / structured / hybrid
+    activity_match_resolution_reason,  ← structured_preferred / text_only / etc.
   }
 ```
 

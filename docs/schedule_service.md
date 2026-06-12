@@ -174,3 +174,143 @@ Date engine needs:          source:
 
 FC default (when there is no FC rule): `fa_recommended + 60 days ± 15 days`
 
+**FC-only rules with FA submission type (added 2026-06-11):**
+When the VT formula only constrains FC (e.g. `start-3M<=FC<=start-1M`) but `sub_type=FA`,
+FA is back-calculated from FC:
+```
+fa_center    = fc_recommended − 60 days
+fa_earliest  = fa_center − 15 days
+fa_latest    = fa_center + 15 days
+fa_recommended = fa_center
+notes = "FA derived from FC constraint (FC-only VT rule)"
+```
+This eliminates `missing_fa` status for these rows.
+
+---
+
+## Activity Matching — Hybrid Workflow (default)
+
+`/schedule/generate` uses `activity_resolver=hybrid` as the default. The hybrid workflow
+combines a structured cell search with a full-corpus fallback, always choosing the better result.
+
+### Step 1 — Structured cell search
+
+Derive a `(system, phase)` cell from the MDL row:
+- **system** — extracted from Equipment / System / Title tokens via `_SCOPE_ALIASES`
+  (e.g. `"Gas Turbine Generator"` → `gtg`, `"HRSG"` → `hrsg`)
+- **phase** — derived from Deliverable type and rule keywords
+  (e.g. `"P&I DIAGRAM"` → `system_design`, `"FOUNDATION DRAWING"` → `civil_design`)
+
+Within the cell, BM25 + semantic + RRF is run using **local cell ranks** (not global
+4039-activity ranks), so activities that rank best within their cell are not penalised by
+their lower global position.
+
+### Step 2 — Full-corpus text search
+
+Independently run BM25 + semantic + RRF over all 4039 activities using the same query.
+
+### Step 3 — Quality comparison and selection
+
+```python
+if structured_cell_found AND s_qual.adjusted_score >= t_qual.adjusted_score * 1.05:
+    use structured result   # resolution_reason = "structured_preferred"
+else:
+    use text result         # resolution_reason = "structured_cell_found_text_preferred"
+                            #                  or "text_only" (no cell found)
+```
+
+The 1.05× threshold means structured only wins when it is meaningfully better — not just
+marginally. If the structured cell is empty, the text result is used unconditionally.
+
+### Procurement conflict guard
+
+Design-phase documents (`system_design`, `design_drawing`, `design_criteria`, `civil_design`)
+must not use procurement-phase activities as anchor. If the structured result is
+procurement-phase and the query is design-phase, the structured result is discarded and
+the text path is used instead (`resolution_reason = "structured_blocked_procurement_conflict"`).
+
+### Activity quality gate
+
+After selecting the candidate, the result is evaluated before generating dates:
+
+| Block condition | Tag | Bypass available? |
+|---|---|---|
+| `phase_status == "mismatch"` | `activity_phase_mismatch` | No |
+| `scope_status == "mismatch"` | `activity_scope_mismatch` | No |
+| `scope_source=="rule"` AND `scope≠match` | `activity_rule_scope_unmatched` | **Yes** — when `activity_unscoped` + `phase∈{match,compatible}` + `sem≥0.55` + `rrf≥0.01` |
+| `rrf_score < 0.01` | `activity_rrf_below_gate` | No |
+| `generic_activity AND adjusted_score < 0.005` | `activity_generic_low_confidence` | No |
+| design-phase doc + procurement-phase activity | `activity_phase_procurement_conflict` | No |
+
+**Unscoped activity bypass** — CCPP contains generic template activities (e.g. `"P&ID"`,
+`"(COND System) P&ID & System Design"`) that carry no equipment scope token. These are
+correctly matched by semantic similarity but trigger `activity_rule_scope_unmatched` because
+the rule's scope cannot be confirmed. The bypass allows them through when the semantic and
+RRF scores are both strong, treating the missing scope as a data gap in the activity, not
+evidence of a wrong match.
+
+### Debug fields in output
+
+| Field | Meaning |
+|---|---|
+| `activity_match_resolver_mode` | always `hybrid` |
+| `activity_match_resolution_reason` | `structured_preferred` / `structured_cell_found_text_preferred` / `text_only` / `structured_blocked_procurement_conflict` / etc. |
+| `activity_match_structured_scope` | derived `(system, phase)` cell key |
+| `activity_match_structured_cell_size` | number of activities in the cell (0 = text-only fallback) |
+| `activity_match_phase_status` | `match` / `compatible` / `query_unknown` / `mismatch` |
+| `activity_match_scope_status` | `match` / `query_unscoped` / `activity_unscoped` / `mismatch` |
+
+---
+
+## Confidence-Graded Output (`schedule_quality_status`)
+
+Instead of hard-blocking uncertain rows, the engine generates dates with a quality flag:
+
+| `date_range_status` | `schedule_quality_status` | Meaning |
+|---------------------|--------------------------|---------|
+| `generated` | `needs_review` | Dates computed; quality flags present |
+| `fi_complete` | `needs_review` | FI doc — no FA needed; FC computed |
+| `skip` | `skip` | Rule says SKIP — document excluded |
+| `no_rule` | `blocked_no_rule` | No matching validation rule found |
+| `blocked_rule` | `blocked_rule` | Rule match quality below gate |
+| `blocked_activity` | `blocked_activity` | Activity match quality below gate |
+| `blocked_rule_activity` | `blocked_rule_activity` | Both rule and activity below gate |
+
+**Gate thresholds:**
+- Rule: block when `rule_score < 0.5` AND NOT semantically confirmed (`family=match` + `subtype=match` + `semantic≥0.60` + `scope≠mismatch`)
+- Activity: block when `rrf_score < 0.01` OR (`generic_activity` AND `adjusted_score < 0.005`) OR `scope_status=mismatch` OR `phase_status=mismatch`
+
+**`schedule_quality_reasons`** — semicolon-separated flags on each row explaining quality signals (e.g. `rule_scope_status=rule_generic`, `activity_phase_status=compatible`). Present on all rows including generated ones.
+
+**`schedule_confidence`** — composite score from rule × activity × date components (0–1).
+- Rows from **historical MDL** (no `match_score` column): candidate component = 1.0, no penalty.
+- Rows from **ITB candidate pipeline** (`mdl_candidates_*.csv`, has `match_score`): candidate component scaled by match_score (0.5–1.0).
+
+---
+
+### Production Confidence Tiers
+
+Use these tiers (derived from rule + activity signals) to decide review depth:
+
+| Tier | Conditions | Recommended action |
+|---|---|---|
+| **T1 — High confidence** | `rule family=match` + `subtype=match` + `activity phase=match` + `activity scope=match` + `rrf≥0.01` | Use directly |
+| **T2 — Medium confidence** | Rule solid + `phase∈{match,compatible}` + scope unconfirmed (unscoped/generic) | Spot-check sample |
+| **T3 — Low confidence** | `phase=query_unknown` / `activity_rrf_low` / generic activity / `query_unscoped` | Expert review |
+
+**Benchmark result (Fadhili_MDL_classified.csv, 2682 rows, hybrid mode, 2026-06-12):**
+
+| `date_range_status` | count | % |
+|---|---|---|
+| `generated` | 1579 | 58.9% |
+| `fi_complete` | 450 | 16.8% |
+| `skip` | 225 | 8.4% |
+| `blocked_activity` | 132 | 4.9% |
+| `no_rule` | 144 | 5.4% |
+| `blocked_rule` | 144 | 5.4% |
+| `blocked_rule_activity` | 8 | 0.3% |
+
+**Usable (generated + fi_complete): 2029 (75.7%)** — Usable + Skip: 2254 (84.1%)
+
+
+
