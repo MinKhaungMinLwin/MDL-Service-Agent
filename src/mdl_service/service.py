@@ -12,6 +12,7 @@ from loguru import logger
 
 from mdl_service.classification import MDLClassifier
 from mdl_service.loader import extract_titles_from_excel, load_ingest_records
+from mdl_service.models import DocumentTitle
 from mdl_service.models import MDLIngestConfig
 from mdl_service.output import write_classified_csv
 from mdl_service.repository import MDLRepository
@@ -44,6 +45,13 @@ class MDLClassificationService:
         """Classify all titles from one MDL workbook."""
         titles = extract_titles_from_excel(input_path)
         logger.info("Extracted {} MDL titles from {}", len(titles), input_path)
+        rows = self.classify_titles(titles)
+        if rows:
+            write_classified_csv(output_path, rows)
+        return len(rows)
+
+    def classify_titles(self, titles: list[DocumentTitle]) -> list[dict[str, str]]:
+        """Classify in-memory MDL titles and return downstream-compatible CSV rows."""
         batches = list(enumerate(_chunked(titles, self.batch_size), start=1))
         if self.max_concurrency > 1 and batches:
             logger.info(
@@ -62,9 +70,7 @@ class MDLClassificationService:
             for _, batch_rows in sorted(indexed_rows, key=lambda item: item[0])
             for row in batch_rows
         ]
-        if rows:
-            write_classified_csv(output_path, rows)
-        return len(rows)
+        return rows
 
     def _run_batches(self, batches: list[tuple[int, list[Any]]]):
         if self.max_concurrency == 1:

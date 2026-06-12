@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import os
 from pathlib import Path
 
@@ -14,8 +15,8 @@ from mdl_service.acc_filter import DEFAULT_ACC_FILTER_PROMPT_PATH, load_acc_filt
 from mdl_service.acc_filter_service import ACCFilterService
 from mdl_service.classification import DEFAULT_CLASSIFICATION_PROMPT_PATH, MDLClassifier, load_system_prompt
 from mdl_service.loader import list_excel_files
-from mdl_service.models import MDLIngestConfig
-from mdl_service.output import write_catalog_outputs
+from mdl_service.models import CLASSIFIED_FIELDNAMES, DocumentTitle, MDLIngestConfig
+from mdl_service.output import write_catalog_outputs, write_classified_csv
 from mdl_service.repository import MDLRepository
 from mdl_service.service import MDLClassificationService, MDLIngestService
 
@@ -41,6 +42,11 @@ def classify(argv: list[str] | None = None) -> None:
     parser.add_argument("--batch-size", type=int, default=20)
     parser.add_argument("--max-concurrency", type=int, default=1)
     parser.add_argument("--batch-delay-seconds", type=float, default=1.0)
+    parser.add_argument(
+        "--retry-failed-from",
+        type=Path,
+        help="Optional existing *_classified.csv file. If set, only rows with Note are reclassified and merged back.",
+    )
     args = parser.parse_args(argv)
 
     client = build_azure_openai_client(
@@ -60,6 +66,10 @@ def classify(argv: list[str] | None = None) -> None:
     )
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
+    if args.retry_failed_from:
+        retried_count = _retry_failed_classifications(service, args.retry_failed_from)
+        print(f"[UPDATED] {args.retry_failed_from} ({retried_count} failed rows retried)")
+        return
     for input_path in list_excel_files(args.data_dir, args.requested_file):
         if not input_path.exists():
             print(f"[ERROR] File not found: {input_path}")
@@ -194,6 +204,41 @@ def _infer_project_name(source_file: str, projects: list[str]) -> str:
 
 def _clean(value: object) -> str:
     return "" if value is None else str(value).strip()
+
+
+def _retry_failed_classifications(service: MDLClassificationService, classified_csv_path: Path) -> int:
+    rows = _read_classified_rows(classified_csv_path)
+    indexed_titles = [
+        (
+            index,
+            DocumentTitle(
+                source_file=_clean(row.get("Source File")),
+                sheet=_clean(row.get("Sheet")),
+                document_no=_clean(row.get("Document No")),
+                title=_clean(row.get("Title")),
+            ),
+        )
+        for index, row in enumerate(rows)
+        if _clean(row.get("Title")) and _clean(row.get("Note"))
+    ]
+    if not indexed_titles:
+        return 0
+    updated_rows = service.classify_titles([title for _, title in indexed_titles])
+    for (index, _), updated_row in zip(indexed_titles, updated_rows, strict=True):
+        rows[index] = updated_row
+    write_classified_csv(classified_csv_path, rows)
+    return len(indexed_titles)
+
+
+def _read_classified_rows(path: Path) -> list[dict[str, str]]:
+    for encoding in ("utf-8-sig", "cp949"):
+        try:
+            with open(path, newline="", encoding=encoding) as file:
+                rows = list(csv.DictReader(file))
+                return [{field: _clean(row.get(field)) for field in CLASSIFIED_FIELDNAMES} for row in rows]
+        except UnicodeDecodeError:
+            continue
+    raise UnicodeDecodeError("utf-8-sig", b"", 0, 1, f"Unable to decode {path}")
 
 
 if __name__ == "__main__":

@@ -15,7 +15,7 @@ import openpyxl
 from mdl_service.acc_filter import parse_acc_filter_results
 from mdl_service.acc_filter_service import ACCFilterService
 from mdl_service.classification import MDLClassifier
-from mdl_service.cli import _build_catalog_row
+from mdl_service.cli import _build_catalog_row, _retry_failed_classifications
 from mdl_service.loader import extract_titles_from_excel, load_ingest_records
 from mdl_service.models import BatchClassification, ClassificationResult, DocumentClassification, MDLIngestConfig
 from mdl_service.output import write_catalog_outputs
@@ -102,6 +102,70 @@ class MDLServiceTest(unittest.TestCase):
         self.assertIn("Title: HVAC GENERAL ARRANGEMENT", records[0]["text_content"])
         self.assertIn("Expanded Terms:", records[0]["text_content"])
         self.assertIn("Heating Ventilating and Air Conditioning", records[0]["text_content"])
+
+    def test_retry_failed_classifications_updates_only_failed_rows(self) -> None:
+        classifier = _RetryFakeClassifier()
+        service = MDLClassificationService(classifier, batch_size=2, batch_delay_seconds=0, sleep=lambda _: None)
+
+        with tempfile.TemporaryDirectory() as directory:
+            csv_path = Path(directory) / "Sample_MDL_classified.csv"
+            with open(csv_path, "w", newline="", encoding="utf-8-sig") as file:
+                writer = csv.DictWriter(file, fieldnames=[
+                    "Source File",
+                    "Sheet",
+                    "Document No",
+                    "Title",
+                    "Equipment",
+                    "Building",
+                    "System",
+                    "Study/Survey",
+                    "Others",
+                    "Deliverable",
+                    "Note",
+                ])
+                writer.writeheader()
+                writer.writerows(
+                    [
+                        {
+                            "Source File": "Sample_MDL.xlsx",
+                            "Sheet": "Documents",
+                            "Document No": "DOC-1",
+                            "Title": "GOOD TITLE",
+                            "Equipment": "",
+                            "Building": "",
+                            "System": "Existing System",
+                            "Study/Survey": "",
+                            "Others": "",
+                            "Deliverable": "Existing Deliverable",
+                            "Note": "",
+                        },
+                        {
+                            "Source File": "Sample_MDL.xlsx",
+                            "Sheet": "Documents",
+                            "Document No": "DOC-2",
+                            "Title": "FAILED TITLE",
+                            "Equipment": "",
+                            "Building": "",
+                            "System": "",
+                            "Study/Survey": "",
+                            "Others": "",
+                            "Deliverable": "",
+                            "Note": "APIConnectionError: Connection error.",
+                        },
+                    ]
+                )
+
+            count = _retry_failed_classifications(service, csv_path)
+            with open(csv_path, newline="", encoding="utf-8-sig") as file:
+                rows = list(csv.DictReader(file))
+
+        self.assertEqual(count, 1)
+        self.assertEqual(classifier.calls, [["FAILED TITLE"]])
+        self.assertEqual(rows[0]["System"], "Existing System")
+        self.assertEqual(rows[0]["Deliverable"], "Existing Deliverable")
+        self.assertEqual(rows[1]["System"], "Retried System")
+        self.assertEqual(rows[1]["Deliverable"], "Retried Deliverable")
+        self.assertEqual(rows[1]["Note"], "")
 
     def test_repository_creates_schema_and_upserts_records(self) -> None:
         conn = _RecordingConnection()
@@ -269,6 +333,15 @@ class _SlowFakeClassifier:
         if "SLOW" in titles[0]:
             time.sleep(0.05)
         return [ClassificationResult(system=title, deliverable="GENERAL ARRANGEMENT") for title in titles]
+
+
+class _RetryFakeClassifier:
+    def __init__(self) -> None:
+        self.calls: list[list[str]] = []
+
+    def classify_titles(self, titles: list[str]) -> list[ClassificationResult]:
+        self.calls.append(list(titles))
+        return [ClassificationResult(system="Retried System", deliverable="Retried Deliverable") for _ in titles]
 
 
 class _RecordingConnection:
