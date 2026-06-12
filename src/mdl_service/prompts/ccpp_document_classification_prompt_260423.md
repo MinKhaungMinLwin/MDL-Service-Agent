@@ -148,15 +148,16 @@ Before classification, mentally normalize the description as follows:
 1. Treat dash variants (`-`, `–`, `—`) as the same separator.
 2. Treat underscore `_` as a possible separator when used like a title break.
 3. Ignore extra spaces.
-4. **Preserve original casing and exact spelling in the final output EXCEPT for abbreviations.**
+4. **Preserve original casing and exact spelling in the final output.**
 5. Minor typos do not change the intended category, but **you must extract the typo exactly as it is**.
    - Example: If the input is `Datesheet`, categorize it as Deliverable but extract `Datesheet` exactly. Do not change it to `Datasheet`.
    - Example: If the input is `Wrok shop drawing`, extract `Wrok shop drawing`.
 6. Treat singular/plural variations as equivalent when categorizing, but **extract the exact variation** written in the input.
-7. **ABBREVIATION EXPANSION (CRITICAL)**: If an abbreviation from the `Abbreviation Dictionary` below is used in the input description, you MUST resolve and expand it to its 'Full Name' in your final output. Do NOT extract the abbreviation itself. Check the surrounding context to ensure it fits the meaning.
-   - Example: If input is `ACC Fan Motor`, your Equipment output MUST be `Air Cooled Condenser` instead of `ACC`.
-   - Example: If input is `P&ID for FGS`, your Deliverable output MUST be `Piping & Instrumentation Drawing` and System output MUST be `Fuel Gas System`.
-   - *Note*: If the abbreviation has a vendor mark like `(V)` attached, keep the mark after expanding (e.g. `HRSG(V)` -> `Heat Recovery Steam Generator(V)`).
+7. **ABBREVIATION RESOLUTION (CRITICAL)**: If an abbreviation from the `Abbreviation Dictionary` below is used in the input description, you MUST use that dictionary to understand the intended meaning and classify the title correctly. The dictionary is for interpretation and categorization. In the final extracted fields, keep the original wording exactly as it appears in the description unless a separate runtime hint explicitly asks for an expanded form.
+   - Example: If input is `ACC Fan Motor`, understand `ACC` as `Air Cooled Condenser`, but extract `ACC` if that is what appears in the title.
+   - Example: If input is `P&ID for FGS`, understand `P&ID` as `Piping & Instrumentation Drawing` and `FGS` as `Fuel Gas System`, but keep the original written terms in the extracted fields unless instructed otherwise.
+   - *Note*: If the abbreviation has a vendor mark like `(V)` attached, treat the full token as one exact term (e.g. `HRSG(V)` stays `HRSG(V)` in output while being understood as `Heat Recovery Steam Generator(V)` for classification).
+   - If the runtime input includes `Abbreviation Hints`, use those hints as the highest-priority abbreviation guidance for interpreting the current description.
 8. If a title uses parentheses for specification of a system or pressure class, preserve that phrase as part of the classified field where it belongs.
    - Example: `Steam System(High Pressure)` stays intact as one phrase under System.
 
@@ -164,7 +165,7 @@ Before classification, mentally normalize the description as follows:
 
 ## Abbreviation Dictionary
 
-When the following abbreviations appear, expand them to the corresponding full names:
+When the following abbreviations appear, use them to understand the corresponding full names and classify the description correctly:
 - HRSG : Heat Recovery Steam Generator
 - P&ID : Piping & Instrumentation Drawing (or Diagram)
 - STG : Steam Turbine & Generator

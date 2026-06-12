@@ -205,22 +205,28 @@ class MDLServiceTest(unittest.TestCase):
             BatchClassification(
                 results=[
                     DocumentClassification(
-                        equipment="",
+                        equipment=" ACC ",
                         building="",
                         system=" HVAC ",
                         study_survey="",
                         others="",
-                        deliverable=" General Arrangement ",
+                        deliverable=" P&ID ",
                     )
                 ]
             )
         )
         classifier = MDLClassifier(client, "deployment", "SYSTEM PROMPT", sleep=lambda _: None)
 
-        results = classifier.classify_titles(["Doc A", "Doc B"])
+        results = classifier.classify_titles(["ACC HVAC P&ID", "Doc B"])
 
         self.assertEqual(client.parameters["messages"][0]["content"], "SYSTEM PROMPT")
-        self.assertEqual(results[0].system, "HVAC")
+        self.assertIn(
+            'Abbreviation Hints = "HVAC = Heating Ventilating and Air Conditioning; P&ID = Piping and Instrumentation Diagram; ACC = Air Cooled Condenser"',
+            client.parameters["messages"][1]["content"],
+        )
+        self.assertEqual(results[0].equipment, "ACC | Air Cooled Condenser")
+        self.assertEqual(results[0].system, "HVAC | Heating Ventilating and Air Conditioning")
+        self.assertEqual(results[0].deliverable, "P&ID | Piping and Instrumentation Diagram")
         self.assertEqual(results[1].note, "missing from batch response")
 
 

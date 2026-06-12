@@ -120,12 +120,21 @@ def build_embedding_text(record: dict[str, Any]) -> str:
 
 
 def _expanded_only_terms(terms: list[str]) -> list[str]:
-    original_keys = {normalize_space(term).casefold() for term in terms}
+    normalized_terms = _split_semantic_terms(terms)
+    original_keys = {normalize_space(term).casefold() for term in normalized_terms}
     return [
         term
-        for term in expand_abbreviation_terms(terms)
+        for term in expand_abbreviation_terms(normalized_terms)
         if normalize_space(term).casefold() not in original_keys
     ]
+
+
+def _split_semantic_terms(terms: list[str]) -> list[str]:
+    split_terms: list[str] = []
+    for term in terms:
+        parts = [normalize_space(part) for part in str(term).split("|")]
+        split_terms.extend(part for part in parts if part)
+    return split_terms
 
 
 def _find_columns(rows: list[tuple[Any, ...]]) -> tuple[int | None, int | None, int | None]:

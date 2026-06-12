@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import json
+import re
 import time
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from common.text_normalizer import ABBREVIATIONS_PATH, normalize_space
 from mdl_service.models import BatchClassification, ClassificationResult
 
 DEFAULT_CLASSIFICATION_PROMPT_PATH = (
@@ -101,13 +104,49 @@ class MDLClassifier:
 
 def _build_user_message(titles: list[str]) -> str:
     if len(titles) == 1:
-        return f'Description = "{titles[0]}"'
-    descriptions = "\n".join(f'{index}. Description = "{title}"' for index, title in enumerate(titles, 1))
+        return _description_block(None, titles[0])
+    descriptions = "\n".join(_description_block(index, title) for index, title in enumerate(titles, 1))
     return (
         f"Classify the following {len(titles)} descriptions. "
         f"Return exactly {len(titles)} objects in the `results` array in the same order.\n\n"
         f"{descriptions}"
     )
+
+
+def _description_block(index: int | None, title: str) -> str:
+    prefix = "" if index is None else f"{index}. "
+    abbreviation_hints = _abbreviation_hints_for_title(title)
+    lines = [f'{prefix}Description = "{title}"']
+    if abbreviation_hints:
+        lines.append(f'{prefix}Abbreviation Hints = "{abbreviation_hints}"')
+    return "\n".join(lines)
+
+
+def _abbreviation_hints_for_title(title: str) -> str:
+    normalized_title = normalize_space(title)
+    if not normalized_title:
+        return ""
+    hints = []
+    for full_name, abbreviation in _abbreviation_variants():
+        if _contains_abbreviation(normalized_title, abbreviation):
+            hints.append(f"{abbreviation} = {full_name}")
+    return "; ".join(hints)
+
+
+def _contains_abbreviation(title: str, abbreviation: str) -> bool:
+    pattern = re.compile(rf"(?<![A-Za-z0-9]){re.escape(abbreviation)}(?![A-Za-z0-9])", re.IGNORECASE)
+    return bool(pattern.search(title))
+
+
+def _abbreviation_variants() -> list[tuple[str, str]]:
+    rules = json.loads(ABBREVIATIONS_PATH.read_text(encoding="utf-8"))
+    variants: list[tuple[str, str]] = []
+    for full_name, values in rules.items():
+        if isinstance(values, str):
+            variants.append((full_name, values))
+            continue
+        variants.extend((full_name, value) for value in values)
+    return sorted(variants, key=lambda item: len(item[1]), reverse=True)
 
 
 def _fit_result_count(results: list[ClassificationResult], expected_count: int) -> list[ClassificationResult]:

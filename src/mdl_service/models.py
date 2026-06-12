@@ -7,6 +7,8 @@ from dataclasses import dataclass
 
 from pydantic import BaseModel, Field
 
+from common.text_normalizer import expand_abbreviation_terms, normalize_space
+
 CLASSIFIED_FIELDNAMES = [
     "Source File",
     "Sheet",
@@ -90,12 +92,12 @@ class ClassificationResult:
     @classmethod
     def from_response(cls, result: DocumentClassification) -> ClassificationResult:
         return cls(
-            equipment=result.equipment.strip(),
-            building=result.building.strip(),
-            system=result.system.strip(),
-            study_survey=result.study_survey.strip(),
-            others=result.others.strip(),
-            deliverable=result.deliverable.strip(),
+            equipment=_normalize_classification_value(result.equipment),
+            building=_normalize_classification_value(result.building),
+            system=_normalize_classification_value(result.system),
+            study_survey=_normalize_classification_value(result.study_survey),
+            others=_normalize_classification_value(result.others),
+            deliverable=_normalize_classification_value(result.deliverable),
         )
 
 
@@ -143,3 +145,18 @@ class MDLIngestConfig:
             raise ValueError("embedding_dimensions must be positive")
         if self.batch_size <= 0:
             raise ValueError("batch_size must be positive")
+
+
+def _normalize_classification_value(value: str) -> str:
+    normalized = normalize_space(value)
+    if not normalized:
+        return ""
+    expanded_terms = expand_abbreviation_terms([normalized])
+    if not expanded_terms:
+        return normalized
+    original = expanded_terms[0]
+    expanded_variant = next(
+        (term for term in expanded_terms[1:] if term.casefold() != original.casefold()),
+        "",
+    )
+    return f"{original} | {expanded_variant}" if expanded_variant else original
