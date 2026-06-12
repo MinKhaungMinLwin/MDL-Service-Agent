@@ -76,13 +76,27 @@ _DELIVERABLE_PHASE_BOOST: dict[str, str] = {
 _SCOPE_ALIASES: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("acc", ("ACC", "AIR COOLED CONDENSER", "COND AIR EXT")),
     ("bop", ("BOP", "BALANCE OF PLANT")),
-    ("bsedg", ("BSEDG", "BSDG", "BLACKSTART EMERGENCY DIESEL")),
+    ("bsedg", ("BSEDG", "BSDG", "BLACKSTART EMERGENCY DIESEL",
+               "BLACKSTART DIESEL GENERATOR", "BLACKSTART GENERATOR")),
+    # Closed Cooling Water — activities use abbreviated forms (CCWP/CCWS/CCW H/EX),
+    # MDL docs use long forms. FIN FAN COOLER belongs to CCW H/EX in the CCPP schedule.
+    ("ccw", ("CCW", "CCWP", "CCWS", "CCW H/EX",
+             "CLOSED COOLING WATER", "CLOSED COOLING WATER SYSTEM",
+             "CLOSED COOLING WATER PUMP", "FIN FAN COOLER", "FIN FAN")),
     ("cems", ("CEMS", "CONTINUOUS EMISSIONS MONITORING")),
+    # Crane & Hoist — activities say "(Crane & Hoist)" / "(Gantry Crane)";
+    # MDL equipment says "CRANE", "HOIST", "JIB CRANE".
+    ("crane_hoist", ("CRANE & HOIST", "CRANE AND HOIST", "GANTRY CRANE",
+                     "CRANE", "HOIST", "JIB CRANE")),
     ("dc_ups", ("DC & UPS", "UPS", "DC SYSTEM", "125V DC", "220V DC")),
     ("dcs", ("DCS", "DISTRIBUTED CONTROL")),
-    ("electrical", ("ELECTRICAL", "POWER METERING", "TARIFF METERING", "METERING SYSTEM")),
+    # Electrical — activities already include Earthing/Lighting/IPB; add MDL long forms.
+    ("electrical", ("ELECTRICAL", "POWER METERING", "TARIFF METERING", "METERING SYSTEM",
+                    "EARTHING", "EARTHING & LIGHTNING", "LIGHTNING PROTECTION", "GROUNDING",
+                    "ISOLATED PHASE BUSDUCT", "IPB",
+                    "LIGHTING & SMALL POWER", "SMALL POWER")),
     ("fgp", ("FGP", "FUEL GAS", "GAS COMP", "GAS CONDITIONING")),
-    ("gtg", ("GTG", "GT", "GAS TURBINE")),
+    ("gtg", ("GTG", "GT", "GAS TURBINE", "GAS TURBINE GENERATOR")),
     ("gsut_uat", ("GSUT", "UAT", "UNIT AUXILIARY TRANSFORMER", "STEP UP", "TRANSFORMER")),
     ("h2", ("H2", "HYDROGEN")),
     ("hrsg", ("HRSG", "HEAT RECOVERY STEAM GENERATOR")),
@@ -91,8 +105,15 @@ _SCOPE_ALIASES: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("mv_lv", ("MV SWGR", "LV SWGR", "SWITCHGEAR", "MCC", "MOTOR CONTROL CENTER")),
     ("n2", ("N2", "NITROGEN")),
     ("reserve_boiler", ("RESERVE BOILER", "AUX BOILER", "AUXILIARY BOILER")),
-    ("stg", ("STG", "ST", "STEAM TURBINE")),
-    ("wts", ("WTS", "WWTS", "WATER TREATMENT", "WASTE WATER", "EFFLUENT", "STP", "SEWAGE")),
+    # Sampling — activities say "(Sampling System)" / "(Sampling Equip)";
+    # no existing scope covered these 38 activities.
+    ("sampling", ("SAMPLING SYSTEM", "SAMPLING EQUIP", "SAMPLING")),
+    ("stg", ("STG", "ST", "STEAM TURBINE",
+             "STEAM TURBINE GENERATOR", "STEAM TURBINE & GENERATOR")),
+    # WTS — chemical dosing and DM/potable water systems are part of water treatment.
+    ("wts", ("WTS", "WWTS", "WATER TREATMENT", "WASTE WATER", "EFFLUENT", "STP", "SEWAGE",
+             "CHEMICAL DOSING", "CHEMICAL DOSING SYSTEM",
+             "DM WATER", "DEMINERALIZED WATER", "POTABLE WATER")),
 )
 
 _GENERIC_ACTIVITY_NAMES = {
