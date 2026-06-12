@@ -403,7 +403,19 @@ def _activity_block_reasons(quality: ActivityMatchQuality | None) -> list[str]:
     if quality.scope_status == "mismatch":
         reasons.append("activity_scope_mismatch")
     if getattr(quality, "scope_source", "") == "rule" and quality.scope_status != "match":
-        reasons.append("activity_rule_scope_unmatched")
+        # Bypass: when the activity is unscoped (generic CCPP template with no explicit
+        # equipment scope) and the semantic + RRF scores confirm a good conceptual match,
+        # the scope gap is a data gap in the activity, not evidence of a wrong match.
+        # Does NOT bypass real scope mismatches (scope_status="mismatch") or low-confidence
+        # matches (semantic<0.55 or rrf<0.01).
+        _unscoped_confirmed = (
+            quality.scope_status == "activity_unscoped"
+            and quality.phase_status in {"match", "compatible"}
+            and quality.semantic_score >= 0.55
+            and quality.rrf_score >= 0.01
+        )
+        if not _unscoped_confirmed:
+            reasons.append("activity_rule_scope_unmatched")
     # Activity gates: lowered from 0.02/0.015 to 0.01/0.005 so that moderately-matched
     # activities produce a draft date (needs_review) rather than a hard block.  Quality
     # scoring already applies confidence penalties for these cases.

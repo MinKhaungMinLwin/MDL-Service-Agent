@@ -117,3 +117,56 @@ Defaults:
 - retrieval stage metric: `recall_at_100`
 - cross-encoder stage metrics: `recall_at_20` and `hit_rate_at_20`
 - recall uses `relevance_threshold=3`, recorded once in `report.json`
+
+---
+
+## Schedule Generation
+
+Start the API server, then POST to `/schedule/generate`:
+
+```bash
+source .venv/bin/activate
+PYTHONPATH=src uvicorn api.main:app --reload --port 8000
+
+# From MDL candidates CSV (output of /schedule/candidates):
+curl -X POST "http://localhost:8000/schedule/generate" --get \
+  --data-urlencode "input_csv=output/schedule_service/candidates/mdl_candidates_output_match_all_projects_section6.csv" \
+  --data-urlencode "ntp_date=2024-03-01"
+
+# From historical MDL directly:
+curl -X POST "http://localhost:8000/schedule/generate" --get \
+  --data-urlencode "input_csv=output/schedule_service/classified/Fadhili_MDL_classified.csv" \
+  --data-urlencode "ntp_date=2024-03-01" \
+  --data-urlencode "activity_resolver=hybrid"
+```
+
+`activity_resolver` options: `text` (default), `structured`, `hybrid`.
+Requires Azure credentials — loaded from `.env` automatically.
+
+Output files written to `output/schedule_service/generate/`.
+
+## Schedule Benchmark and Diff
+
+```bash
+# Benchmark a single run (generates charts + summary):
+uv run python scripts/review_schedule_json_metrics.py \
+  output/schedule_service/generate/generated_schedule_Fadhili_MDL_classified_ntp2024-03-01.json \
+  --out-dir output/schedule_service/bench_text
+
+# Diff two runs (gained/lost usable rows):
+uv run python scripts/diff_schedule_runs.py \
+  output/schedule_service/generate/generated_schedule_Fadhili_MDL_classified_ntp2024-03-01.json \
+  output/schedule_service/generate/generated_schedule_Fadhili_MDL_classified_ntp2024-03-01_resolver-hybrid.json \
+  --out-dir output/schedule_service/diff_hybrid_vs_text
+```
+
+Bench output: `review_report.md` + PNG charts + summary CSVs.
+Diff output: `diff_report.md` + `gained_usable.csv` + `regressions_lost_usable.csv`.
+
+## Tests and Lint
+
+```bash
+source .venv/bin/activate
+PYTHONPATH=src python -m pytest src/schedule_service/tests/ -q   # 139 tests
+ruff check src/
+```
