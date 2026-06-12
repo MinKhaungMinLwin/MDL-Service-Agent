@@ -1,0 +1,4 @@
+﻿stage,queries,positive_queries,avg_precision,avg_f1,avg_recall,recall_at_20,recall_at_300
+retrieval@300,2,0,,,,,
+rrf@20,2,0,,,,,
+itb_chunk_level@20,2,0,,,,,
