@@ -84,9 +84,13 @@ def ingest(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description="Embed and ingest classified MDL CSV files into Neo4j.")
     parser.add_argument("--input-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
     parser.add_argument("--embedding-dimensions", type=int, default=env_int("EMBEDDING_DIMENSIONS", 1536))
+    parser.add_argument("--max-concurrency", type=int, default=1)
     args = parser.parse_args(argv)
 
-    config = MDLIngestConfig(embedding_dimensions=args.embedding_dimensions)
+    config = MDLIngestConfig(
+        embedding_dimensions=args.embedding_dimensions,
+        max_concurrency=args.max_concurrency,
+    )
     with Neo4jConnection() as conn:
         service = MDLIngestService(
             repository=MDLRepository(conn, config),

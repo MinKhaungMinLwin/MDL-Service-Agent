@@ -175,32 +175,24 @@ def _split_semantic_terms(terms: list[str]) -> list[str]:
 
 def _merge_title_duplicate(existing: dict[str, Any], incoming: dict[str, Any]) -> dict[str, Any]:
     merged = dict(existing)
-    for field in (
-        "project_names",
-        "source_file",
-        "document_no",
-        "equipment",
-        "building",
-        "system",
-        "study_survey",
-        "others",
-        "deliverable",
-    ):
-        merged[field] = _merge_unique_values(existing.get(field), incoming.get(field))
+    for field in ("project_names", "source_file", "document_no"):
+        merged[field] = _merge_unique_values(existing.get(field), incoming.get(field), separator="|")
+    for field in ("equipment", "building", "system", "study_survey", "others", "deliverable"):
+        merged[field] = _merge_unique_values(existing.get(field), incoming.get(field), separator=";")
     return merged
 
 
-def _merge_unique_values(*values: Any) -> str:
+def _merge_unique_values(*values: Any, separator: str) -> str:
     unique_values: list[str] = []
     seen: set[str] = set()
     for raw in values:
-        for part in str(raw or "").split(";"):
+        for part in str(raw or "").split(separator):
             cleaned = _clean(part)
             key = normalize_space(cleaned).casefold()
             if cleaned and key not in seen:
                 unique_values.append(cleaned)
                 seen.add(key)
-    return " ; ".join(unique_values)
+    return f" {separator} ".join(unique_values)
 
 
 def _build_title_doc_id(title: str) -> str:

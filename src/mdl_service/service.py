@@ -141,13 +141,15 @@ class MDLIngestService:
 
     def _ingest_records(self, records: list[dict[str, Any]]) -> int:
         """Embed and upsert prepared MDL records."""
-        for start in range(0, len(records), self.config.batch_size):
-            batch = records[start : start + self.config.batch_size]
-            embeddings = self._embed_texts([record["text_content"] for record in batch])
-            if len(embeddings) != len(batch):
-                raise ValueError("Embedding service returned an unexpected number of embeddings")
-            for record, embedding in zip(batch, embeddings, strict=True):
-                record["embedding"] = embedding
+        batches = _chunked(records, self.config.batch_size)
+        if self.config.max_concurrency > 1 and batches:
+            logger.info(
+                "Embedding {} ingest batch(es) with concurrency {}",
+                len(batches),
+                self.config.max_concurrency,
+            )
+        embedded_batches = self._embed_batches(batches)
+        for batch in embedded_batches:
             self.repository.upsert_batch(batch)
         return len(records)
 
@@ -155,6 +157,28 @@ class MDLIngestService:
         if hasattr(self.embedding_service, "embed_texts"):
             return self.embedding_service.embed_texts(texts)
         return self.embedding_service.embed_batch(texts)
+
+    def _embed_batches(self, batches: list[list[dict[str, Any]]]) -> list[list[dict[str, Any]]]:
+        if self.config.max_concurrency == 1:
+            return [self._embed_batch(batch) for batch in batches]
+        with ThreadPoolExecutor(max_workers=self.config.max_concurrency) as executor:
+            futures = {
+                executor.submit(self._embed_batch, batch): batch_index
+                for batch_index, batch in enumerate(batches)
+            }
+            embedded_by_index: dict[int, list[dict[str, Any]]] = {}
+            for future in as_completed(futures):
+                embedded_by_index[futures[future]] = future.result()
+        return [embedded_by_index[index] for index in range(len(batches))]
+
+    def _embed_batch(self, batch: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        embeddings = self._embed_texts([record["text_content"] for record in batch])
+        if len(embeddings) != len(batch):
+            raise ValueError("Embedding service returned an unexpected number of embeddings")
+        embedded_batch = []
+        for record, embedding in zip(batch, embeddings, strict=True):
+            embedded_batch.append({**record, "embedding": embedding})
+        return embedded_batch
 
 
 def _chunked(items: list[Any], size: int) -> list[list[Any]]:

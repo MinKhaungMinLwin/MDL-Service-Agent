@@ -138,7 +138,7 @@ class MDLServiceTest(unittest.TestCase):
 
         self.assertEqual(len(records), 1)
         self.assertEqual(records[0]["title"], "Instrument List")
-        self.assertEqual(records[0]["document_no"], "DOC-1 ; DOC-2")
+        self.assertEqual(records[0]["document_no"], "DOC-1 | DOC-2")
         self.assertEqual(records[0]["equipment"], "ACC | Air Cooled Condenser")
         self.assertEqual(records[0]["system"], "HVAC | Heating Ventilating and Air Conditioning")
 
@@ -189,9 +189,9 @@ class MDLServiceTest(unittest.TestCase):
         self.assertEqual(len(repository.batches[0]), 1)
         record = repository.batches[0][0]
         self.assertEqual(record["title"], "Document Numbering Procedure")
-        self.assertEqual(record["project_names"], "ProjectA ; ProjectB")
-        self.assertEqual(record["source_file"], "ProjectA_MDL.xlsx ; ProjectB_MDL.xlsx")
-        self.assertEqual(record["document_no"], "A-001 ; B-002")
+        self.assertEqual(record["project_names"], "ProjectA | ProjectB")
+        self.assertEqual(record["source_file"], "ProjectA_MDL.xlsx | ProjectB_MDL.xlsx")
+        self.assertEqual(record["document_no"], "A-001 | B-002")
 
     def test_retry_failed_classifications_updates_only_failed_rows(self) -> None:
         classifier = _RetryFakeClassifier()
@@ -383,6 +383,28 @@ class MDLServiceTest(unittest.TestCase):
         self.assertEqual([len(batch) for batch in repository.batches], [2, 1])
         self.assertEqual(repository.batches[0][0]["embedding"], [1.0, 0.0])
 
+    def test_ingest_service_embeds_concurrently_and_upserts_in_order(self) -> None:
+        repository = _RecordingRepository()
+        service = MDLIngestService(
+            repository,
+            _SlowEmbeddingService(),
+            MDLIngestConfig(batch_size=1, max_concurrency=2),
+        )
+
+        with tempfile.TemporaryDirectory() as directory:
+            csv_path = Path(directory) / "Sample_MDL_classified.csv"
+            _write_csv(
+                csv_path,
+                [
+                    {"Title": "slow"},
+                    {"Title": "fast"},
+                ],
+            )
+            count = service.ingest_file(csv_path)
+
+        self.assertEqual(count, 2)
+        self.assertEqual([batch[0]["title"] for batch in repository.batches], ["slow", "fast"])
+
     def test_classifier_preserves_prompt_and_pads_short_response(self) -> None:
         client = _StructuredOutputClient(
             BatchClassification(
@@ -483,6 +505,13 @@ class _RecordingRepository:
 
 class _EmbeddingService:
     def embed_texts(self, texts: list[str]) -> list[list[float]]:
+        return [[1.0, 0.0] for _ in texts]
+
+
+class _SlowEmbeddingService:
+    def embed_texts(self, texts: list[str]) -> list[list[float]]:
+        if texts and "slow" in texts[0]:
+            time.sleep(0.05)
         return [[1.0, 0.0] for _ in texts]
 
 

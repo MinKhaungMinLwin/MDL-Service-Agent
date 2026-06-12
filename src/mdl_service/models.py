@@ -136,6 +136,7 @@ class MDLIngestConfig:
     vector_index_name: str = "test_mdl_document_vector_idx"
     embedding_dimensions: int = 1536
     batch_size: int = 50
+    max_concurrency: int = 1
 
     def __post_init__(self) -> None:
         for value in (self.node_label, self.constraint_name, self.fulltext_index_name, self.vector_index_name):
@@ -145,6 +146,8 @@ class MDLIngestConfig:
             raise ValueError("embedding_dimensions must be positive")
         if self.batch_size <= 0:
             raise ValueError("batch_size must be positive")
+        if self.max_concurrency <= 0:
+            raise ValueError("max_concurrency must be positive")
 
 
 def _normalize_classification_value(value: str) -> str:
