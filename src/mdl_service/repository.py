@@ -58,6 +58,7 @@ class MDLRepository:
                 UNWIND $batch AS record
                 MERGE (n:{self.config.node_label} {{doc_id: record.doc_id}})
                 SET n.text_content = record.text_content,
+                    n.project_names = record.project_names,
                     n.source_file = record.source_file,
                     n.document_no = record.document_no,
                     n.title = record.title,
@@ -79,7 +80,9 @@ class MDLRepository:
         MATCH (n:{self.config.node_label})
         WHERE size($project_terms) = 0
            OR any(term IN $project_terms WHERE toLower(coalesce(n.source_file, "")) CONTAINS toLower(term))
+           OR any(term IN $project_terms WHERE toLower(coalesce(n.project_names, "")) CONTAINS toLower(term))
         RETURN n.doc_id AS doc_id,
+               n.project_names AS project_names,
                n.source_file AS source_file,
                n.document_no AS document_no,
                n.title AS title,

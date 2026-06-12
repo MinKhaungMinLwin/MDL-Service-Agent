@@ -97,11 +97,101 @@ class MDLServiceTest(unittest.TestCase):
             )
             records = load_ingest_records(csv_path)
 
-        self.assertEqual(records[0]["doc_id"], "Sample_MDL_classified_DOC_0_0")
+        self.assertTrue(records[0]["doc_id"].startswith("title_"))
         self.assertEqual(records[0]["building"], "")
         self.assertIn("Title: HVAC GENERAL ARRANGEMENT", records[0]["text_content"])
         self.assertIn("Expanded Terms:", records[0]["text_content"])
         self.assertIn("Heating Ventilating and Air Conditioning", records[0]["text_content"])
+
+    def test_load_ingest_records_dedupes_duplicate_titles(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            csv_path = Path(directory) / "Sample_MDL_classified.csv"
+            _write_csv(
+                csv_path,
+                [
+                    {
+                        "Source File": "Sample_MDL.xlsx",
+                        "Document No": "DOC-1",
+                        "Title": "Instrument List",
+                        "Equipment": "ACC | Air Cooled Condenser",
+                        "Building": "",
+                        "System": "",
+                        "Study/Survey": "",
+                        "Others": "",
+                        "Deliverable": "List",
+                    },
+                    {
+                        "Source File": "Sample_MDL.xlsx",
+                        "Document No": "DOC-2",
+                        "Title": "Instrument List",
+                        "Equipment": "ACC | Air Cooled Condenser",
+                        "Building": "",
+                        "System": "HVAC | Heating Ventilating and Air Conditioning",
+                        "Study/Survey": "",
+                        "Others": "",
+                        "Deliverable": "List",
+                    },
+                ],
+            )
+
+            records = load_ingest_records(csv_path)
+
+        self.assertEqual(len(records), 1)
+        self.assertEqual(records[0]["title"], "Instrument List")
+        self.assertEqual(records[0]["document_no"], "DOC-1 ; DOC-2")
+        self.assertEqual(records[0]["equipment"], "ACC | Air Cooled Condenser")
+        self.assertEqual(records[0]["system"], "HVAC | Heating Ventilating and Air Conditioning")
+
+    def test_ingest_directory_dedupes_duplicate_titles_across_projects(self) -> None:
+        repository = _RecordingRepository()
+        service = MDLIngestService(repository, _EmbeddingService(), MDLIngestConfig(batch_size=10))
+
+        with tempfile.TemporaryDirectory() as directory:
+            first_csv = Path(directory) / "ProjectA_MDL_classified.csv"
+            second_csv = Path(directory) / "ProjectB_MDL_classified.csv"
+            _write_csv(
+                first_csv,
+                [
+                    {
+                        "Source File": "ProjectA_MDL.xlsx",
+                        "Document No": "A-001",
+                        "Title": "Document Numbering Procedure",
+                        "Equipment": "",
+                        "Building": "",
+                        "System": "",
+                        "Study/Survey": "",
+                        "Others": "Document Numbering",
+                        "Deliverable": "Procedure",
+                    }
+                ],
+            )
+            _write_csv(
+                second_csv,
+                [
+                    {
+                        "Source File": "ProjectB_MDL.xlsx",
+                        "Document No": "B-002",
+                        "Title": "Document Numbering Procedure",
+                        "Equipment": "",
+                        "Building": "",
+                        "System": "",
+                        "Study/Survey": "",
+                        "Others": "Document Numbering",
+                        "Deliverable": "Procedure",
+                    }
+                ],
+            )
+
+            count = service.ingest_directory(directory)
+
+        self.assertEqual(count, 1)
+        self.assertEqual(len(repository.batches), 1)
+        self.assertEqual(len(repository.batches[0]), 1)
+        record = repository.batches[0][0]
+        self.assertEqual(record["title"], "Document Numbering Procedure")
+        self.assertEqual(record["project_names"], "ProjectA ; ProjectB")
+        self.assertEqual(record["source_file"], "ProjectA_MDL.xlsx ; ProjectB_MDL.xlsx")
+        self.assertEqual(record["document_no"], "A-001 ; B-002")
 
     def test_retry_failed_classifications_updates_only_failed_rows(self) -> None:
         classifier = _RetryFakeClassifier()

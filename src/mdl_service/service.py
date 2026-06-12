@@ -11,7 +11,7 @@ from typing import Any
 from loguru import logger
 
 from mdl_service.classification import MDLClassifier
-from mdl_service.loader import extract_titles_from_excel, load_ingest_records
+from mdl_service.loader import dedupe_ingest_records, extract_titles_from_excel, load_ingest_records
 from mdl_service.models import DocumentTitle
 from mdl_service.models import MDLIngestConfig
 from mdl_service.output import write_classified_csv
@@ -122,12 +122,25 @@ class MDLIngestService:
     def ingest_directory(self, directory: str | Path) -> int:
         """Ingest every classified MDL CSV in a directory."""
         paths = sorted(Path(directory).glob("*_classified.csv"))
-        return sum(self.ingest_file(path) for path in paths)
+        records = []
+        for path in paths:
+            records.extend(load_ingest_records(path))
+        deduped_records = dedupe_ingest_records(records)
+        logger.info(
+            "Ingesting {} deduplicated MDL documents from {} classified file(s)",
+            len(deduped_records),
+            len(paths),
+        )
+        return self._ingest_records(deduped_records)
 
     def ingest_file(self, csv_path: str | Path) -> int:
         """Embed and upsert every classified MDL document in one CSV."""
         records = load_ingest_records(csv_path)
         logger.info("Ingesting {} MDL documents from {}", len(records), csv_path)
+        return self._ingest_records(records)
+
+    def _ingest_records(self, records: list[dict[str, Any]]) -> int:
+        """Embed and upsert prepared MDL records."""
         for start in range(0, len(records), self.config.batch_size):
             batch = records[start : start + self.config.batch_size]
             embeddings = self._embed_texts([record["text_content"] for record in batch])

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import csv
+import hashlib
 from pathlib import Path
 from typing import Any
 
@@ -67,18 +68,21 @@ def extract_titles_from_excel(filepath: str | Path) -> list[DocumentTitle]:
 
 
 def load_ingest_records(csv_path: str | Path) -> list[dict[str, Any]]:
-    """Load one classified MDL CSV into normalized Neo4j records."""
+    """Load one classified MDL CSV into deduplicated normalized Neo4j records."""
     path = Path(csv_path)
     rows = _read_csv_rows(path)
-    records = []
+    grouped_records: dict[str, dict[str, Any]] = {}
+    title_order: list[str] = []
     for index, row in enumerate(rows):
         title = _clean(row.get("Title"))
         if not title:
             continue
+        title_key = normalize_space(title).casefold()
         document_no = _clean(row.get("Document No")) or f"DOC_{index}"
+        source_file = _clean(row.get("Source File"))
         record = {
-            "doc_id": f"{path.stem}_{document_no}_{index}",
-            "source_file": _clean(row.get("Source File")),
+            "project_names": _infer_project_name(source_file),
+            "source_file": source_file,
             "document_no": document_no,
             "title": title,
             "equipment": _clean(row.get("Equipment")),
@@ -88,9 +92,41 @@ def load_ingest_records(csv_path: str | Path) -> list[dict[str, Any]]:
             "others": _clean(row.get("Others")),
             "deliverable": _clean(row.get("Deliverable")),
         }
+        if title_key not in grouped_records:
+            grouped_records[title_key] = record
+            title_order.append(title_key)
+            continue
+        grouped_records[title_key] = _merge_title_duplicate(grouped_records[title_key], record)
+    records = []
+    for title_key in title_order:
+        record = grouped_records[title_key]
+        record["doc_id"] = _build_title_doc_id(record["title"])
         record["text_content"] = build_embedding_text(record)
         records.append(record)
     return records
+
+
+def dedupe_ingest_records(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Deduplicate ingest records globally by normalized title."""
+    grouped_records: dict[str, dict[str, Any]] = {}
+    title_order: list[str] = []
+    for record in records:
+        title = _clean(record.get("title"))
+        if not title:
+            continue
+        title_key = normalize_space(title).casefold()
+        normalized_record = {**record, "doc_id": _build_title_doc_id(title)}
+        if title_key not in grouped_records:
+            grouped_records[title_key] = normalized_record
+            title_order.append(title_key)
+            continue
+        grouped_records[title_key] = _merge_title_duplicate(grouped_records[title_key], normalized_record)
+    deduped_records = []
+    for title_key in title_order:
+        record = grouped_records[title_key]
+        record["text_content"] = build_embedding_text(record)
+        deduped_records.append(record)
+    return deduped_records
 
 
 def build_embedding_text(record: dict[str, Any]) -> str:
@@ -135,6 +171,47 @@ def _split_semantic_terms(terms: list[str]) -> list[str]:
         parts = [normalize_space(part) for part in str(term).split("|")]
         split_terms.extend(part for part in parts if part)
     return split_terms
+
+
+def _merge_title_duplicate(existing: dict[str, Any], incoming: dict[str, Any]) -> dict[str, Any]:
+    merged = dict(existing)
+    for field in (
+        "project_names",
+        "source_file",
+        "document_no",
+        "equipment",
+        "building",
+        "system",
+        "study_survey",
+        "others",
+        "deliverable",
+    ):
+        merged[field] = _merge_unique_values(existing.get(field), incoming.get(field))
+    return merged
+
+
+def _merge_unique_values(*values: Any) -> str:
+    unique_values: list[str] = []
+    seen: set[str] = set()
+    for raw in values:
+        for part in str(raw or "").split(";"):
+            cleaned = _clean(part)
+            key = normalize_space(cleaned).casefold()
+            if cleaned and key not in seen:
+                unique_values.append(cleaned)
+                seen.add(key)
+    return " ; ".join(unique_values)
+
+
+def _build_title_doc_id(title: str) -> str:
+    normalized_title = normalize_space(title).casefold()
+    digest = hashlib.sha1(normalized_title.encode("utf-8")).hexdigest()[:12]
+    return f"title_{digest}"
+
+
+def _infer_project_name(source_file: str) -> str:
+    stem = Path(source_file).stem if source_file else ""
+    return stem[:-4] if stem.endswith("_MDL") else stem
 
 
 def _find_columns(rows: list[tuple[Any, ...]]) -> tuple[int | None, int | None, int | None]:
