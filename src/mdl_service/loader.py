@@ -8,6 +8,7 @@ from typing import Any
 
 import openpyxl
 
+from common.text_normalizer import expand_abbreviation_terms, join_unique_texts, normalize_space
 from mdl_service.models import DocumentTitle
 
 TITLE_HEADERS = {"TITLE", "DOCUMENT DESCRIPTION", "DOCUMENT TITLE"}
@@ -93,12 +94,38 @@ def load_ingest_records(csv_path: str | Path) -> list[dict[str, Any]]:
 
 
 def build_embedding_text(record: dict[str, Any]) -> str:
-    """Build the compact MDL representation stored and embedded in Neo4j."""
-    return " | ".join(
+    """Build the MDL representation stored and embedded in Neo4j."""
+    labeled_text = " | ".join(
         f"{label}: {value}"
         for label, field in EMBEDDING_FIELDS
         if (value := _clean(record.get(field)))
     )
+    semantic_terms = [
+        term
+        for term in [
+            _clean(record.get("title")),
+            _clean(record.get("equipment")),
+            _clean(record.get("building")),
+            _clean(record.get("system")),
+            _clean(record.get("study_survey")),
+            _clean(record.get("others")),
+            _clean(record.get("deliverable")),
+        ]
+        if term
+    ]
+    expanded_terms = _expanded_only_terms(semantic_terms)
+    if expanded_terms:
+        return f"{labeled_text} | Expanded Terms: {join_unique_texts(expanded_terms)}"
+    return labeled_text
+
+
+def _expanded_only_terms(terms: list[str]) -> list[str]:
+    original_keys = {normalize_space(term).casefold() for term in terms}
+    return [
+        term
+        for term in expand_abbreviation_terms(terms)
+        if normalize_space(term).casefold() not in original_keys
+    ]
 
 
 def _find_columns(rows: list[tuple[Any, ...]]) -> tuple[int | None, int | None, int | None]:

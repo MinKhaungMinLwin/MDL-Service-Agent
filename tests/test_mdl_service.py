@@ -70,11 +70,9 @@ class MDLServiceTest(unittest.TestCase):
 
         self.assertEqual(records[0]["doc_id"], "Sample_MDL_classified_DOC_0_0")
         self.assertEqual(records[0]["building"], "")
-        self.assertEqual(
-            records[0]["text_content"],
-            "Title: HVAC GENERAL ARRANGEMENT | System: HVAC | Others: Fresh Air Intake | "
-            "Deliverable: GENERAL ARRANGEMENT",
-        )
+        self.assertIn("Title: HVAC GENERAL ARRANGEMENT", records[0]["text_content"])
+        self.assertIn("Expanded Terms:", records[0]["text_content"])
+        self.assertIn("Heating Ventilating and Air Conditioning", records[0]["text_content"])
 
     def test_repository_creates_schema_and_upserts_records(self) -> None:
         conn = _RecordingConnection()
