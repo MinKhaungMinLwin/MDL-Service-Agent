@@ -1,0 +1,4 @@
+﻿stage,queries,positive_queries,avg_precision,avg_f1,avg_recall,recall_at_100,recall_at_60
+retrieval@100,22,13,,,,0.8987179487179487,
+rrf@60,22,13,,,,,0.8283882783882784
+itb_chunk_level,23,13,0.6956906729634003,0.6094726963626484,0.5693223443223443,,
