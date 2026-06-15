@@ -40,6 +40,10 @@ _SCOPE_MULTIPLIER: dict[str, float] = {
     "match": 1.0,
     "query_unscoped": 0.75,
     "activity_unscoped": 0.75,
+    # discipline_only: query and activity overlap only on a cross-cutting discipline
+    # (electrical/HVAC) while the query's equipment system is NOT confirmed — a weak,
+    # likely-wrong-system signal, ranked well below a real system match.
+    "discipline_only": 0.5,
     "mismatch": 0.25,
     "rule_scope_only": 0.85,
 }
@@ -115,6 +119,13 @@ _SCOPE_ALIASES: tuple[tuple[str, tuple[str, ...]], ...] = (
              "CHEMICAL DOSING", "CHEMICAL DOSING SYSTEM",
              "DM WATER", "DEMINERALIZED WATER", "POTABLE WATER")),
 )
+
+# Cross-cutting engineering disciplines, NOT equipment systems. Earthing, lighting,
+# cable raceway, conduit, HVAC ducting etc. exist for every building and system, so an
+# overlap on one of these alone does not confirm two documents share the same equipment.
+# When a query carries a real equipment scope, a discipline-only overlap is treated as a
+# weak `discipline_only` match (see `_scope_status`), not a full `match`.
+_DISCIPLINE_SCOPES: frozenset[str] = frozenset({"electrical", "hvac"})
 
 _GENERIC_ACTIVITY_NAMES = {
     "MECHANICAL DESIGN CRITERIA",
@@ -903,7 +914,22 @@ def _scope_status(query_scope: list[str], activity_scope: list[str]) -> str:
         return "query_unscoped"
     if not activity_scope:
         return "activity_unscoped"
-    return "match" if set(query_scope).intersection(activity_scope) else "mismatch"
+    q = set(query_scope)
+    a = set(activity_scope)
+    overlap = q & a
+    if not overlap:
+        return "mismatch"
+    q_systems = q - _DISCIPLINE_SCOPES
+    if q_systems:
+        # The query names a real equipment system: a confident match must agree on that
+        # system. Overlapping only on a cross-cutting discipline (electrical/HVAC) is a
+        # weak signal — the document's equipment is left unconfirmed.
+        if q_systems & a:
+            return "match"
+        return "discipline_only"
+    # The query is purely a discipline scope (e.g. plant-wide "HVAC SYSTEM" document):
+    # a discipline overlap is the strongest signal available and is a legitimate match.
+    return "match"
 
 
 def _rule_scope_keys(rule: ValidationRule | None) -> list[str]:
@@ -914,10 +940,17 @@ def _rule_scope_keys(rule: ValidationRule | None) -> list[str]:
 
 
 def _effective_query_scope(query_scope: list[str], rule_scope: list[str]) -> tuple[list[str], str]:
-    if rule_scope:
-        return rule_scope, "rule"
+    # The document's own classified scope (Equipment / System / Building / Title) is the
+    # ground truth about what the document is. The matched validation rule is often a
+    # generic deliverable rule whose incidental equipment (from its Item column) is
+    # unrelated to this document; trusting it over the document's own scope hijacks the
+    # activity search to the wrong system and makes scope_status self-confirming. So the
+    # query scope wins whenever it exists; the rule scope is only a fallback for documents
+    # that carry no scope of their own.
     if query_scope:
         return query_scope, "query"
+    if rule_scope:
+        return rule_scope, "rule"
     return [], ""
 
 

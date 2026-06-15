@@ -105,14 +105,6 @@ def extract(argv: list[str] | None = None) -> None:
     verification_prompt = load_prompt(args.verify_prompt_file) if args.verify else ""
     abbreviation_rules = load_abbreviation_rules(args.abbreviation_rules)
 
-    args.output_dir.mkdir(parents=True, exist_ok=True)
-    count = service.extract_to_files(
-        targets=[
-            ITBTarget(
-                chunks_file=args.chunks_file,
-                document_name=args.document_name,
-                min_page=min_page,
-                max_page=max_page,
     total_count = 0
     for chunks_file in chunks_files:
         document_name = args.document_name or _infer_document_name(chunks_file)
@@ -254,7 +246,6 @@ def _build_target(chunks_file: Path, document_name: str, mode: str, section: str
         min_page=section_config["min_page"],
         max_page=section_config["max_page"],
     )
-    logger.info("Extracted {} ITB chunks for pages {}-{} (section arg: {})", count, min_page, max_page, args.section)
 
 
 def _split_env_list(value: str) -> list[str]:
