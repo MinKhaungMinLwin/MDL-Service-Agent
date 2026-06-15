@@ -88,18 +88,36 @@ _SCOPE_ALIASES: tuple[tuple[str, tuple[str, ...]], ...] = (
              "CLOSED COOLING WATER", "CLOSED COOLING WATER SYSTEM",
              "CLOSED COOLING WATER PUMP", "FIN FAN COOLER", "FIN FAN")),
     ("cems", ("CEMS", "CONTINUOUS EMISSIONS MONITORING")),
+    # Compressed/instrument/service air — activities use "(COMP Air ...)" / "(Purge Air System)";
+    # MDL docs say "COMPRESSED AIR", "INSTRUMENT AIR", "AIR COMPRESSOR".
+    ("compressed_air", ("COMPRESSED AIR", "INSTRUMENT AIR", "SERVICE AIR", "AIR COMPRESSOR",
+                        "PLANT AIR", "PURGE AIR", "COMP AIR")),
+    # Condensate (steam-cycle) — activities abbreviate to CEP / "(Condensate ...)".
+    # Excludes bare "CONDENSER" on purpose: that collides with acc (Air Cooled CONDENSER).
+    ("condensate", ("CONDENSATE", "CONDENSATE EXTRACTION", "CONDENSATE SYSTEM", "CEP")),
     # Crane & Hoist — activities say "(Crane & Hoist)" / "(Gantry Crane)";
     # MDL equipment says "CRANE", "HOIST", "JIB CRANE".
     ("crane_hoist", ("CRANE & HOIST", "CRANE AND HOIST", "GANTRY CRANE",
                      "CRANE", "HOIST", "JIB CRANE")),
-    ("dc_ups", ("DC & UPS", "UPS", "DC SYSTEM", "125V DC", "220V DC")),
+    ("dc_ups", ("DC & UPS", "UPS", "DC SYSTEM", "125V DC", "220V DC",
+                "DIRECT CURRENT", "UNINTERRUPTIBLE POWER SUPPLY")),
     ("dcs", ("DCS", "DISTRIBUTED CONTROL")),
     # Electrical — activities already include Earthing/Lighting/IPB; add MDL long forms.
     ("electrical", ("ELECTRICAL", "POWER METERING", "TARIFF METERING", "METERING SYSTEM",
                     "EARTHING", "EARTHING & LIGHTNING", "LIGHTNING PROTECTION", "GROUNDING",
                     "ISOLATED PHASE BUSDUCT", "IPB",
                     "LIGHTING & SMALL POWER", "SMALL POWER")),
+    # Boiler/condensate feedwater — activities abbreviate to FWP/FWS/"FW PIPING"/BFP.
+    ("feedwater", ("FEEDWATER", "FEED WATER", "BOILER FEED", "FWP", "FWS", "FW PIPING", "BFP")),
     ("fgp", ("FGP", "FUEL GAS", "GAS COMP", "GAS CONDITIONING")),
+    # Fire fighting/protection — activities group these as "(... BLDG) ... Fire Fighting Sys."
+    # / "Foam Station"; MDL docs cover alarm/detection/sprinkler/standpipe/clean-agent/etc.
+    # Treated as a real system (not a cross-cutting discipline) because fire docs are
+    # almost always dedicated; revisit _DISCIPLINE_SCOPES if cross-system bleed appears.
+    ("fire_fighting", ("FIRE FIGHTING", "FIRE PROTECTION", "FIRE WATER", "FIRE SERVICE",
+                       "FIRE ALARM", "FIRE DETECTION", "FIRE SUPPRESSION", "FIRE HYDRANT",
+                       "SPRINKLER", "STANDPIPE", "STAND PIPE", "CLEAN AGENT", "WATER SPRAY",
+                       "DELUGE", "HYDRANT", "FOAM STATION", "FOAM SYSTEM")),
     ("gtg", ("GTG", "GT", "GAS TURBINE", "GAS TURBINE GENERATOR")),
     ("gsut_uat", ("GSUT", "UAT", "UNIT AUXILIARY TRANSFORMER", "STEP UP", "TRANSFORMER")),
     ("h2", ("H2", "HYDROGEN")),
@@ -112,6 +130,12 @@ _SCOPE_ALIASES: tuple[tuple[str, tuple[str, ...]], ...] = (
     # Sampling — activities say "(Sampling System)" / "(Sampling Equip)";
     # no existing scope covered these 38 activities.
     ("sampling", ("SAMPLING SYSTEM", "SAMPLING EQUIP", "SAMPLING")),
+    # Service/raw water — activities abbreviate service water to "(SWS)".
+    ("service_water", ("SERVICE WATER", "RAW WATER", "SWS")),
+    # Steam-cycle system (NOT the steam turbine) — all aliases are multiword to avoid
+    # matching bare "STEAM" in "STEAM TURBINE"/"HEAT RECOVERY STEAM GENERATOR".
+    ("steam", ("MAIN STEAM", "PROCESS STEAM", "HP STEAM", "IP STEAM", "LP STEAM",
+               "AUXILIARY STEAM", "AUX STEAM", "STEAM DRAIN", "STEAM PIPING", "STEAM SYSTEM")),
     ("stg", ("STG", "ST", "STEAM TURBINE",
              "STEAM TURBINE GENERATOR", "STEAM TURBINE & GENERATOR")),
     # WTS — chemical dosing and DM/potable water systems are part of water treatment.
