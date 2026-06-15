@@ -40,6 +40,10 @@ _SCOPE_MULTIPLIER: dict[str, float] = {
     "match": 1.0,
     "query_unscoped": 0.75,
     "activity_unscoped": 0.75,
+    # discipline_only: query and activity overlap only on a cross-cutting discipline
+    # (electrical/HVAC) while the query's equipment system is NOT confirmed — a weak,
+    # likely-wrong-system signal, ranked well below a real system match.
+    "discipline_only": 0.5,
     "mismatch": 0.25,
     "rule_scope_only": 0.85,
 }
@@ -84,18 +88,36 @@ _SCOPE_ALIASES: tuple[tuple[str, tuple[str, ...]], ...] = (
              "CLOSED COOLING WATER", "CLOSED COOLING WATER SYSTEM",
              "CLOSED COOLING WATER PUMP", "FIN FAN COOLER", "FIN FAN")),
     ("cems", ("CEMS", "CONTINUOUS EMISSIONS MONITORING")),
+    # Compressed/instrument/service air — activities use "(COMP Air ...)" / "(Purge Air System)";
+    # MDL docs say "COMPRESSED AIR", "INSTRUMENT AIR", "AIR COMPRESSOR".
+    ("compressed_air", ("COMPRESSED AIR", "INSTRUMENT AIR", "SERVICE AIR", "AIR COMPRESSOR",
+                        "PLANT AIR", "PURGE AIR", "COMP AIR")),
+    # Condensate (steam-cycle) — activities abbreviate to CEP / "(Condensate ...)".
+    # Excludes bare "CONDENSER" on purpose: that collides with acc (Air Cooled CONDENSER).
+    ("condensate", ("CONDENSATE", "CONDENSATE EXTRACTION", "CONDENSATE SYSTEM", "CEP")),
     # Crane & Hoist — activities say "(Crane & Hoist)" / "(Gantry Crane)";
     # MDL equipment says "CRANE", "HOIST", "JIB CRANE".
     ("crane_hoist", ("CRANE & HOIST", "CRANE AND HOIST", "GANTRY CRANE",
                      "CRANE", "HOIST", "JIB CRANE")),
-    ("dc_ups", ("DC & UPS", "UPS", "DC SYSTEM", "125V DC", "220V DC")),
+    ("dc_ups", ("DC & UPS", "UPS", "DC SYSTEM", "125V DC", "220V DC",
+                "DIRECT CURRENT", "UNINTERRUPTIBLE POWER SUPPLY")),
     ("dcs", ("DCS", "DISTRIBUTED CONTROL")),
     # Electrical — activities already include Earthing/Lighting/IPB; add MDL long forms.
     ("electrical", ("ELECTRICAL", "POWER METERING", "TARIFF METERING", "METERING SYSTEM",
                     "EARTHING", "EARTHING & LIGHTNING", "LIGHTNING PROTECTION", "GROUNDING",
                     "ISOLATED PHASE BUSDUCT", "IPB",
                     "LIGHTING & SMALL POWER", "SMALL POWER")),
+    # Boiler/condensate feedwater — activities abbreviate to FWP/FWS/"FW PIPING"/BFP.
+    ("feedwater", ("FEEDWATER", "FEED WATER", "BOILER FEED", "FWP", "FWS", "FW PIPING", "BFP")),
     ("fgp", ("FGP", "FUEL GAS", "GAS COMP", "GAS CONDITIONING")),
+    # Fire fighting/protection — activities group these as "(... BLDG) ... Fire Fighting Sys."
+    # / "Foam Station"; MDL docs cover alarm/detection/sprinkler/standpipe/clean-agent/etc.
+    # Treated as a real system (not a cross-cutting discipline) because fire docs are
+    # almost always dedicated; revisit _DISCIPLINE_SCOPES if cross-system bleed appears.
+    ("fire_fighting", ("FIRE FIGHTING", "FIRE PROTECTION", "FIRE WATER", "FIRE SERVICE",
+                       "FIRE ALARM", "FIRE DETECTION", "FIRE SUPPRESSION", "FIRE HYDRANT",
+                       "SPRINKLER", "STANDPIPE", "STAND PIPE", "CLEAN AGENT", "WATER SPRAY",
+                       "DELUGE", "HYDRANT", "FOAM STATION", "FOAM SYSTEM")),
     ("gtg", ("GTG", "GT", "GAS TURBINE", "GAS TURBINE GENERATOR")),
     ("gsut_uat", ("GSUT", "UAT", "UNIT AUXILIARY TRANSFORMER", "STEP UP", "TRANSFORMER")),
     ("h2", ("H2", "HYDROGEN")),
@@ -108,6 +130,12 @@ _SCOPE_ALIASES: tuple[tuple[str, tuple[str, ...]], ...] = (
     # Sampling — activities say "(Sampling System)" / "(Sampling Equip)";
     # no existing scope covered these 38 activities.
     ("sampling", ("SAMPLING SYSTEM", "SAMPLING EQUIP", "SAMPLING")),
+    # Service/raw water — activities abbreviate service water to "(SWS)".
+    ("service_water", ("SERVICE WATER", "RAW WATER", "SWS")),
+    # Steam-cycle system (NOT the steam turbine) — all aliases are multiword to avoid
+    # matching bare "STEAM" in "STEAM TURBINE"/"HEAT RECOVERY STEAM GENERATOR".
+    ("steam", ("MAIN STEAM", "PROCESS STEAM", "HP STEAM", "IP STEAM", "LP STEAM",
+               "AUXILIARY STEAM", "AUX STEAM", "STEAM DRAIN", "STEAM PIPING", "STEAM SYSTEM")),
     ("stg", ("STG", "ST", "STEAM TURBINE",
              "STEAM TURBINE GENERATOR", "STEAM TURBINE & GENERATOR")),
     # WTS — chemical dosing and DM/potable water systems are part of water treatment.
@@ -115,6 +143,13 @@ _SCOPE_ALIASES: tuple[tuple[str, tuple[str, ...]], ...] = (
              "CHEMICAL DOSING", "CHEMICAL DOSING SYSTEM",
              "DM WATER", "DEMINERALIZED WATER", "POTABLE WATER")),
 )
+
+# Cross-cutting engineering disciplines, NOT equipment systems. Earthing, lighting,
+# cable raceway, conduit, HVAC ducting etc. exist for every building and system, so an
+# overlap on one of these alone does not confirm two documents share the same equipment.
+# When a query carries a real equipment scope, a discipline-only overlap is treated as a
+# weak `discipline_only` match (see `_scope_status`), not a full `match`.
+_DISCIPLINE_SCOPES: frozenset[str] = frozenset({"electrical", "hvac"})
 
 _GENERIC_ACTIVITY_NAMES = {
     "MECHANICAL DESIGN CRITERIA",
@@ -903,7 +938,22 @@ def _scope_status(query_scope: list[str], activity_scope: list[str]) -> str:
         return "query_unscoped"
     if not activity_scope:
         return "activity_unscoped"
-    return "match" if set(query_scope).intersection(activity_scope) else "mismatch"
+    q = set(query_scope)
+    a = set(activity_scope)
+    overlap = q & a
+    if not overlap:
+        return "mismatch"
+    q_systems = q - _DISCIPLINE_SCOPES
+    if q_systems:
+        # The query names a real equipment system: a confident match must agree on that
+        # system. Overlapping only on a cross-cutting discipline (electrical/HVAC) is a
+        # weak signal — the document's equipment is left unconfirmed.
+        if q_systems & a:
+            return "match"
+        return "discipline_only"
+    # The query is purely a discipline scope (e.g. plant-wide "HVAC SYSTEM" document):
+    # a discipline overlap is the strongest signal available and is a legitimate match.
+    return "match"
 
 
 def _rule_scope_keys(rule: ValidationRule | None) -> list[str]:
@@ -914,10 +964,17 @@ def _rule_scope_keys(rule: ValidationRule | None) -> list[str]:
 
 
 def _effective_query_scope(query_scope: list[str], rule_scope: list[str]) -> tuple[list[str], str]:
-    if rule_scope:
-        return rule_scope, "rule"
+    # The document's own classified scope (Equipment / System / Building / Title) is the
+    # ground truth about what the document is. The matched validation rule is often a
+    # generic deliverable rule whose incidental equipment (from its Item column) is
+    # unrelated to this document; trusting it over the document's own scope hijacks the
+    # activity search to the wrong system and makes scope_status self-confirming. So the
+    # query scope wins whenever it exists; the rule scope is only a fallback for documents
+    # that carry no scope of their own.
     if query_scope:
         return query_scope, "query"
+    if rule_scope:
+        return rule_scope, "rule"
     return [], ""
 
 

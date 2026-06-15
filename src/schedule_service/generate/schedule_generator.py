@@ -448,8 +448,13 @@ def _candidate_quality_component(row: dict[str, str]) -> tuple[float, str]:
     status = row.get("candidate_status", "").strip().lower()
     if status and status != "accepted":
         return 0.4, f"candidate_status={status}"
+    raw_score = row.get("match_score", "").strip()
+    if not raw_score:
+        # No match_score column → row comes from a historical MDL file, not from the
+        # ITB candidate pipeline.  There is no candidate-quality signal to penalise.
+        return 1.0, ""
     try:
-        score = float(row.get("match_score", "") or 0.0)
+        score = float(raw_score)
     except ValueError:
         return 0.75, "candidate_score_missing"
     if score >= 0.82:
@@ -517,6 +522,11 @@ def _activity_quality_component(quality: ActivityMatchQuality | None) -> tuple[f
         component *= 0.3
         status = "needs_review_activity"
         reasons.append("activity_scope_mismatch")
+    elif quality.scope_status == "discipline_only":
+        # Overlaps only on a cross-cutting discipline (electrical/HVAC); the document's
+        # equipment system is unconfirmed, so the anchor is likely the wrong system.
+        component *= 0.5
+        reasons.append("activity_scope_status=discipline_only")
     elif quality.scope_status in {"activity_unscoped", "query_unscoped"}:
         component *= 0.8
         reasons.append(f"activity_scope_status={quality.scope_status}")
