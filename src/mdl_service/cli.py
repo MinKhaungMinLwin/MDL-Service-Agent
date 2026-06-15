@@ -85,6 +85,11 @@ def ingest(argv: list[str] | None = None) -> None:
     parser.add_argument("--input-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
     parser.add_argument("--embedding-dimensions", type=int, default=env_int("EMBEDDING_DIMENSIONS", 1536))
     parser.add_argument("--max-concurrency", type=int, default=1)
+    parser.add_argument(
+        "--replace",
+        action="store_true",
+        help="Delete existing MDL document nodes for this ingest label before ingesting.",
+    )
     args = parser.parse_args(argv)
 
     config = MDLIngestConfig(
@@ -92,12 +97,16 @@ def ingest(argv: list[str] | None = None) -> None:
         max_concurrency=args.max_concurrency,
     )
     with Neo4jConnection() as conn:
+        repository = MDLRepository(conn, config)
         service = MDLIngestService(
-            repository=MDLRepository(conn, config),
+            repository=repository,
             embedding_service=AzureEmbeddingService(),
             config=config,
         )
         service.setup()
+        if args.replace:
+            deleted_count = repository.delete_all_documents()
+            print(f"Deleted {deleted_count} existing MDL documents from {config.node_label}.")
         count = service.ingest_directory(args.input_dir)
     print(f"Ingested {count} MDL documents into {config.node_label}.")
 

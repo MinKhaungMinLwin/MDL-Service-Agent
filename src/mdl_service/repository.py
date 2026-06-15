@@ -48,6 +48,20 @@ class MDLRepository:
                 """
             )
 
+    def delete_all_documents(self) -> int:
+        """Delete every MDL document node managed by this repository."""
+        with self.conn.session() as session:
+            result = session.run(
+                f"""
+                MATCH (n:{self.config.node_label})
+                WITH n, count(n) AS deleted_count
+                DETACH DELETE n
+                RETURN deleted_count
+                """
+            )
+            record = result.single()
+        return int(record["deleted_count"] if record else 0)
+
     def upsert_batch(self, records: list[dict[str, Any]]) -> None:
         """Upsert one embedded document batch."""
         if not records:

@@ -67,10 +67,7 @@ def main() -> None:
     parser.add_argument(
         "--excluded-source-text",
         default="",
-        help=(
-            "Skip nodes whose source_file contains this text. "
-            f"Use {MatchingConfig.excluded_source_text!r} to mimic matching search corpus."
-        ),
+        help="Skip nodes whose source_file contains this text.",
     )
     parser.add_argument("--json-output", type=Path, help="Optional path to save the duplicate report as JSON.")
     args = parser.parse_args()
