@@ -37,6 +37,11 @@ from schedule_service.generate.activity.matcher import (
 )
 from schedule_service.generate.activity.models import ScheduleActivity
 from schedule_service.generate.date.date_range_engine import DateRange, compute_date_range
+from schedule_service.generate.rule.generic_judge import (
+    GenericVerdict,
+    JudgeProvider,
+    resolve_generic_verdicts,
+)
 from schedule_service.generate.rule.loader import DEFAULT_RULE_PATH
 from schedule_service.generate.rule.matcher import RuleMatchQuality, build_rule_query, resolve_rule_matches
 from schedule_service.generate.rule.models import ValidationRule
@@ -56,6 +61,7 @@ class MatchContext:
     activity: ScheduleActivity
     rule_quality: RuleMatchQuality | None = None
     activity_quality: ActivityMatchQuality | None = None
+    rule_generic_verdict: GenericVerdict | None = None
 
 
 def generate_schedule_file(
@@ -69,6 +75,7 @@ def generate_schedule_file(
     semantic_weight: float = 0.3,
     activity_cache_dir: Path | None = None,
     activity_resolver: str = "text",
+    rule_generic_judge: JudgeProvider | None = None,
 ) -> tuple[Path, Path, dict[str, Any]]:
     """Generate FA/FC date ranges from an MDL classified CSV.
 
@@ -113,6 +120,15 @@ def generate_schedule_file(
     rule_semantic_index = get_rule_semantic_index(rule_matcher, semantic_cache_dir) if rule_matcher else None
     rules, rule_qualities = resolve_rule_matches(rows, rule_matcher, rule_semantic_index, semantic_weight)
 
+    # 1b. Resolve rule_generic ambiguity: deterministic bucketing for all generic-rule
+    #     rows, plus an optional LLM judge for the genuinely ambiguous ones (G_AMBIG).
+    if rule_matcher is not None:
+        generic_verdicts = resolve_generic_verdicts(
+            rows, rules, rule_qualities, rule_matcher.rules, provider=rule_generic_judge
+        )
+    else:
+        generic_verdicts = [None] * len(rows)
+
     t_rules = time.perf_counter()
 
     # 2. Resolve the CCPP activity for every row (always BM25 + semantic + RRF), rule-boosted.
@@ -140,8 +156,10 @@ def generate_schedule_file(
 
     # 3. Render output rows from the resolved matches.
     contexts = [
-        MatchContext(rule=r, activity=a, rule_quality=q, activity_quality=aq)
-        for r, a, q, aq in zip(rules, activities, rule_qualities, activity_qualities, strict=True)
+        MatchContext(rule=r, activity=a, rule_quality=q, activity_quality=aq, rule_generic_verdict=gv)
+        for r, a, q, aq, gv in zip(
+            rules, activities, rule_qualities, activity_qualities, generic_verdicts, strict=True
+        )
     ]
     output_rows = [
         _format_schedule_row(row, ctx, shift_days)
@@ -211,6 +229,7 @@ def _format_schedule_row(
     vt_description = rule.describe() if rule and vt_parsed else ""
     rule_quality_fields = ctx.rule_quality.output_fields() if ctx.rule_quality else {}
     activity_quality_fields = ctx.activity_quality.output_fields() if ctx.activity_quality else {}
+    generic_judge_fields = ctx.rule_generic_verdict.output_fields() if ctx.rule_generic_verdict else {}
 
     # Compute FA/FC date ranges only when rule/activity quality passes the generation gate.
     dr = DateRange()
@@ -249,6 +268,7 @@ def _format_schedule_row(
         "matched_rule_validation_time": vt_raw,
         "matched_rule_date_formula": vt_description,
         **rule_quality_fields,
+        **generic_judge_fields,
         "submission_type": sub_type,
         "matched_activity_id": activity.activity_id,
         "matched_activity_name": activity.activity_name_clean or activity.activity_name,
@@ -305,6 +325,7 @@ def _schedule_quality(
     confidence = candidate_component * rule_component * activity_component * date_component
     caps: list[float] = []
     reasons = [reason for reason in [candidate_reason, date_reason, *rule_reasons, *activity_reasons] if reason]
+    reasons = _apply_generic_verdict(reasons, ctx.rule_generic_verdict)
 
     if rule_status == "needs_review_rule":
         caps.append(0.4)
@@ -429,6 +450,26 @@ def _activity_block_reasons(quality: ActivityMatchQuality | None) -> list[str]:
     ):
         reasons.append("activity_phase_procurement_conflict")
     return reasons
+
+
+def _apply_generic_verdict(reasons: list[str], verdict: GenericVerdict | None) -> list[str]:
+    """Let a rule_generic verdict clear (or annotate) the generic-scope ambiguity.
+
+    Phase 1 is verify-only: a promoting verdict removes the ``rule_scope_status=rule_generic``
+    ambiguity tag so the row can become ``usable`` — it never changes the computed dates.
+    Every verdict is also recorded as a ``rule_generic_judge=...`` reason for audit.
+    """
+    if verdict is None:
+        return reasons
+    out = list(reasons)
+    if verdict.promotes:
+        out = [r for r in out if r != "rule_scope_status=rule_generic"]
+        out.append(f"rule_generic_judge={verdict.bucket}:{verdict.verdict or 'safe'}")
+    elif verdict.flags_wrong:
+        out.append("rule_generic_judge=use_specific")
+    else:
+        out.append("rule_generic_judge=uncertain")
+    return out
 
 
 def _has_rule_ambiguity_reasons(reasons: list[str]) -> bool:

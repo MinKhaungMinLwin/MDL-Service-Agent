@@ -80,6 +80,17 @@ def schedule_generate(
         ),
     ] = "",
     activity_resolver: ActivityResolver = "text",
+    rule_generic_judge: Annotated[
+        bool,
+        Query(
+            description=(
+                "When true, resolve rule_generic ambiguity: deterministic bucketing for all "
+                "generic-rule rows plus an LLM judge for the genuinely ambiguous ones. "
+                "Promotes safe rows out of needs_review without changing computed dates. "
+                "Requires Azure chat credentials."
+            ),
+        ),
+    ] = False,
     limit: ScheduleLimit = 0,
 ) -> dict[str, object]:
     """Generate FA/FC schedule date ranges from an MDL classified CSV."""
@@ -93,6 +104,13 @@ def schedule_generate(
     if rule_csv:
         logger.info("Using custom rule file: {}", rule_path)
 
+    judge_provider = None
+    if rule_generic_judge:
+        from schedule_service.generate.rule.generic_judge_llm import LLMJudgeProvider
+
+        logger.info("rule_generic LLM judge enabled")
+        judge_provider = LLMJudgeProvider()
+
     schedule_activities = get_schedule_activities(DEFAULT_SCHEDULE_PATH)
     xlsx_path, json_path, timing = generate_schedule_file(
         input_csv=input_path,
@@ -104,6 +122,7 @@ def schedule_generate(
         semantic_cache_dir=CACHE_DIR / "rule_semantic_cache",
         activity_cache_dir=CACHE_DIR / "activity_semantic_cache",
         activity_resolver=activity_resolver,
+        rule_generic_judge=judge_provider,
     )
     return _file_response("generated_schedule", input_path, xlsx_path, json_path, timing)
 
