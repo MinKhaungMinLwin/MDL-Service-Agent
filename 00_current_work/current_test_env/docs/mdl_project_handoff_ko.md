@@ -83,6 +83,12 @@ build_package_grouped_llm_pilot.py
 → Excel/CSV 출력
 ```
 
+Vendor package master 초안 생성 스크립트:
+
+```text
+build_vendor_package_master_candidate.py
+```
+
 ## 현재 구현된 주요 규칙
 
 ### 1. Vendor / EPC Scope 분리
@@ -162,23 +168,29 @@ L3: Burner Management System
 현재 가장 의미 있는 결과:
 
 ```text
-output/standard_mdl/package_grouped_llm_vendor_acc_hrsg_dcs_l12_forced_l3_free/package_grouped_standard_mdl.xlsx
+output/standard_mdl/package_grouped_llm_vendor_acc_hrsg_dcs_l12_forced_l3_llm/package_grouped_standard_mdl.xlsx
 ```
 
 요약:
 
 ```text
-rows: 437
-ACC: 103
-HRSG: 279
-DCS: 55
+rows: 526
+ACC: 106
+HRSG: 357
+DCS: 63
 rejections: 0
 invalid_l1: 0
 invalid_l2: 0
-L2 == L3: 1건
+L3 == L2: 9건
 For Block / Block qualifier in title: 0
 Data Sheet & Drawings remaining: 0
 Validation Report: empty
+```
+
+Vendor package master 초안:
+
+```text
+output/standard_mdl/vendor_package_master_candidate/vendor_package_master_candidate.xlsx
 ```
 
 ## 이전 시행착오
@@ -345,7 +357,7 @@ cd 00_current_work/current_test_env
   --all-projects \
   --batch-size 40 \
   --max-epc-batches 0 \
-  --output-dir output/standard_mdl/package_grouped_llm_vendor_acc_hrsg_dcs_l12_forced_l3_free
+  --output-dir output/standard_mdl/package_grouped_llm_vendor_acc_hrsg_dcs_l12_forced_l3_llm
 ```
 
 EPC 일부 batch 이어서 실행:

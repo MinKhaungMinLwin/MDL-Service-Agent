@@ -85,6 +85,12 @@ Vai trò:
 → xuất Excel/CSV
 ```
 
+Script tạo vendor package master candidate:
+
+```text
+build_vendor_package_master_candidate.py
+```
+
 ## Quy Tắc Hiện Tại
 
 ### 1. Tách Vendor / EPC Scope
@@ -168,23 +174,29 @@ Các quy tắc title hiện tại:
 Kết quả test tốt nhất hiện tại:
 
 ```text
-output/standard_mdl/package_grouped_llm_vendor_acc_hrsg_dcs_l12_forced_l3_free/package_grouped_standard_mdl.xlsx
+output/standard_mdl/package_grouped_llm_vendor_acc_hrsg_dcs_l12_forced_l3_llm/package_grouped_standard_mdl.xlsx
 ```
 
 Tóm tắt kết quả:
 
 ```text
-rows: 437
-ACC: 103
-HRSG: 279
-DCS: 55
+rows: 526
+ACC: 106
+HRSG: 357
+DCS: 63
 rejections: 0
 invalid_l1: 0
 invalid_l2: 0
-L2 == L3: chỉ 1 row
+L3 == L2: 9 rows
 For Block / Block qualifier trong title: 0
 Data Sheet & Drawings còn lại: 0
 Validation Report: empty
+```
+
+Vendor package master candidate:
+
+```text
+output/standard_mdl/vendor_package_master_candidate/vendor_package_master_candidate.xlsx
 ```
 
 ## Các Thử Nghiệm Trước Đó
@@ -351,7 +363,7 @@ cd 00_current_work/current_test_env
   --all-projects \
   --batch-size 40 \
   --max-epc-batches 0 \
-  --output-dir output/standard_mdl/package_grouped_llm_vendor_acc_hrsg_dcs_l12_forced_l3_free
+  --output-dir output/standard_mdl/package_grouped_llm_vendor_acc_hrsg_dcs_l12_forced_l3_llm
 ```
 
 Chạy tiếp các EPC batch:
