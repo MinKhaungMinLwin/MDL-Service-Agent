@@ -66,7 +66,26 @@ _SCOPE_PATTERNS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("reserve_boiler", ("RESERVE BOILER", "AUX BOILER", "AUXILIARY BOILER")),
     ("bop", ("BOP", "BALANCE OF PLANT")),
     ("fgp", ("FGP", "FUEL GAS PACKAGE", "FUEL GAS")),
+    # Fire-protection systems. Distinct from civil drainage and from the cooling-water
+    # circuit; added so the scope guard rejects generic drainage/utility rules that the
+    # token+semantic scorer otherwise pulls in for fire documents (e.g. a "FIRE ALARM
+    # SYSTEM LAYOUT" matching a "STORMWATER DRAINAGE LAYOUT" rule).
+    ("fire_protection", (
+        "FIRE ALARM", "FIRE FIGHTING", "FIRE WATER", "FIRE BRIGADE", "FIRE HYDRANT",
+        "SPRINKLER", "STAND PIPE", "STANDPIPE", "DELUGE", "CLEAN AGENT", "FM200", "FM 200",
+    )),
+    # Civil drainage / effluent. Never the same system as fire protection or the closed
+    # cooling-water circuit, so a drainage-scoped rule must not win for those documents.
+    ("drainage", ("DRAINAGE", "STORMWATER", "STORM WATER", "SEWAGE", "SANITARY")),
+    # Cooling tower equipment — a different system from the Closed Cooling Water (CCW)
+    # pump circuit, which the "COOLING TOWER _MOTOR DATA SHEET" rule was mis-applied to.
+    ("cooling_tower", ("COOLING TOWER",)),
 )
+
+# Scope keys that denote distinct physical systems which must never substitute for one
+# another. When a document and a rule each carry a *different* member of this set, the
+# match is a wrong-system match regardless of any shared building/area token.
+_EXCLUSIVE_SYSTEM_SCOPES = frozenset({"fire_protection", "drainage", "cooling_tower"})
 
 _DELIVERABLE_FAMILIES: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("painting_specification", ("PAINTING SPECIFICATION", "PAINT SPECIFICATION")),
@@ -656,6 +675,20 @@ def _rule_guard_status(
                 sorted(rule_scope_tokens),
             )
             return "rejected", "scope_mismatch"
+        # Mutually-exclusive physical systems (fire protection vs drainage vs cooling
+        # tower) must never substitute for one another even when they share a building or
+        # area token — e.g. a "STORMWATER DRAINAGE LAYOUT" rule must not win for a "FIRE
+        # ALARM SYSTEM LAYOUT" document just because both are for the same LEB. The plain
+        # intersection guard above misses this because the shared building token overlaps.
+        if _exclusive_system_conflict(query_scope_tokens, rule_scope_tokens):
+            logger.trace(
+                "Rule rejected by system-scope guard: query='{}' rule='{}' ({} vs {})",
+                document,
+                rule.doc_keyword,
+                sorted(query_scope_tokens & _EXCLUSIVE_SYSTEM_SCOPES),
+                sorted(rule_scope_tokens & _EXCLUSIVE_SYSTEM_SCOPES),
+            )
+            return "rejected", "system_scope_conflict"
     subtype_status = _subtype_status(query_family, query_subtype, rule_family, rule_subtype)
     if subtype_status == "mismatch":
         logger.trace(
@@ -986,6 +1019,17 @@ def _scope_keys(text: str, tokens: set[str] | None = None) -> set[str]:
 def _rule_scope_keys(rule: ValidationRule) -> set[str]:
     text = f"{rule.item_name} {rule.doc_keyword}"
     return _scope_keys(text, set(rule._item_tokens) | set(rule._doc_kw_tokens)) | _free_text_scope_tokens(text)
+
+
+def _exclusive_system_conflict(query_scope_tokens: set[str], rule_scope_tokens: set[str]) -> bool:
+    """True when query and rule name *different* mutually-exclusive physical systems.
+
+    Returns False when either side names no exclusive system (so generic rules are never
+    blocked) or when both name the same one.
+    """
+    query_systems = query_scope_tokens & _EXCLUSIVE_SYSTEM_SCOPES
+    rule_systems = rule_scope_tokens & _EXCLUSIVE_SYSTEM_SCOPES
+    return bool(query_systems and rule_systems and not (query_systems & rule_systems))
 
 
 def _scope_alias_matches(text: str, alias: str) -> bool:

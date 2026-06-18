@@ -559,6 +559,14 @@ def _activity_quality_component(quality: ActivityMatchQuality | None) -> tuple[f
     elif quality.phase_status in {"compatible", "query_unknown", "activity_unknown"}:
         component *= 0.75
         reasons.append(f"activity_phase_status={quality.phase_status}")
+    if quality.scope_status == "match" and not quality.equipment_agreement:
+        # The scope "match" is corroborated only by the System field or the rule, not by
+        # the document's own equipment/title — a coarse-bucket false friend (e.g. a
+        # duct-burner water-spray calc landing on a Chemical Dosing building via `wts`).
+        # The anchor is likely the wrong system, so the date is untrustworthy.
+        component *= 0.4
+        status = "needs_review_activity"
+        reasons.append("activity_equipment_unconfirmed")
     if quality.scope_status == "mismatch":
         component *= 0.3
         status = "needs_review_activity"
