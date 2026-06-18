@@ -295,6 +295,36 @@ def _format_schedule_row(
     }
 
 
+# Minimum deliverable-concept similarity to promote an all-green sub-0.55 row to usable.
+# Calibrated to sit in the gap between true matches (Design Criteria -> Design Criteria,
+# concept sim high) and wrong-discipline generic matches (DRAWING -> Piping Arrangement
+# Drawing, concept sim low). Tune from rule_match_deliverable_concept_sim on a real run.
+_DELIVERABLE_PROMOTE_SIM = 0.70
+
+
+def _deliverable_promotable(ctx: MatchContext) -> bool:
+    """True when every match signal is green AND the deliverable concept is confirmed.
+
+    These rows pass rule family+subtype+scope, activity scope+phase, and equipment agreement,
+    yet get multiplied below the 0.55 confidence floor by soft caps. The deliverable-concept
+    similarity separates genuine matches from wrong-discipline generic matches (a generic doc
+    deliverable bound to a specific, unrelated rule keyword), so a high similarity makes the
+    sub-threshold confidence a formula artefact rather than evidence of a wrong match.
+    """
+    rq = ctx.rule_quality
+    aq = ctx.activity_quality
+    if rq is None or aq is None:
+        return False
+    return (
+        _match_trusted(ctx)
+        and rq.family_status == "match"
+        and getattr(rq, "subtype_status", "") == "match"
+        and aq.scope_status == "match"
+        and aq.phase_status in {"match", "compatible"}
+        and getattr(rq, "deliverable_concept_sim", -1.0) >= _DELIVERABLE_PROMOTE_SIM
+    )
+
+
 def _match_trusted(ctx: MatchContext) -> bool:
     """True when the rule and activity match are reliable enough to trust an NTP-anchored
     early-project date.
@@ -389,6 +419,17 @@ def _schedule_quality(
     elif activity_status == "needs_review_activity":
         status = "needs_review_activity"
     elif confidence >= 0.55 and not _has_rule_ambiguity_reasons(reasons) and not date_floored_degenerate:
+        status = "usable"
+    elif (
+        _deliverable_promotable(ctx)
+        and not _has_rule_ambiguity_reasons(reasons)
+        and not date_floored_degenerate
+    ):
+        # Every match signal is green (rule family+subtype+scope, activity scope+phase,
+        # equipment) and the deliverable concept is confirmed; the sub-0.55 confidence is
+        # the soft-cap stack (default FC window, generic-rule tag, priority), a formula
+        # artefact, not evidence of a wrong match. Promote rather than hold in review.
+        reasons.append("promoted_deliverable_concept")
         status = "usable"
     else:
         status = "needs_review"

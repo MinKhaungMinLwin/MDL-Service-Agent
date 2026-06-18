@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import os
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from loguru import logger
 
@@ -238,6 +238,10 @@ class RuleMatchQuality:
     hybrid_score: float = 0.0
     final_score: float = 0.0
     rule_priority: int = 0
+    # Cosine similarity between the document's deliverable phrase and the matched rule's
+    # doc_keyword alone (scope/equipment stripped). Isolates deliverable-concept agreement
+    # from the scope noise that pollutes semantic_score. -1.0 = not computed (token path).
+    deliverable_concept_sim: float = -1.0
 
     def output_fields(self) -> dict[str, str]:
         """Return stable string fields for generated schedule outputs."""
@@ -259,6 +263,7 @@ class RuleMatchQuality:
             "rule_match_semantic_score": _fmt_score(self.semantic_score),
             "rule_match_hybrid_score": _fmt_score(self.hybrid_score),
             "rule_match_final_score": _fmt_score(self.final_score),
+            "rule_match_deliverable_concept_sim": _fmt_score(self.deliverable_concept_sim),
         }
 
 
@@ -597,7 +602,65 @@ def _match_rules_semantic(
                 quality = title_quality
         results.append(rule)
         qualities.append(quality)
+
+    _attach_deliverable_concept_sim(rows, query_contexts, results, qualities, service)
     return results, qualities
+
+
+def _attach_deliverable_concept_sim(rows, query_contexts, results, qualities, service) -> None:
+    """Fill quality.deliverable_concept_sim for every matched row (in place).
+
+    Isolates the deliverable concept from scope by embedding the document's deliverable
+    phrase against the matched rule's doc_keyword alone (RuleSemanticIndex embeds
+    doc_keyword + item_name, blending scope into semantic_score). A generic doc deliverable
+    ("DRAWING") bound to a specific rule keyword ("Coupling detail drawing") scores low here
+    even when family/subtype/scope all "match" — the signal that separates true matches from
+    wrong-discipline generic matches. Reuses the disk-cached embedder; deliverable phrases
+    are highly repetitive, so this adds few API calls.
+    """
+    import numpy as np
+
+    from schedule_service.generate._shared.embedding_cache import embed_texts_cached
+
+    doc_texts: list[str | None] = []
+    rule_texts: list[str | None] = []
+    for row, ctx, rule in zip(rows, query_contexts, results, strict=True):
+        if rule is None:
+            doc_texts.append(None)
+            rule_texts.append(None)
+            continue
+        _rule_query, _title, query_family, query_subtype, _scope = ctx
+        doc_texts.append(_doc_deliverable_text(row, query_family, query_subtype))
+        rule_texts.append(rule.doc_keyword)
+
+    unique = list(dict.fromkeys(t for t in (*doc_texts, *rule_texts) if t))
+    if not unique:
+        return
+    embeddings = embed_texts_cached(service, unique)
+    emb_map = {t: np.array(v, dtype=np.float32) for t, v in zip(unique, embeddings, strict=True)}
+    for i, (doc_text, rule_text) in enumerate(zip(doc_texts, rule_texts, strict=True)):
+        if doc_text and rule_text:
+            qualities[i] = replace(
+                qualities[i],
+                deliverable_concept_sim=_cosine(emb_map[doc_text], emb_map[rule_text]),
+            )
+
+
+def _doc_deliverable_text(row: dict[str, str], query_family: str, query_subtype: str) -> str:
+    """Text representing the document's deliverable concept, free of equipment/system scope."""
+    deliverable = row.get("Deliverable", "").strip()
+    if deliverable:
+        return deliverable
+    return query_subtype or query_family or row.get("Title", "").strip()
+
+
+def _cosine(a, b) -> float:
+    import numpy as np
+
+    norm = float(np.linalg.norm(a)) * float(np.linalg.norm(b))
+    if norm == 0.0:
+        return 0.0
+    return float(np.dot(a, b) / norm)
 
 
 # Lever A helpers: title-rescue for weak rule-query matches.
