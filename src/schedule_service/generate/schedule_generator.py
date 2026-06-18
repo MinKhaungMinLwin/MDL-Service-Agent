@@ -37,6 +37,11 @@ from schedule_service.generate.activity.matcher import (
 )
 from schedule_service.generate.activity.models import ScheduleActivity
 from schedule_service.generate.date.date_range_engine import DateRange, compute_date_range
+from schedule_service.generate.rule.generic_judge import (
+    GenericVerdict,
+    JudgeProvider,
+    resolve_generic_verdicts,
+)
 from schedule_service.generate.rule.loader import DEFAULT_RULE_PATH
 from schedule_service.generate.rule.matcher import RuleMatchQuality, build_rule_query, resolve_rule_matches
 from schedule_service.generate.rule.models import ValidationRule
@@ -56,6 +61,7 @@ class MatchContext:
     activity: ScheduleActivity
     rule_quality: RuleMatchQuality | None = None
     activity_quality: ActivityMatchQuality | None = None
+    rule_generic_verdict: GenericVerdict | None = None
 
 
 def generate_schedule_file(
@@ -69,6 +75,7 @@ def generate_schedule_file(
     semantic_weight: float = 0.3,
     activity_cache_dir: Path | None = None,
     activity_resolver: str = "text",
+    rule_generic_judge: JudgeProvider | None = None,
 ) -> tuple[Path, Path, dict[str, Any]]:
     """Generate FA/FC date ranges from an MDL classified CSV.
 
@@ -113,6 +120,15 @@ def generate_schedule_file(
     rule_semantic_index = get_rule_semantic_index(rule_matcher, semantic_cache_dir) if rule_matcher else None
     rules, rule_qualities = resolve_rule_matches(rows, rule_matcher, rule_semantic_index, semantic_weight)
 
+    # 1b. Resolve rule_generic ambiguity: deterministic bucketing for all generic-rule
+    #     rows, plus an optional LLM judge for the genuinely ambiguous ones (G_AMBIG).
+    if rule_matcher is not None:
+        generic_verdicts = resolve_generic_verdicts(
+            rows, rules, rule_qualities, rule_matcher.rules, provider=rule_generic_judge
+        )
+    else:
+        generic_verdicts = [None] * len(rows)
+
     t_rules = time.perf_counter()
 
     # 2. Resolve the CCPP activity for every row (always BM25 + semantic + RRF), rule-boosted.
@@ -140,8 +156,10 @@ def generate_schedule_file(
 
     # 3. Render output rows from the resolved matches.
     contexts = [
-        MatchContext(rule=r, activity=a, rule_quality=q, activity_quality=aq)
-        for r, a, q, aq in zip(rules, activities, rule_qualities, activity_qualities, strict=True)
+        MatchContext(rule=r, activity=a, rule_quality=q, activity_quality=aq, rule_generic_verdict=gv)
+        for r, a, q, aq, gv in zip(
+            rules, activities, rule_qualities, activity_qualities, generic_verdicts, strict=True
+        )
     ]
     output_rows = [
         _format_schedule_row(row, ctx, shift_days)
@@ -211,6 +229,7 @@ def _format_schedule_row(
     vt_description = rule.describe() if rule and vt_parsed else ""
     rule_quality_fields = ctx.rule_quality.output_fields() if ctx.rule_quality else {}
     activity_quality_fields = ctx.activity_quality.output_fields() if ctx.activity_quality else {}
+    generic_judge_fields = ctx.rule_generic_verdict.output_fields() if ctx.rule_generic_verdict else {}
 
     # Compute FA/FC date ranges only when rule/activity quality passes the generation gate.
     dr = DateRange()
@@ -249,6 +268,7 @@ def _format_schedule_row(
         "matched_rule_validation_time": vt_raw,
         "matched_rule_date_formula": vt_description,
         **rule_quality_fields,
+        **generic_judge_fields,
         "submission_type": sub_type,
         "matched_activity_id": activity.activity_id,
         "matched_activity_name": activity.activity_name_clean or activity.activity_name,
@@ -264,12 +284,67 @@ def _format_schedule_row(
         "fc_latest": _fmt_date(dr.fc_latest),
         "date_range_status": date_range_status,
         "date_range_confidence": f"{dr.confidence:.2f}" if dr.confidence else "",
+        "date_range_floored_fields": "|".join(dr.floored_fields),
+        "date_range_floored_degenerate": "true" if dr.is_floored_degenerate else "false",
+        "date_range_ntp_anchored": "true" if dr.ntp_anchored else "false",
         "schedule_confidence": _fmt_confidence(schedule_quality["confidence"]),
         "schedule_quality_status": schedule_quality["status"],
         "schedule_quality_reasons": schedule_quality["reasons"],
         "date_range_notes": dr.notes,
         "ntp_shift_days": shift_days if shift_days else "",
     }
+
+
+# Minimum deliverable-concept similarity to promote an all-green sub-0.55 row to usable.
+# Calibrated to sit in the gap between true matches (Design Criteria -> Design Criteria,
+# concept sim high) and wrong-discipline generic matches (DRAWING -> Piping Arrangement
+# Drawing, concept sim low). Tune from rule_match_deliverable_concept_sim on a real run.
+_DELIVERABLE_PROMOTE_SIM = 0.70
+
+
+def _deliverable_promotable(ctx: MatchContext) -> bool:
+    """True when every match signal is green AND the deliverable concept is confirmed.
+
+    These rows pass rule family+subtype+scope, activity scope+phase, and equipment agreement,
+    yet get multiplied below the 0.55 confidence floor by soft caps. The deliverable-concept
+    similarity separates genuine matches from wrong-discipline generic matches (a generic doc
+    deliverable bound to a specific, unrelated rule keyword), so a high similarity makes the
+    sub-threshold confidence a formula artefact rather than evidence of a wrong match.
+    """
+    rq = ctx.rule_quality
+    aq = ctx.activity_quality
+    if rq is None or aq is None:
+        return False
+    return (
+        _match_trusted(ctx)
+        and rq.family_status == "match"
+        and getattr(rq, "subtype_status", "") == "match"
+        and aq.scope_status == "match"
+        and aq.phase_status in {"match", "compatible"}
+        and getattr(rq, "deliverable_concept_sim", -1.0) >= _DELIVERABLE_PROMOTE_SIM
+    )
+
+
+def _match_trusted(ctx: MatchContext) -> bool:
+    """True when the rule and activity match are reliable enough to trust an NTP-anchored
+    early-project date.
+
+    A translated early-project range looks like a confident date, so it is only safe to
+    surface when the match is confirmed: rule family + subtype match with a passing guard,
+    and an activity whose scope does not conflict and whose equipment agrees with the doc.
+    Anything weaker keeps the row in needs_review rather than fabricating a usable date.
+    """
+    rq = ctx.rule_quality
+    aq = ctx.activity_quality
+    if rq is None or aq is None:
+        return False
+    return (
+        rq.family_status == "match"
+        and getattr(rq, "subtype_status", "") == "match"
+        and rq.guard_status == "passed"
+        and aq.scope_status != "mismatch"
+        and aq.equipment_agreement
+    )
 
 
 def _schedule_quality(
@@ -305,6 +380,7 @@ def _schedule_quality(
     confidence = candidate_component * rule_component * activity_component * date_component
     caps: list[float] = []
     reasons = [reason for reason in [candidate_reason, date_reason, *rule_reasons, *activity_reasons] if reason]
+    reasons = _apply_generic_verdict(reasons, ctx.rule_generic_verdict)
 
     if rule_status == "needs_review_rule":
         caps.append(0.4)
@@ -314,6 +390,25 @@ def _schedule_quality(
         caps.append(0.8)
     if date_reason == "default_fc_window":
         caps.append(0.9)
+    # Date model for documents the template places before the project NTP. Two cases:
+    #  - ntp_anchored: the negative-offset VT window fell entirely before NTP and was
+    #    translated forward to sit at the project start. The range is real (widths + FA->FC
+    #    gap preserved) but anchored on NTP, not on a confirmed activity position, so it is
+    #    only trustworthy when the rule+activity match itself is reliable. A fabricated-
+    #    looking early date on a wrong match is dangerous, hence the trust gate.
+    #  - is_floored_degenerate: legacy clamp collapsed the window onto a single floor day.
+    date_floored_degenerate = dr.is_floored_degenerate
+    if dr.ntp_anchored:
+        if _match_trusted(ctx):
+            reasons.append("date_range_ntp_anchored")
+            caps.append(0.55)
+        else:
+            reasons.append("date_range_ntp_anchored_untrusted")
+            caps.append(0.3)
+    if date_floored_degenerate:
+        reasons.append("date_range_floored_to_ntp")
+        caps.append(0.4)
+
     if caps:
         confidence = min(confidence, min(caps))
 
@@ -323,7 +418,18 @@ def _schedule_quality(
         status = "needs_review_rule"
     elif activity_status == "needs_review_activity":
         status = "needs_review_activity"
-    elif confidence >= 0.55 and not _has_rule_ambiguity_reasons(reasons):
+    elif confidence >= 0.55 and not _has_rule_ambiguity_reasons(reasons) and not date_floored_degenerate:
+        status = "usable"
+    elif (
+        _deliverable_promotable(ctx)
+        and not _has_rule_ambiguity_reasons(reasons)
+        and not date_floored_degenerate
+    ):
+        # Every match signal is green (rule family+subtype+scope, activity scope+phase,
+        # equipment) and the deliverable concept is confirmed; the sub-0.55 confidence is
+        # the soft-cap stack (default FC window, generic-rule tag, priority), a formula
+        # artefact, not evidence of a wrong match. Promote rather than hold in review.
+        reasons.append("promoted_deliverable_concept")
         status = "usable"
     else:
         status = "needs_review"
@@ -431,6 +537,26 @@ def _activity_block_reasons(quality: ActivityMatchQuality | None) -> list[str]:
     return reasons
 
 
+def _apply_generic_verdict(reasons: list[str], verdict: GenericVerdict | None) -> list[str]:
+    """Let a rule_generic verdict clear (or annotate) the generic-scope ambiguity.
+
+    Phase 1 is verify-only: a promoting verdict removes the ``rule_scope_status=rule_generic``
+    ambiguity tag so the row can become ``usable`` — it never changes the computed dates.
+    Every verdict is also recorded as a ``rule_generic_judge=...`` reason for audit.
+    """
+    if verdict is None:
+        return reasons
+    out = list(reasons)
+    if verdict.promotes:
+        out = [r for r in out if r != "rule_scope_status=rule_generic"]
+        out.append(f"rule_generic_judge={verdict.bucket}:{verdict.verdict or 'safe'}")
+    elif verdict.flags_wrong:
+        out.append("rule_generic_judge=use_specific")
+    else:
+        out.append("rule_generic_judge=uncertain")
+    return out
+
+
 def _has_rule_ambiguity_reasons(reasons: list[str]) -> bool:
     """Keep rows with ambiguous rule identity in review even when other signals are strong."""
     ambiguous = {
@@ -518,6 +644,14 @@ def _activity_quality_component(quality: ActivityMatchQuality | None) -> tuple[f
     elif quality.phase_status in {"compatible", "query_unknown", "activity_unknown"}:
         component *= 0.75
         reasons.append(f"activity_phase_status={quality.phase_status}")
+    if quality.scope_status == "match" and not quality.equipment_agreement:
+        # The scope "match" is corroborated only by the System field or the rule, not by
+        # the document's own equipment/title — a coarse-bucket false friend (e.g. a
+        # duct-burner water-spray calc landing on a Chemical Dosing building via `wts`).
+        # The anchor is likely the wrong system, so the date is untrustworthy.
+        component *= 0.4
+        status = "needs_review_activity"
+        reasons.append("activity_equipment_unconfirmed")
     if quality.scope_status == "mismatch":
         component *= 0.3
         status = "needs_review_activity"

@@ -182,6 +182,7 @@ class ActivityMatchQuality:
     scope_source: str = ""
     activity_scope: str = ""
     scope_status: str = ""
+    equipment_agreement: bool = True
     generic_activity: bool = False
     bm25_rank: int | None = None
     semantic_rank: int | None = None
@@ -207,6 +208,7 @@ class ActivityMatchQuality:
             "activity_match_scope_source": self.scope_source,
             "activity_match_activity_scope": self.activity_scope,
             "activity_match_scope_status": self.scope_status,
+            "activity_match_equipment_agreement": "true" if self.equipment_agreement else "false",
             "activity_match_generic_activity": "true" if self.generic_activity else "false",
             "activity_match_bm25_rank": str(self.bm25_rank or ""),
             "activity_match_semantic_rank": str(self.semantic_rank or ""),
@@ -532,7 +534,7 @@ def _structured_candidates_for_row(
     structured_index: StructuredActivityIndex | None,
     domain_mappings: list[DomainMapping],
 ) -> tuple[list[Candidate], dict[str, object]]:
-    query_scope = _scope_keys(" ".join([row.get("Equipment", ""), row.get("System", ""), row.get("Building", "")]))
+    query_scope = list(resolve_doc_scope(row).keys)
     rule_scope = _rule_scope_keys(rule)
     effective_scope, _scope_source = _effective_query_scope(query_scope, rule_scope)
     query_phase = _query_phase(row, rule)
@@ -650,7 +652,7 @@ def _activity_quality(
     activity_text = " ".join([activity.activity_name_clean, activity.activity_name, activity.wbs_path])
     query_phase = _query_phase(row, rule)
     activity_phase = _activity_phase(activity_text)
-    query_scope = _scope_keys(" ".join([row.get("Equipment", ""), row.get("System", ""), row.get("Building", "")]))
+    query_scope = list(resolve_doc_scope(row).keys)
     rule_scope = _rule_scope_keys(rule)
     effective_scope, scope_source = _effective_query_scope(query_scope, rule_scope)
     activity_scope = _scope_keys(activity_text)
@@ -665,6 +667,12 @@ def _activity_quality(
         scope_source=scope_source,
         activity_scope="|".join(activity_scope),
         scope_status=_scope_status(effective_scope, activity_scope),
+        equipment_agreement=equipment_agreement(
+            row.get("Equipment", ""),
+            row.get("Title", ""),
+            f"{activity.activity_name_clean} {activity.activity_name}",
+            activity_scope,
+        ),
         generic_activity=_is_generic_activity(activity),
         bm25_rank=candidate.bm25_rank,
         semantic_rank=candidate.semantic_rank,
@@ -933,6 +941,67 @@ def _contains_scope_alias(value: str, alias: str) -> bool:
     return bool(re.search(rf"(?<![A-Z0-9]){re.escape(cleaned)}(?![A-Z0-9])", value))
 
 
+# Equipment/title tokens too generic to corroborate an activity match on their own.
+_GENERIC_AGREEMENT_TOKENS: frozenset[str] = frozenset({
+    "system", "design", "drawing", "data", "calculation", "calculations", "list",
+    "report", "manual", "specification", "diagram", "plan", "layout", "arrangement",
+    "detail", "details", "sheet", "general", "equip", "equipment", "technical",
+    "load", "civil", "structure", "structural", "outline", "elevation", "section",
+    "schedule", "study", "vendor", "package", "area", "shelter", "building", "bldg",
+})
+
+# Sibling scope keys that denote the same physical system, so a document tagged one
+# and an activity tagged the other still agree. Air Cooled Condenser IS the condensate
+# sink, so acc/condensate are interchangeable for agreement purposes.
+_SCOPE_COMPAT: tuple[frozenset[str], ...] = (
+    frozenset({"acc", "condensate"}),
+)
+
+
+def _scopes_compatible(doc_scope: set[str], activity_scope: set[str]) -> bool:
+    return any(
+        (doc_scope & group) and (activity_scope & group) for group in _SCOPE_COMPAT
+    )
+
+
+def _agreement_tokens(text: str) -> set[str]:
+    import re
+
+    return {
+        t
+        for t in re.findall(r"[a-z0-9]+", text.lower())
+        if len(t) >= 4 and t not in _GENERIC_AGREEMENT_TOKENS
+    }
+
+
+def equipment_agreement(
+    equipment: str, title: str, activity_name: str, activity_scope: list[str]
+) -> bool:
+    """True when the chosen activity is corroborated by the document's own equipment/title.
+
+    Guards against false scope ``match``es that arise only from the (sometimes
+    misclassified) System field or the rule's scope — e.g. a duct-burner water-spray
+    calc landing on a Chemical Dosing building because both carry the broad ``wts``
+    bucket, or an ammonia tank landing on a compressed-air receiver-tank shelter.
+
+    Agreement holds if any of:
+      A. the activity scope overlaps the scope derived from equipment+title (NOT System);
+      B. the doc and activity scopes are compatible siblings (acc/condensate);
+      C. a concrete (non-generic) equipment/title token literally names the activity.
+    When the activity carries no scope at all there is nothing to contradict, so the
+    decision is left to the existing unscoped/phase gates (returns True).
+    """
+    act = set(activity_scope)
+    if not act:
+        return True
+    doc_scope = set(_scope_keys(f"{equipment} {title}"))
+    if doc_scope & act:
+        return True
+    if _scopes_compatible(doc_scope, act):
+        return True
+    return bool(_agreement_tokens(f"{equipment} {title}") & _agreement_tokens(activity_name))
+
+
 def _scope_status(query_scope: list[str], activity_scope: list[str]) -> str:
     if not query_scope:
         return "query_unscoped"
@@ -961,6 +1030,45 @@ def _rule_scope_keys(rule: ValidationRule | None) -> list[str]:
         return []
     text = " ".join(part for part in [rule.item_name, rule.doc_keyword] if part)
     return _scope_keys(text)
+
+
+@dataclass(frozen=True)
+class DocScope:
+    """Document scope merged from structured fields with Title/Others fallback."""
+
+    keys: tuple[str, ...]
+    origin: str  # "esb" | "title" | "others" | "esb+title" | "none"
+    conflict: bool  # structured (E/S/B) scope and Title scope both exist but disagree
+
+
+def resolve_doc_scope(row: dict[str, str]) -> DocScope:
+    """Merge document scope from Equipment/System/Building, then Title, then Others.
+
+    Policy (see scope_source_analysis memory):
+      * Structured fields (E/S/B) are the primary, most-trusted source.
+      * When they yield no scope, fall back to Title, then Others — this recovers the
+        ~28% of documents that carry their scope only in the title (e.g. "STEAM DRAIN
+        & FGP DEMIN SUPPLY").
+      * When E/S/B and Title both yield scope but are disjoint, keep BOTH as candidates
+        and flag a conflict, so the activity search can pick whichever system its best
+        match actually belongs to instead of being forced onto a possibly-misclassified
+        structured field (e.g. a FIRE ALARM document tagged System=WASTE WATER).
+    """
+    esb = set(_scope_keys(" ".join([
+        row.get("Equipment", ""), row.get("System", ""), row.get("Building", ""),
+    ])))
+    title = set(_scope_keys(row.get("Title", "")))
+    others = set(_scope_keys(row.get("Others", "")))
+
+    if esb:
+        if title and not (esb & title):
+            return DocScope(tuple(sorted(esb | title)), "esb+title", True)
+        return DocScope(tuple(sorted(esb)), "esb", False)
+    if title:
+        return DocScope(tuple(sorted(title)), "title", False)
+    if others:
+        return DocScope(tuple(sorted(others)), "others", False)
+    return DocScope((), "none", False)
 
 
 def _effective_query_scope(query_scope: list[str], rule_scope: list[str]) -> tuple[list[str], str]:

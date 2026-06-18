@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import os
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from loguru import logger
 
@@ -66,7 +66,26 @@ _SCOPE_PATTERNS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("reserve_boiler", ("RESERVE BOILER", "AUX BOILER", "AUXILIARY BOILER")),
     ("bop", ("BOP", "BALANCE OF PLANT")),
     ("fgp", ("FGP", "FUEL GAS PACKAGE", "FUEL GAS")),
+    # Fire-protection systems. Distinct from civil drainage and from the cooling-water
+    # circuit; added so the scope guard rejects generic drainage/utility rules that the
+    # token+semantic scorer otherwise pulls in for fire documents (e.g. a "FIRE ALARM
+    # SYSTEM LAYOUT" matching a "STORMWATER DRAINAGE LAYOUT" rule).
+    ("fire_protection", (
+        "FIRE ALARM", "FIRE FIGHTING", "FIRE WATER", "FIRE BRIGADE", "FIRE HYDRANT",
+        "SPRINKLER", "STAND PIPE", "STANDPIPE", "DELUGE", "CLEAN AGENT", "FM200", "FM 200",
+    )),
+    # Civil drainage / effluent. Never the same system as fire protection or the closed
+    # cooling-water circuit, so a drainage-scoped rule must not win for those documents.
+    ("drainage", ("DRAINAGE", "STORMWATER", "STORM WATER", "SEWAGE", "SANITARY")),
+    # Cooling tower equipment — a different system from the Closed Cooling Water (CCW)
+    # pump circuit, which the "COOLING TOWER _MOTOR DATA SHEET" rule was mis-applied to.
+    ("cooling_tower", ("COOLING TOWER",)),
 )
+
+# Scope keys that denote distinct physical systems which must never substitute for one
+# another. When a document and a rule each carry a *different* member of this set, the
+# match is a wrong-system match regardless of any shared building/area token.
+_EXCLUSIVE_SYSTEM_SCOPES = frozenset({"fire_protection", "drainage", "cooling_tower"})
 
 _DELIVERABLE_FAMILIES: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("painting_specification", ("PAINTING SPECIFICATION", "PAINT SPECIFICATION")),
@@ -219,6 +238,10 @@ class RuleMatchQuality:
     hybrid_score: float = 0.0
     final_score: float = 0.0
     rule_priority: int = 0
+    # Cosine similarity between the document's deliverable phrase and the matched rule's
+    # doc_keyword alone (scope/equipment stripped). Isolates deliverable-concept agreement
+    # from the scope noise that pollutes semantic_score. -1.0 = not computed (token path).
+    deliverable_concept_sim: float = -1.0
 
     def output_fields(self) -> dict[str, str]:
         """Return stable string fields for generated schedule outputs."""
@@ -240,6 +263,7 @@ class RuleMatchQuality:
             "rule_match_semantic_score": _fmt_score(self.semantic_score),
             "rule_match_hybrid_score": _fmt_score(self.hybrid_score),
             "rule_match_final_score": _fmt_score(self.final_score),
+            "rule_match_deliverable_concept_sim": _fmt_score(self.deliverable_concept_sim),
         }
 
 
@@ -578,7 +602,65 @@ def _match_rules_semantic(
                 quality = title_quality
         results.append(rule)
         qualities.append(quality)
+
+    _attach_deliverable_concept_sim(rows, query_contexts, results, qualities, service)
     return results, qualities
+
+
+def _attach_deliverable_concept_sim(rows, query_contexts, results, qualities, service) -> None:
+    """Fill quality.deliverable_concept_sim for every matched row (in place).
+
+    Isolates the deliverable concept from scope by embedding the document's deliverable
+    phrase against the matched rule's doc_keyword alone (RuleSemanticIndex embeds
+    doc_keyword + item_name, blending scope into semantic_score). A generic doc deliverable
+    ("DRAWING") bound to a specific rule keyword ("Coupling detail drawing") scores low here
+    even when family/subtype/scope all "match" — the signal that separates true matches from
+    wrong-discipline generic matches. Reuses the disk-cached embedder; deliverable phrases
+    are highly repetitive, so this adds few API calls.
+    """
+    import numpy as np
+
+    from schedule_service.generate._shared.embedding_cache import embed_texts_cached
+
+    doc_texts: list[str | None] = []
+    rule_texts: list[str | None] = []
+    for row, ctx, rule in zip(rows, query_contexts, results, strict=True):
+        if rule is None:
+            doc_texts.append(None)
+            rule_texts.append(None)
+            continue
+        _rule_query, _title, query_family, query_subtype, _scope = ctx
+        doc_texts.append(_doc_deliverable_text(row, query_family, query_subtype))
+        rule_texts.append(rule.doc_keyword)
+
+    unique = list(dict.fromkeys(t for t in (*doc_texts, *rule_texts) if t))
+    if not unique:
+        return
+    embeddings = embed_texts_cached(service, unique)
+    emb_map = {t: np.array(v, dtype=np.float32) for t, v in zip(unique, embeddings, strict=True)}
+    for i, (doc_text, rule_text) in enumerate(zip(doc_texts, rule_texts, strict=True)):
+        if doc_text and rule_text:
+            qualities[i] = replace(
+                qualities[i],
+                deliverable_concept_sim=_cosine(emb_map[doc_text], emb_map[rule_text]),
+            )
+
+
+def _doc_deliverable_text(row: dict[str, str], query_family: str, query_subtype: str) -> str:
+    """Text representing the document's deliverable concept, free of equipment/system scope."""
+    deliverable = row.get("Deliverable", "").strip()
+    if deliverable:
+        return deliverable
+    return query_subtype or query_family or row.get("Title", "").strip()
+
+
+def _cosine(a, b) -> float:
+    import numpy as np
+
+    norm = float(np.linalg.norm(a)) * float(np.linalg.norm(b))
+    if norm == 0.0:
+        return 0.0
+    return float(np.dot(a, b) / norm)
 
 
 # Lever A helpers: title-rescue for weak rule-query matches.
@@ -656,6 +738,20 @@ def _rule_guard_status(
                 sorted(rule_scope_tokens),
             )
             return "rejected", "scope_mismatch"
+        # Mutually-exclusive physical systems (fire protection vs drainage vs cooling
+        # tower) must never substitute for one another even when they share a building or
+        # area token — e.g. a "STORMWATER DRAINAGE LAYOUT" rule must not win for a "FIRE
+        # ALARM SYSTEM LAYOUT" document just because both are for the same LEB. The plain
+        # intersection guard above misses this because the shared building token overlaps.
+        if _exclusive_system_conflict(query_scope_tokens, rule_scope_tokens):
+            logger.trace(
+                "Rule rejected by system-scope guard: query='{}' rule='{}' ({} vs {})",
+                document,
+                rule.doc_keyword,
+                sorted(query_scope_tokens & _EXCLUSIVE_SYSTEM_SCOPES),
+                sorted(rule_scope_tokens & _EXCLUSIVE_SYSTEM_SCOPES),
+            )
+            return "rejected", "system_scope_conflict"
     subtype_status = _subtype_status(query_family, query_subtype, rule_family, rule_subtype)
     if subtype_status == "mismatch":
         logger.trace(
@@ -986,6 +1082,17 @@ def _scope_keys(text: str, tokens: set[str] | None = None) -> set[str]:
 def _rule_scope_keys(rule: ValidationRule) -> set[str]:
     text = f"{rule.item_name} {rule.doc_keyword}"
     return _scope_keys(text, set(rule._item_tokens) | set(rule._doc_kw_tokens)) | _free_text_scope_tokens(text)
+
+
+def _exclusive_system_conflict(query_scope_tokens: set[str], rule_scope_tokens: set[str]) -> bool:
+    """True when query and rule name *different* mutually-exclusive physical systems.
+
+    Returns False when either side names no exclusive system (so generic rules are never
+    blocked) or when both name the same one.
+    """
+    query_systems = query_scope_tokens & _EXCLUSIVE_SYSTEM_SCOPES
+    rule_systems = rule_scope_tokens & _EXCLUSIVE_SYSTEM_SCOPES
+    return bool(query_systems and rule_systems and not (query_systems & rule_systems))
 
 
 def _scope_alias_matches(text: str, alias: str) -> bool:
