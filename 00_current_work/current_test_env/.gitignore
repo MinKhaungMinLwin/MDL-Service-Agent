@@ -2,3 +2,5 @@
 .env.local
 __pycache__/
 *.py[cod]
+archive/
+output/archive/

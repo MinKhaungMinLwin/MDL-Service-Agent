@@ -100,6 +100,21 @@ TITLE_ABBREVIATIONS = [
     (r"\bUninterrupt(?:ible|ed) Power Supply\b", "UPS"),
 ]
 
+GENERIC_TITLE_EXACT = {
+    "drawing",
+    "calculation",
+    "report",
+    "list",
+    "data sheet",
+    "datasheet",
+    "procedure",
+    "manual",
+    "specification",
+    "diagram",
+    "plan",
+    "layout",
+}
+
 FLAT_COLUMNS = [
     "No",
     "Section",
@@ -298,8 +313,8 @@ def remove_project_qualifiers(text: object) -> str:
         return ""
     title = re.sub(r"\s*\(\s*(?:for\s+)?(?:block|unit|project)\s+[^)]*\)", " ", title, flags=re.IGNORECASE)
     title = re.sub(r"\s*\[\s*(?:for\s+)?(?:block|unit|project)\s+[^\]]*\]", " ", title, flags=re.IGNORECASE)
-    title = re.sub(r"\bfor\s+(?:block|unit|project)\s+[0-9A-Za-z,&/ -]+(?=\s+(?:Data|Drawing|Drawings|List|Report|Calculation|Specification|Procedure|Manual|Curve|Diagram|Description|Schedule|Index)\b|$)", " ", title, flags=re.IGNORECASE)
-    title = re.sub(r"\b(?:block|unit|project)\s+[0-9A-Za-z,&/ -]+(?=\s+(?:Data|Drawing|Drawings|List|Report|Calculation|Specification|Procedure|Manual|Curve|Diagram|Description|Schedule|Index)\b)", " ", title, flags=re.IGNORECASE)
+    title = re.sub(r"\bfor\s+(?:block|unit|project)\s*#?\s*\d[0-9A-Za-z,#&/ -]*(?=\s+(?:Data|Drawing|Drawings|List|Report|Calculation|Specification|Procedure|Manual|Curve|Diagram|Description|Schedule|Index)\b|$)", " ", title, flags=re.IGNORECASE)
+    title = re.sub(r"\b(?:block|unit|project)\s*#?\s*\d[0-9A-Za-z,#&/ -]*(?=\s+(?:Data|Drawing|Drawings|List|Report|Calculation|Specification|Procedure|Manual|Curve|Diagram|Description|Schedule|Index)\b)", " ", title, flags=re.IGNORECASE)
     return base.normalize_cell(title)
 
 
@@ -315,6 +330,19 @@ def normalize_standardized_title(text: object) -> str:
     title = apply_title_abbreviations(title)
     title = re.sub(r"\s*&\s*", " & ", title)
     return base.normalize_cell(title)
+
+
+def ensure_specific_title(title: object, document_type: object, equipment_l3: object, sub_system_l2: object, system_l1: object) -> str:
+    normalized = normalize_standardized_title(title)
+    if base.normalize_key(normalized) not in GENERIC_TITLE_EXACT:
+        return normalized
+    subject = base.normalize_cell(equipment_l3)
+    if base.normalize_key(subject) in {"", "general", "document", "equipment", "package"}:
+        subject = base.normalize_cell(sub_system_l2)
+    if base.normalize_key(subject) in {"", "general"}:
+        subject = base.normalize_cell(system_l1)
+    doc_type = base.normalize_cell(document_type) or normalized
+    return normalize_standardized_title(f"{subject} {doc_type}") if subject else normalized
 
 
 def normalize_equipment_l3(value: object, source_rows: list[pd.Series], item: GroupedLLMItem | None = None) -> str:
@@ -612,16 +640,17 @@ def output_row(
     system_l1 = forced_system_l1(source_rows, item)
     sub_system_l2 = forced_sub_system_l2(source_rows, item)
     equipment_l3 = normalize_equipment_l3(item.equipment_l3, source_rows, item)
+    document_type = base.normalize_cell(item.document_type) or base.majority_value(row["Document Type"] for row in source_rows)
     return {
         "No": 0,
         "Section": PACKAGE_SECTION_TITLE[group],
         "Package/Scope Group": group,
         "Discipline": normalize_discipline(item.discipline),
-        "Document Type": base.normalize_cell(item.document_type) or base.majority_value(row["Document Type"] for row in source_rows),
+        "Document Type": document_type,
         "System (L1)": system_l1,
         "Sub-System / Area (L2)": sub_system_l2,
         "Equipment (L3)": equipment_l3,
-        "Standardized Document Title": normalize_standardized_title(item.standardized_document_title),
+        "Standardized Document Title": ensure_specific_title(item.standardized_document_title, document_type, equipment_l3, sub_system_l2, system_l1),
         "Scope": normalize_scope(item.scope, group),
         "Evidence Type": evidence_type,
         "Review Status": review_status,
@@ -749,17 +778,21 @@ def consolidate_output(df: pd.DataFrame) -> pd.DataFrame:
                 }
             )
         ]
+        document_type = base.majority_value(group["Document Type"])
+        system_l1 = forced_system_l1(synthetic_source_rows)
+        sub_system_l2 = forced_sub_system_l2(synthetic_source_rows)
+        equipment_l3 = normalize_equipment_l3(base.choose_context_value(group["Equipment (L3)"]), synthetic_source_rows)
         rows.append(
             {
                 "No": len(rows) + 1,
                 "Section": representative["Section"],
                 "Package/Scope Group": representative["Package/Scope Group"],
                 "Discipline": base.majority_value(group["Discipline"]),
-                "Document Type": base.majority_value(group["Document Type"]),
-                "System (L1)": forced_system_l1(synthetic_source_rows),
-                "Sub-System / Area (L2)": forced_sub_system_l2(synthetic_source_rows),
-                "Equipment (L3)": normalize_equipment_l3(base.choose_context_value(group["Equipment (L3)"]), synthetic_source_rows),
-                "Standardized Document Title": normalize_standardized_title(representative["Standardized Document Title"]),
+                "Document Type": document_type,
+                "System (L1)": system_l1,
+                "Sub-System / Area (L2)": sub_system_l2,
+                "Equipment (L3)": equipment_l3,
+                "Standardized Document Title": ensure_specific_title(representative["Standardized Document Title"], document_type, equipment_l3, sub_system_l2, system_l1),
                 "Scope": representative["Scope"],
                 "Evidence Type": combine_evidence(group["Evidence Type"]),
                 "Review Status": combine_review_status(group["Review Status"]),

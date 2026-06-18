@@ -21,3 +21,7 @@ venv/
 # OS/editor noise
 .DS_Store
 Thumbs.db
+
+# Local workspace archives
+00_current_work/current_test_env/archive/
+00_current_work/current_test_env/output/archive/
