@@ -16,10 +16,6 @@ import sys
 from collections import Counter
 
 
-def _is(x: str) -> bool:
-    return str(x).strip().lower() in ("true", "1", "yes")
-
-
 def _rule_confirmed(r: dict) -> bool:
     return (
         r["rule_match_scope_status"] == "match"
@@ -56,7 +52,7 @@ def _suggest_tau(sims: list[float]) -> float:
     if len(pts) < 2:
         return 0.70
     best_gap, best_mid = 0.0, 0.70
-    for a, b in zip(pts, pts[1:], strict=True):
+    for a, b in zip(pts, pts[1:], strict=False):
         if b - a > best_gap:
             best_gap, best_mid = b - a, (a + b) / 2
     return round(best_mid, 3)
