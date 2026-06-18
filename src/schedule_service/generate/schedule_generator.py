@@ -286,12 +286,35 @@ def _format_schedule_row(
         "date_range_confidence": f"{dr.confidence:.2f}" if dr.confidence else "",
         "date_range_floored_fields": "|".join(dr.floored_fields),
         "date_range_floored_degenerate": "true" if dr.is_floored_degenerate else "false",
+        "date_range_ntp_anchored": "true" if dr.ntp_anchored else "false",
         "schedule_confidence": _fmt_confidence(schedule_quality["confidence"]),
         "schedule_quality_status": schedule_quality["status"],
         "schedule_quality_reasons": schedule_quality["reasons"],
         "date_range_notes": dr.notes,
         "ntp_shift_days": shift_days if shift_days else "",
     }
+
+
+def _match_trusted(ctx: MatchContext) -> bool:
+    """True when the rule and activity match are reliable enough to trust an NTP-anchored
+    early-project date.
+
+    A translated early-project range looks like a confident date, so it is only safe to
+    surface when the match is confirmed: rule family + subtype match with a passing guard,
+    and an activity whose scope does not conflict and whose equipment agrees with the doc.
+    Anything weaker keeps the row in needs_review rather than fabricating a usable date.
+    """
+    rq = ctx.rule_quality
+    aq = ctx.activity_quality
+    if rq is None or aq is None:
+        return False
+    return (
+        rq.family_status == "match"
+        and getattr(rq, "subtype_status", "") == "match"
+        and rq.guard_status == "passed"
+        and aq.scope_status != "mismatch"
+        and aq.equipment_agreement
+    )
 
 
 def _schedule_quality(
@@ -337,10 +360,21 @@ def _schedule_quality(
         caps.append(0.8)
     if date_reason == "default_fc_window":
         caps.append(0.9)
-    # Date floored to NTP: the template places this document before the project NTP, so the
-    # range collapsed onto the floor and is not a real schedule. Surface it and keep it out of
-    # "usable" — a fabricated single-day range must be reviewed, not shipped as a date.
+    # Date model for documents the template places before the project NTP. Two cases:
+    #  - ntp_anchored: the negative-offset VT window fell entirely before NTP and was
+    #    translated forward to sit at the project start. The range is real (widths + FA->FC
+    #    gap preserved) but anchored on NTP, not on a confirmed activity position, so it is
+    #    only trustworthy when the rule+activity match itself is reliable. A fabricated-
+    #    looking early date on a wrong match is dangerous, hence the trust gate.
+    #  - is_floored_degenerate: legacy clamp collapsed the window onto a single floor day.
     date_floored_degenerate = dr.is_floored_degenerate
+    if dr.ntp_anchored:
+        if _match_trusted(ctx):
+            reasons.append("date_range_ntp_anchored")
+            caps.append(0.55)
+        else:
+            reasons.append("date_range_ntp_anchored_untrusted")
+            caps.append(0.3)
     if date_floored_degenerate:
         reasons.append("date_range_floored_to_ntp")
         caps.append(0.4)
