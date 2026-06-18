@@ -284,6 +284,8 @@ def _format_schedule_row(
         "fc_latest": _fmt_date(dr.fc_latest),
         "date_range_status": date_range_status,
         "date_range_confidence": f"{dr.confidence:.2f}" if dr.confidence else "",
+        "date_range_floored_fields": "|".join(dr.floored_fields),
+        "date_range_floored_degenerate": "true" if dr.is_floored_degenerate else "false",
         "schedule_confidence": _fmt_confidence(schedule_quality["confidence"]),
         "schedule_quality_status": schedule_quality["status"],
         "schedule_quality_reasons": schedule_quality["reasons"],
@@ -335,6 +337,14 @@ def _schedule_quality(
         caps.append(0.8)
     if date_reason == "default_fc_window":
         caps.append(0.9)
+    # Date floored to NTP: the template places this document before the project NTP, so the
+    # range collapsed onto the floor and is not a real schedule. Surface it and keep it out of
+    # "usable" — a fabricated single-day range must be reviewed, not shipped as a date.
+    date_floored_degenerate = dr.is_floored_degenerate
+    if date_floored_degenerate:
+        reasons.append("date_range_floored_to_ntp")
+        caps.append(0.4)
+
     if caps:
         confidence = min(confidence, min(caps))
 
@@ -344,7 +354,7 @@ def _schedule_quality(
         status = "needs_review_rule"
     elif activity_status == "needs_review_activity":
         status = "needs_review_activity"
-    elif confidence >= 0.55 and not _has_rule_ambiguity_reasons(reasons):
+    elif confidence >= 0.55 and not _has_rule_ambiguity_reasons(reasons) and not date_floored_degenerate:
         status = "usable"
     else:
         status = "needs_review"

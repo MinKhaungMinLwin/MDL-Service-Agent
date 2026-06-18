@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, timedelta
 
 _FC_DEFAULT_AFTER_FA_DAYS = 60
@@ -23,6 +23,29 @@ class DateRange:
     sub_type: str = "UNKNOWN"
     confidence: float = 0.0
     notes: str = ""
+    # Names of date fields that the NTP floor clamped (their template value fell before
+    # the project NTP). A clamped recommended date means the date is fabricated at the
+    # floor, not a genuine schedule position.
+    floored_fields: list[str] = field(default_factory=list)
+
+    @property
+    def is_floored_degenerate(self) -> bool:
+        """True when NTP flooring fabricated/collapsed the recommended submission date.
+
+        The template places this document before the project NTP (negative-offset VT
+        anchored near NTP), so the floor either clamps the recommended date or collapses
+        the whole window to a single day. The resulting range is not a real schedule.
+        """
+        if self.fa_recommended is not None:
+            return "fa_recommended" in self.floored_fields or (
+                self.fa_earliest is not None and self.fa_earliest == self.fa_latest
+            )
+        # For-information / FC-only outputs: judge the FC window instead.
+        if self.fc_recommended is not None:
+            return "fc_recommended" in self.floored_fields or (
+                self.fc_earliest is not None and self.fc_earliest == self.fc_latest
+            )
+        return False
 
 
 def compute_date_range(
@@ -99,11 +122,12 @@ def compute_date_range(
                 result.fc_latest = result.fc_latest + timedelta(days=shift)
 
     if ntp_floor is not None:
-        for field in ("fa_earliest", "fa_recommended", "fa_latest",
-                      "fc_earliest", "fc_recommended", "fc_latest"):
-            val = getattr(result, field)
+        for field_name in ("fa_earliest", "fa_recommended", "fa_latest",
+                           "fc_earliest", "fc_recommended", "fc_latest"):
+            val = getattr(result, field_name)
             if val is not None and val < ntp_floor:
-                setattr(result, field, ntp_floor)
+                setattr(result, field_name, ntp_floor)
+                result.floored_fields.append(field_name)
 
     return result
 
