@@ -1,0 +1,184 @@
+[
+  {
+    "id": "bl-001",
+    "l1": "Project Management",
+    "l2": "Project Management",
+    "task": "Define functional requirements and final deliverables",
+    "deliverable": ""
+  },
+  {
+    "id": "bl-002",
+    "l1": "Project Management",
+    "l2": "Project Management",
+    "task": "Data collection and source data cleanup",
+    "deliverable": ""
+  },
+  {
+    "id": "bl-003",
+    "l1": "Project Management",
+    "l2": "Project Management",
+    "task": "Establish data management framework and versioning standards",
+    "deliverable": ""
+  },
+  {
+    "id": "bl-004",
+    "l1": "Document Title Generation",
+    "l2": "Integrated Standard MDL Generation",
+    "task": "Define MDL classification scheme and attributes",
+    "deliverable": ""
+  },
+  {
+    "id": "bl-005",
+    "l1": "Document Title Generation",
+    "l2": "Integrated Standard MDL Generation",
+    "task": "Generate integrated standard MDL draft with LLM",
+    "deliverable": ""
+  },
+  {
+    "id": "bl-006",
+    "l1": "Document Title Generation",
+    "l2": "Integrated Standard MDL Generation",
+    "task": "Finalize integrated standard MDL based on field review",
+    "deliverable": ""
+  },
+  {
+    "id": "bl-007",
+    "l1": "Document Title Generation",
+    "l2": "ITB Analysis",
+    "task": "Analyze ITB document structure patterns",
+    "deliverable": ""
+  },
+  {
+    "id": "bl-008",
+    "l1": "Document Title Generation",
+    "l2": "ITB Analysis",
+    "task": "Define key items and keywords in ITB",
+    "deliverable": ""
+  },
+  {
+    "id": "bl-009",
+    "l1": "Document Title Generation",
+    "l2": "ITB Analysis",
+    "task": "Develop ITB key keyword extraction logic",
+    "deliverable": ""
+  },
+  {
+    "id": "bl-010",
+    "l1": "Document Title Generation",
+    "l2": "Matching Logic",
+    "task": "Design ITB key keyword to integrated standard MDL matching logic",
+    "deliverable": ""
+  },
+  {
+    "id": "bl-011",
+    "l1": "Document Title Generation",
+    "l2": "Matching Logic",
+    "task": "Design LLM-based inference logic for unspecified document supplementation",
+    "deliverable": ""
+  },
+  {
+    "id": "bl-012",
+    "l1": "Document Title Generation",
+    "l2": "Matching Logic",
+    "task": "Develop KKS code conversion logic",
+    "deliverable": ""
+  },
+  {
+    "id": "bl-013",
+    "l1": "Document Title Generation",
+    "l2": "Matching Logic",
+    "task": "Implement document title generation prototype",
+    "deliverable": ""
+  },
+  {
+    "id": "bl-014",
+    "l1": "Schedule Generation & L3 Comparison",
+    "l2": "Schedule Generation Algorithm",
+    "task": "Analyze MDL schedule generation patterns",
+    "deliverable": ""
+  },
+  {
+    "id": "bl-015",
+    "l1": "Schedule Generation & L3 Comparison",
+    "l2": "Schedule Generation Algorithm",
+    "task": "Develop MDL schedule generation algorithm",
+    "deliverable": ""
+  },
+  {
+    "id": "bl-016",
+    "l1": "Schedule Generation & L3 Comparison",
+    "l2": "Schedule Generation Algorithm",
+    "task": "Define schedule generation rules and exception handling criteria",
+    "deliverable": ""
+  },
+  {
+    "id": "bl-017",
+    "l1": "Schedule Generation & L3 Comparison",
+    "l2": "Schedule Generation Algorithm",
+    "task": "Develop schedule generation result validation logic",
+    "deliverable": ""
+  },
+  {
+    "id": "bl-018",
+    "l1": "Schedule Generation & L3 Comparison",
+    "l2": "Schedule Generation Algorithm",
+    "task": "Link document title generation results with schedule generation logic",
+    "deliverable": ""
+  },
+  {
+    "id": "bl-019",
+    "l1": "Schedule Generation & L3 Comparison",
+    "l2": "L3 Comparison",
+    "task": "Develop MDL-L3 schedule comparison algorithm",
+    "deliverable": ""
+  },
+  {
+    "id": "bl-020",
+    "l1": "Schedule Generation & L3 Comparison",
+    "l2": "L3 Comparison",
+    "task": "Develop logic to identify differences and detect exceptions",
+    "deliverable": ""
+  },
+  {
+    "id": "bl-021",
+    "l1": "Schedule Generation & L3 Comparison",
+    "l2": "L3 Comparison",
+    "task": "Develop Excel report auto-generation feature",
+    "deliverable": ""
+  },
+  {
+    "id": "bl-022",
+    "l1": "System Implementation & Integration",
+    "l2": "Service Implementation",
+    "task": "Design service UI/UX screen structure",
+    "deliverable": ""
+  },
+  {
+    "id": "bl-023",
+    "l1": "System Implementation & Integration",
+    "l2": "Service Implementation",
+    "task": "Frontend and backend development",
+    "deliverable": ""
+  },
+  {
+    "id": "bl-024",
+    "l1": "System Implementation & Integration",
+    "l2": "Integration & Finalization",
+    "task": "Final system integration and integration testing",
+    "deliverable": ""
+  },
+  {
+    "id": "bl-025",
+    "l1": "System Implementation & Integration",
+    "l2": "Integration & Finalization",
+    "task": "Technical documentation and operational handover",
+    "deliverable": ""
+  },
+  {
+    "id": "bl-026",
+    "l1": "System Implementation & Integration",
+    "l2": "Integration & Finalization",
+    "task": "System stabilization",
+    "deliverable": ""
+  }
+]

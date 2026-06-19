@@ -1,0 +1,44 @@
+<header class="page-header">
+        <h1>CLI 명령어</h1>
+        <p>저장소 루트에서 <code>uv run &lt;command&gt;</code>으로 실행합니다.</p>
+      </header>
+
+      <section>
+        <h2>MDL / ITB 처리</h2>
+        <table>
+          <thead>
+            <tr><th>명령어</th><th>설명</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><span class="tag tag-cli">mdl-classify</span></td><td>MDL Excel → LLM 분류 CSV</td></tr>
+            <tr><td><span class="tag tag-cli">mdl-ingest</span></td><td>분류된 MDL CSV → Neo4j 적재</td></tr>
+            <tr><td><span class="tag tag-cli">mdl-export-catalog</span></td><td>MDL 카탈로그보내기</td></tr>
+            <tr><td><span class="tag tag-cli">itb-extract</span></td><td>ITB 청크 → Depth/Keywords LLM 추출</td></tr>
+            <tr><td><span class="tag tag-cli">itb-match</span></td><td>ITB↔MDL 매칭 (keyword / semantic / hybrid)</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>평가 / 실험</h2>
+        <table>
+          <thead>
+            <tr><th>명령어</th><th>설명</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><span class="tag tag-cli">itb-eval-build-ground-truth</span></td><td>매칭 Ground Truth 생성 (LLM 검증)</td></tr>
+            <tr><td><span class="tag tag-cli">itb-eval-matching</span></td><td>매칭 품질 평가</td></tr>
+            <tr><td><span class="tag tag-cli">schedule-eval</span></td><td>일정 생성 품질 평가</td></tr>
+            <tr><td><span class="tag tag-cli">acc-*</span></td><td>ACC(정확도) 실험 관련 명령어 모음</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>사용 예시</h2>
+        <pre>uv run mdl-classify
+uv run mdl-ingest
+uv run itb-extract --section 7
+uv run itb-match --retrieval-mode hybrid
+uv run itb-match --retrieval-mode hybrid --source-file R&N_MDL.xlsx</pre>
+      </section>

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>실행 방법 — Doosan MDL</title>
+  <link rel="stylesheet" href="../assets/style.css" />
+</head>
+<body data-section="overview" data-page="run">
+  <header id="site-header"></header>
+  <div class="layout">
+    <aside id="sidebar"></aside>
+    <main class="content">
+      <header class="page-header">
+        <h1>실행 방법</h1>
+        <p>로컬 개발 환경 설정 및 파이프라인 실행 가이드입니다.</p>
+      </header>
+
+      <section>
+        <h2>초기 설정</h2>
+        <pre>cp .env.example .env   # 값 입력
+uv sync
+source .venv/bin/activate
+docker compose up neo4j -d</pre>
+      </section>
+
+      <section>
+        <h2>API 서버 실행</h2>
+        <pre>PYTHONPATH=src uvicorn api.main:app --reload --port 8000</pre>
+        <p>헬스 체크: <code>http://localhost:8000/health</code></p>
+      </section>
+
+      <section>
+        <h2>Docker Compose (API + Neo4j)</h2>
+        <pre>docker compose up -d</pre>
+      </section>
+
+      <section>
+        <h2>전체 파이프라인 예시</h2>
+        <h3>1. ITB 매칭 (CLI)</h3>
+        <pre>uv run itb-match --retrieval-mode hybrid</pre>
+
+        <h3>2. MDL 후보 추출 (API)</h3>
+        <pre>curl -X POST "http://localhost:8000/schedule/candidates" \
+  --get --data-urlencode "input_csv=output/current_test_env/matching/hybrid/output_match_all_projects_section6.csv"</pre>
+
+        <h3>3. FA/FC 일정 생성 (API)</h3>
+        <pre>curl -X POST "http://localhost:8000/schedule/generate" \
+  --get \
+  --data-urlencode "input_csv=output/schedule_service/candidates/mdl_candidates_output_match_all_projects_section6.csv" \
+  --data-urlencode "ntp_date=2024-03-01"</pre>
+
+        <h3>또는 과거 MDL 직접 사용</h3>
+        <pre>curl -X POST "http://localhost:8000/schedule/generate" \
+  --get --data-urlencode "input_csv=output/current_test_env/Fadhili_MDL_classified.csv" \
+  -d "limit=50"</pre>
+      </section>
+
+      <section>
+        <h2>린트 / 테스트</h2>
+        <pre>ruff check src/
+python -m pytest src/schedule_service/tests/ -v</pre>
+      </section>
+    </main>
+  </div>
+  <script src="../assets/nav.js"></script>
+</body>
+</html>
