@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>전체 파이프라인 — Doosan MDL</title>
+  <link rel="stylesheet" href="../assets/style.css" />
+</head>
+<body data-section="overview" data-page="pipeline">
+  <header id="site-header"></header>
+  <div class="layout">
+    <aside id="sidebar"></aside>
+    <main class="content">
+      <header class="page-header">
+        <h1>전체 파이프라인</h1>
+        <p>오프라인 준비 단계와 런타임 API 2단계로 구성됩니다.</p>
+      </header>
+
+      <section>
+        <h2>오프라인 준비 (1회 실행, 결과를 디스크에 저장)</h2>
+        <div class="pipeline">[A] CCPP Guide Schedule XLSX
+      └─ data_prep/ccpp_schedule_cleaner.py
+            └─▶ ccpp_guide_schedule_260527_clean.json  (4,039 activities)
+
+[B] 과거 MDL Excel (*_MDL.xlsx)
+      └─ uv run mdl-classify  (LLM 분류)
+            └─▶ *_MDL_classified.csv
+                  └─ uv run mdl-ingest
+                        └─▶ Neo4j: MDL 문서 노드 + HNSW 벡터 인덱스
+
+[C] ITB PDF
+      └─ /parser + /chunker  (API)
+            └─▶ ITB chunks JSON
+                  └─ uv run itb-extract  (LLM 추출)
+                        └─▶ itb_extraction_section*.csv
+                              └─ uv run itb-match  (Neo4j 벡터 검색)
+                                    └─▶ output_match_*.csv</div>
+      </section>
+
+      <section>
+        <h2>런타임 API (2단계)</h2>
+        <div class="pipeline">output_match_*.csv
+        │
+        ▼
+  POST /schedule/candidates
+  (ITB 청크 → 필요 MDL 문서 추출, 중복 제거, 선택적 LLM 분류)
+        │
+        ▼
+  mdl_candidates_*.csv
+        │
+        ▼
+  POST /schedule/generate
+  (Validation Rule 매칭 + Activity 검색 + NTP 날짜 이동 + FA/FC 계산)
+        │
+        ▼
+  generated_schedule_*.json / .xlsx</div>
+      </section>
+
+      <section>
+        <h2>/schedule/generate 내부 처리</h2>
+        <p>각 MDL 문서 행에 대해 다음 3단계를 수행합니다.</p>
+        <table>
+          <thead>
+            <tr><th>단계</th><th>처리 내용</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>1. Rule 매칭</td>
+              <td>Deliverable + Equipment → Validation Rule 하이브리드(token+semantic) 매칭 → FA/FI/SKIP + VT 공식</td>
+            </tr>
+            <tr>
+              <td>2. Activity 검색</td>
+              <td>CCPP Guide Schedule에서 BM25 + semantic + RRF로 활동 검색 → anchor_date 결정</td>
+            </tr>
+            <tr>
+              <td>3. 날짜 계산</td>
+              <td>VT 공식으로 FA 범위 계산, FC = FA + 60일(또는 FC 공식). NTP 날짜 제공 시 실제 달력으로 이동</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+    </main>
+  </div>
+  <script src="../assets/nav.js"></script>
+</body>
+</html>

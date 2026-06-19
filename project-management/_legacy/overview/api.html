@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>API 엔드포인트 — Doosan MDL</title>
+  <link rel="stylesheet" href="../assets/style.css" />
+</head>
+<body data-section="overview" data-page="api">
+  <header id="site-header"></header>
+  <div class="layout">
+    <aside id="sidebar"></aside>
+    <main class="content">
+      <header class="page-header">
+        <h1>API 엔드포인트</h1>
+        <p>FastAPI 기반 REST API. 기본 포트 <code>8000</code>.</p>
+      </header>
+
+      <section>
+        <table>
+          <thead>
+            <tr><th>메서드</th><th>경로</th><th>설명</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="tag tag-api">GET</span></td>
+              <td><code>/health</code></td>
+              <td>서비스 헬스 체크</td>
+            </tr>
+            <tr>
+              <td><span class="tag tag-api">POST</span></td>
+              <td><code>/parser/...</code></td>
+              <td>PDF 업로드 및 파싱</td>
+            </tr>
+            <tr>
+              <td><span class="tag tag-api">POST</span></td>
+              <td><code>/chunker/...</code></td>
+              <td>파싱 결과를 청크로 분할</td>
+            </tr>
+            <tr>
+              <td><span class="tag tag-api">POST</span></td>
+              <td><code>/schedule/candidates</code></td>
+              <td>ITB 매칭 결과 → MDL 문서 후보 목록 생성. <code>classify_with_llm</code> 옵션 지원</td>
+            </tr>
+            <tr>
+              <td><span class="tag tag-api">POST</span></td>
+              <td><code>/schedule/generate</code></td>
+              <td>MDL 문서 → FA/FC 날짜 생성. <code>ntp_date</code>, <code>rule_csv</code> 옵션. 시맨틱 매칭 필수(Azure 자격증명 필요)</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="alert alert-warn">
+          <code>/schedule/map</code> 엔드포인트는 <code>feat/mia-2</code> 리팩터링에서 제거됨.
+          Activity 조회는 이제 <code>/schedule/generate</code> 내부에서 처리.
+        </div>
+      </section>
+
+      <section>
+        <h2>/schedule/candidates</h2>
+        <p><code>output_match_*.csv</code>를 입력으로, ITB 청크별 Matched_Doc_1..N(점수 ≥ 0.75)을 파싱하여 MDL 후보 목록을 생성합니다.</p>
+        <pre>curl -X POST "http://localhost:8000/schedule/candidates" \
+  --get --data-urlencode "input_csv=output/current_test_env/matching/hybrid/output_match_all_projects_section6.csv"</pre>
+      </section>
+
+      <section>
+        <h2>/schedule/generate</h2>
+        <p><code>mdl_candidates_*.csv</code> 또는 <code>*_MDL_classified.csv</code>를 입력으로 FA/FC 일정을 생성합니다.</p>
+        <pre>curl -X POST "http://localhost:8000/schedule/generate" \
+  --get \
+  --data-urlencode "input_csv=output/schedule_service/candidates/mdl_candidates_....csv" \
+  --data-urlencode "ntp_date=2024-03-01"</pre>
+      </section>
+    </main>
+  </div>
+  <script src="../assets/nav.js"></script>
+</body>
+</html>

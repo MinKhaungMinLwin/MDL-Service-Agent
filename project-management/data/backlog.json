@@ -1,0 +1,262 @@
+[
+  {
+    "id": "bl-001",
+    "l1": "프로젝트 관리",
+    "l2": "프로젝트 관리",
+    "task": "기능 요건 정리 및 최종 산출물 정의",
+    "status": "완료",
+    "deliverable": "",
+    "scheduleStart": "2026-04-01",
+    "scheduleEnd": "2026-04-06"
+  },
+  {
+    "id": "bl-002",
+    "l1": "프로젝트 관리",
+    "l2": "프로젝트 관리",
+    "task": "데이터 수집 및 원천데이터 정리",
+    "status": "완료",
+    "deliverable": "",
+    "scheduleStart": "2026-04-01",
+    "scheduleEnd": "2026-04-06"
+  },
+  {
+    "id": "bl-003",
+    "l1": "프로젝트 관리",
+    "l2": "프로젝트 관리",
+    "task": "데이터 관리 체계 및 버전 관리 기준 수립",
+    "status": "완료",
+    "deliverable": "",
+    "scheduleStart": "2026-04-07",
+    "scheduleEnd": "2026-04-12"
+  },
+  {
+    "id": "bl-004",
+    "l1": "도서명 생성",
+    "l2": "통합 표준 MDL 생성",
+    "task": "MDL 분류 체계 및 속성 정의",
+    "status": "완료",
+    "deliverable": "",
+    "scheduleStart": "2026-04-13",
+    "scheduleEnd": "2026-05-07"
+  },
+  {
+    "id": "bl-005",
+    "l1": "도서명 생성",
+    "l2": "통합 표준 MDL 생성",
+    "task": "LLM 기반 통합 표준 MDL 초안 생성",
+    "status": "진행중",
+    "deliverable": "",
+    "scheduleStart": "2026-06-08",
+    "scheduleEnd": "2026-06-30"
+  },
+  {
+    "id": "bl-006",
+    "l1": "도서명 생성",
+    "l2": "통합 표준 MDL 생성",
+    "task": "현업 검토 기반 통합 표준 MDL 확정",
+    "status": "진행중",
+    "deliverable": "",
+    "scheduleStart": "2026-06-08",
+    "scheduleEnd": "2026-06-30"
+  },
+  {
+    "id": "bl-007",
+    "l1": "도서명 생성",
+    "l2": "ITB 분석",
+    "task": "ITB 문서 구조 패턴 분석",
+    "status": "완료",
+    "deliverable": "",
+    "scheduleStart": "2026-04-13",
+    "scheduleEnd": "2026-04-18"
+  },
+  {
+    "id": "bl-008",
+    "l1": "도서명 생성",
+    "l2": "ITB 분석",
+    "task": "ITB 내 핵심 항목 및 키워드 정의",
+    "status": "완료",
+    "deliverable": "",
+    "scheduleStart": "2026-04-19",
+    "scheduleEnd": "2026-05-07"
+  },
+  {
+    "id": "bl-009",
+    "l1": "도서명 생성",
+    "l2": "ITB 분석",
+    "task": "ITB 핵심 키워드 추출 로직 개발",
+    "status": "완료",
+    "deliverable": "",
+    "scheduleStart": "2026-04-19",
+    "scheduleEnd": "2026-05-07"
+  },
+  {
+    "id": "bl-010",
+    "l1": "도서명 생성",
+    "l2": "매칭 로직",
+    "task": "ITB 내 핵심 키워드 - 통합 표준 MDL 매칭 로직 설계",
+    "status": "진행예정",
+    "deliverable": "",
+    "scheduleStart": "2026-06-23",
+    "scheduleEnd": "2026-06-30"
+  },
+  {
+    "id": "bl-011",
+    "l1": "도서명 생성",
+    "l2": "매칭 로직",
+    "task": "LLM 기반 미명시 문서 보완 추론 로직 설계",
+    "status": "진행예정",
+    "deliverable": "",
+    "scheduleStart": "2026-07-01",
+    "scheduleEnd": "2026-07-18"
+  },
+  {
+    "id": "bl-012",
+    "l1": "도서명 생성",
+    "l2": "매칭 로직",
+    "task": "KKS 코드 변환 로직 개발",
+    "status": "진행예정",
+    "deliverable": "",
+    "scheduleStart": "2026-08-01",
+    "scheduleEnd": "2026-08-15"
+  },
+  {
+    "id": "bl-013",
+    "l1": "도서명 생성",
+    "l2": "매칭 로직",
+    "task": "도서명 생성 프로토타입 구현",
+    "status": "진행예정",
+    "deliverable": "",
+    "scheduleStart": "2026-07-07",
+    "scheduleEnd": "2026-07-12"
+  },
+  {
+    "id": "bl-014",
+    "l1": "일정 생성 및 L3 비교",
+    "l2": "일정 생성 알고리즘",
+    "task": "MDL 일정 생성 패턴 분석",
+    "status": "진행예정",
+    "deliverable": "",
+    "scheduleStart": "2026-07-13",
+    "scheduleEnd": "2026-07-24"
+  },
+  {
+    "id": "bl-015",
+    "l1": "일정 생성 및 L3 비교",
+    "l2": "일정 생성 알고리즘",
+    "task": "MDL 일정 생성 알고리즘 개발",
+    "status": "진행예정",
+    "deliverable": "",
+    "scheduleStart": "2026-07-19",
+    "scheduleEnd": "2026-07-31"
+  },
+  {
+    "id": "bl-016",
+    "l1": "일정 생성 및 L3 비교",
+    "l2": "일정 생성 알고리즘",
+    "task": "일정 생성 규칙 및 예외 처리 기준 정의",
+    "status": "진행예정",
+    "deliverable": "",
+    "scheduleStart": "2026-08-01",
+    "scheduleEnd": "2026-08-15"
+  },
+  {
+    "id": "bl-017",
+    "l1": "일정 생성 및 L3 비교",
+    "l2": "일정 생성 알고리즘",
+    "task": "일정 생성 결과 검증 로직 개발",
+    "status": "진행예정",
+    "deliverable": "",
+    "scheduleStart": "2026-08-16",
+    "scheduleEnd": "2026-08-31"
+  },
+  {
+    "id": "bl-018",
+    "l1": "일정 생성 및 L3 비교",
+    "l2": "일정 생성 알고리즘",
+    "task": "도서명 생성 결과와 일정 생성 로직 연계",
+    "status": "진행예정",
+    "deliverable": "",
+    "scheduleStart": "2026-08-16",
+    "scheduleEnd": "2026-08-31"
+  },
+  {
+    "id": "bl-019",
+    "l1": "일정 생성 및 L3 비교",
+    "l2": "L3 비교 비교",
+    "task": "MDL-L3 일정 비교 알고리즘 개발",
+    "status": "진행예정",
+    "deliverable": "",
+    "scheduleStart": "2026-08-24",
+    "scheduleEnd": "2026-09-24"
+  },
+  {
+    "id": "bl-020",
+    "l1": "일정 생성 및 L3 비교",
+    "l2": "L3 비교 비교",
+    "task": "차이 항목 식별 및 예외 탐지 로직 개발",
+    "status": "진행예정",
+    "deliverable": "",
+    "scheduleStart": "2026-09-19",
+    "scheduleEnd": "2026-09-30"
+  },
+  {
+    "id": "bl-021",
+    "l1": "일정 생성 및 L3 비교",
+    "l2": "L3 비교 비교",
+    "task": "엑셀 리포트 자동생성 기능 개발",
+    "status": "진행예정",
+    "deliverable": "",
+    "scheduleStart": "2026-10-01",
+    "scheduleEnd": "2026-10-07"
+  },
+  {
+    "id": "bl-022",
+    "l1": "시스템 구현 및 통합",
+    "l2": "서비스 구현",
+    "task": "서비스 UI/UX 화면 구조 설계",
+    "status": "진행예정",
+    "deliverable": "",
+    "scheduleStart": "2026-09-13",
+    "scheduleEnd": "2026-09-24"
+  },
+  {
+    "id": "bl-023",
+    "l1": "시스템 구현 및 통합",
+    "l2": "서비스 구현",
+    "task": "시스템 프론트, 백엔드 개발",
+    "status": "진행예정",
+    "deliverable": "",
+    "scheduleStart": "2026-09-19",
+    "scheduleEnd": "2026-10-07"
+  },
+  {
+    "id": "bl-024",
+    "l1": "시스템 구현 및 통합",
+    "l2": "통합 및 마무리",
+    "task": "최종 시스템 연동 및 통합 테스트",
+    "status": "진행예정",
+    "deliverable": "",
+    "scheduleStart": "2026-10-08",
+    "scheduleEnd": "2026-10-23"
+  },
+  {
+    "id": "bl-025",
+    "l1": "시스템 구현 및 통합",
+    "l2": "통합 및 마무리",
+    "task": "기술문서 작성 및 운영 이관",
+    "status": "진행예정",
+    "deliverable": "",
+    "scheduleStart": "2026-10-08",
+    "scheduleEnd": "2026-10-23"
+  },
+  {
+    "id": "bl-026",
+    "l1": "시스템 구현 및 통합",
+    "l2": "통합 및 마무리",
+    "task": "시스템 안정화",
+    "status": "진행예정",
+    "deliverable": "",
+    "scheduleStart": "2026-10-08",
+    "scheduleEnd": "2026-10-31"
+  }
+]

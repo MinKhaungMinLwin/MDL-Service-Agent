@@ -1,0 +1,59 @@
+<header class="page-header">
+        <h1>서비스 모듈</h1>
+        <p><code>src/</code> 하위의 주요 Python 모듈과 역할입니다.</p>
+      </header>
+
+      <section>
+        <table>
+          <thead>
+            <tr><th>모듈</th><th>경로</th><th>역할</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>api</strong></td>
+              <td><code>src/api/</code></td>
+              <td>FastAPI 진입점. health, parser, chunker, schedule 라우트 제공</td>
+            </tr>
+            <tr>
+              <td><strong>mdl_service</strong></td>
+              <td><code>src/mdl_service/</code></td>
+              <td>MDL Excel LLM 분류(mdl-classify), Neo4j 적재(mdl-ingest)</td>
+            </tr>
+            <tr>
+              <td><strong>itb_service</strong></td>
+              <td><code>src/itb_service/</code></td>
+              <td>ITB 청크에서 Depth/Keywords/Search Query LLM 추출(itb-extract)</td>
+            </tr>
+            <tr>
+              <td><strong>matching_service</strong></td>
+              <td><code>src/matching_service/</code></td>
+              <td>ITB↔MDL 벡터 검색 + Cross-encoder 재순위(itb-match). keyword/semantic/hybrid 모드</td>
+            </tr>
+            <tr>
+              <td><strong>schedule_service</strong></td>
+              <td><code>src/schedule_service/</code></td>
+              <td>MDL 후보 추출(candidates) + FA/FC 일정 생성(generate). Rule/Activity 매칭 핵심</td>
+            </tr>
+            <tr>
+              <td><strong>evaluation_service</strong></td>
+              <td><code>src/evaluation_service/</code></td>
+              <td>매칭·일정 품질 평가, Ground Truth 생성, ACC 실험</td>
+            </tr>
+            <tr>
+              <td><strong>parser_service</strong></td>
+              <td><code>src/parser_service/</code></td>
+              <td>PDF 파싱 (Docling 기반)</td>
+            </tr>
+            <tr>
+              <td><strong>chunker_service</strong></td>
+              <td><code>src/chunker_service/</code></td>
+              <td>파싱된 문서를 계층적 청크로 분할</td>
+            </tr>
+            <tr>
+              <td><strong>common</strong></td>
+              <td><code>src/common/</code></td>
+              <td>Neo4j 클라이언트, OpenAI/Embedding 클라이언트, 설정, 텍스트 정규화 공통 유틸</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
