@@ -26,16 +26,6 @@ dist/
 .DS_Store
 Thumbs.db
 
-.claude/
-
-# Parser/chunker service code kept local
-src/parser_service/
-src/chunker_service/
-neo4j_export/
-neo4j_export.7z
-
-src/schedule_service/tests
-src/evaluation_service/schedule_eval
-
-backup/
-.omc/
+# Local workspace archives
+00_current_work/current_test_env/archive/
+00_current_work/current_test_env/output/archive/
