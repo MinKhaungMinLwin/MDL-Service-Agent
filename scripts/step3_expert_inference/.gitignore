@@ -1,0 +1,7 @@
+# Generated intermediate/output artifacts - reproducible by running the
+# numbered scripts in this folder. Not committed to keep the repo lean.
+integrated_mdl.csv
+family_gap_analysis.csv
+family_summary.csv
+curated_gap_records.json
+expert_inferred_documents.csv
